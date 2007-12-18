@@ -2,12 +2,12 @@ require File.dirname(__FILE__) + '/../rev'
 
 module Rev
   class Server
-    def initialize(listener)
+    def initialize(listener, klass = BufferedIO)
       raise ArgumentError, "no listener provided" unless listener.is_a? Listener
-      @listener = listener
+      @listener, @klass = listener, klass
     end
 
-    def attach(evloop, klass = BufferedIO, *args)
+    def attach(evloop, klass = @klass, *args)
       # Ensure the provided class responds to attach
       unless (klass.instance_method(:attach) rescue nil)
         raise ArgumentError, "provided class must respond to 'attach'"
@@ -27,13 +27,13 @@ module Rev
 
   class TCPServer < Server
     def initialize(*args)
-      super(TCPListener.new(*args))
+      super(TCPListener.new(*args), TCPSocket)
     end
   end
 
   class UNIXServer < Server
     def initialize(*args)
-      super(UNIXListener.new(*args))
+      super(UNIXListener.new(*args), UNIXSocket)
     end
   end
 end

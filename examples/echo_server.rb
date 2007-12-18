@@ -2,16 +2,15 @@ require File.dirname(__FILE__) + '/../lib/rev'
 
 PORT = 4321
 
-class EchoServerConnection < Rev::BufferedIO
+class EchoServerConnection < Rev::TCPSocket
   def initialize(socket)
     super
 
-    @port, @addr = Socket.unpack_sockaddr_in(socket.getpeername)
-    puts "Received connection from #{@addr}:#{@port}"
+    puts "Received connection from #{remote_addr}:#{remote_port}"
   end
 
   def on_close
-    puts "Connection closed from #{@addr}:#{@port}"
+    puts "Connection closed from #{remote_addr}:#{remote_port}"
   end
 
   def on_read(data)
