@@ -71,7 +71,7 @@ static VALUE Rev_Watcher_attach(VALUE self, VALUE loop)
 
   if(loop_watchers == Qnil) {
     loop_watchers = rb_ary_new();
-    rb_ivar_set(loop, rb_intern("@watchers"), loop_watchers);
+    rb_iv_set(loop, "@watchers", loop_watchers);
   }
 
   rb_ary_push(loop_watchers, self);
@@ -95,7 +95,7 @@ static VALUE Rev_Watcher_detach(VALUE self)
   if(watcher_data->loop == Qnil)
     rb_raise(rb_eRuntimeError, "not attached to a loop");
 
-  loop_watchers = rb_ivar_get(watcher_data->loop, rb_intern("@watchers"));
+  loop_watchers = rb_iv_get(watcher_data->loop, "@watchers");
   rb_ary_delete(loop_watchers, self);
 
   watcher_data->loop = Qnil;

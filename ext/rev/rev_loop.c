@@ -17,6 +17,7 @@ static void Rev_Loop_mark(struct Rev_Loop *loop);
 static void Rev_Loop_free(struct Rev_Loop *loop);
 
 /* Method implementations */
+static VALUE Rev_Loop_default(VALUE klass);
 static VALUE Rev_Loop_ev_loop_new(VALUE self, VALUE flags);
 static VALUE Rev_Loop_run_once(VALUE self);
 static VALUE Rev_Loop_run_nonblock(VALUE self);
@@ -27,10 +28,13 @@ void Init_rev_loop()
 {		
   Rev_Loop = rb_define_class_under(Rev, "Loop", rb_cObject);
   rb_define_alloc_func(Rev_Loop, Rev_Loop_allocate);
+	rb_define_singleton_method(Rev_Loop, "default", Rev_Loop_default, 0);
 
   rb_define_private_method(Rev_Loop, "ev_loop_new", Rev_Loop_ev_loop_new, 1);
   rb_define_method(Rev_Loop, "run_once", Rev_Loop_run_once, 0);
   rb_define_method(Rev_Loop, "run_nonblock", Rev_Loop_run_nonblock, 0);
+
+	rb_cv_set(Rev_Loop, "@@default_loop", Qnil);
 }
 
 static VALUE Rev_Loop_allocate(VALUE klass)
@@ -60,17 +64,36 @@ static void Rev_Loop_free(struct Rev_Loop *loop)
   xfree(loop);
 }
 
-/* Wrapper for populating a Rev_Loop struct with a new event loop */
-VALUE Rev_Loop_ev_loop_new(VALUE self, VALUE flags)
+/* Retrieve a singleton for the default loop */
+static VALUE Rev_Loop_default(VALUE klass)
 {
-  struct Rev_Loop *loop;
-  Data_Get_Struct(self, struct Rev_Loop, loop);
+	struct Rev_Loop *loop_data;
+	VALUE default_loop = rb_cv_get(klass, "@@default_loop");
+	
+	if(default_loop == Qnil) {
+		default_loop = rb_obj_alloc(klass);
+		Data_Get_Struct(default_loop, struct Rev_Loop, loop_data);
+		
+		loop_data->ev_loop = ev_default_loop(0);
+		loop_data->default_loop = 1;
+		
+		rb_cv_set(klass, "@@default_loop", default_loop);
+	}
+	
+	return default_loop;
+}
 
-  if(loop->ev_loop)
+/* Wrapper for populating a Rev_Loop struct with a new event loop */
+static VALUE Rev_Loop_ev_loop_new(VALUE self, VALUE flags)
+{
+  struct Rev_Loop *loop_data;
+  Data_Get_Struct(self, struct Rev_Loop, loop_data);
+
+  if(loop_data->ev_loop)
     rb_raise(rb_eRuntimeError, "loop already initialized");
 
-  loop->ev_loop = ev_loop_new(NUM2INT(flags));
-  loop->default_loop = 0;
+  loop_data->ev_loop = ev_loop_new(NUM2INT(flags));
+  loop_data->default_loop = 0;
 
   return Qnil;
 }
@@ -106,7 +129,7 @@ void Rev_Loop_process_event(VALUE watcher, int revents)
      of thread safety.  Maybe there's a better approach...
      */
 
-  assert(!loop_data->active_watcher); /* We expect only one event per iteration of the ev_loop */
+  assert(loop_data->active_watcher == Qnil); /* We expect only one event per iteration of the ev_loop */
 
   loop_data->active_watcher = watcher;
   loop_data->revents = revents;
@@ -135,7 +158,7 @@ static VALUE Rev_Loop_run_once(VALUE self)
   if(!loop_data->ev_loop)
     rb_raise(rb_eRuntimeError, "loop not initialized");
 
-  loop_data->active_watcher = 0;
+  loop_data->active_watcher = Qnil;
   rb_thread_blocking_region(rev_loop_blocking, loop_data->ev_loop, RB_UBF_DFL, 0);
 
   Rev_Loop_dispatch_event(loop_data);
@@ -158,7 +181,7 @@ static VALUE Rev_Loop_run_nonblock(VALUE self)
   if(!loop_data->ev_loop)
     rb_raise(rb_eRuntimeError, "loop not initialized");
 
-  loop_data->active_watcher = 0;
+  loop_data->active_watcher = Qnil;
   ev_loop(loop_data->ev_loop, EVLOOP_NONBLOCK);
 
   Rev_Loop_dispatch_event(loop_data);
@@ -170,7 +193,7 @@ static void Rev_Loop_dispatch_event(struct Rev_Loop *loop_data)
 {
   struct Rev_Watcher *watcher_data;
 
-  if(!loop_data->active_watcher)
+  if(loop_data->active_watcher == Qnil)
     return;
 
   Data_Get_Struct(loop_data->active_watcher, struct Rev_Watcher, watcher_data);
