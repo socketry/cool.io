@@ -72,7 +72,9 @@ static VALUE Rev_IOWatcher_initialize(int argc, VALUE *argv, VALUE self)
 
   watcher_data->dispatch_callback = Rev_IOWatcher_dispatch_callback;
   ev_io_init(&watcher_data->event_types.ev_io, Rev_IOWatcher_libev_callback, fptr->fd, events);
-  watcher_data->event_types.ev_io.data = (void *)self;  
+  watcher_data->event_types.ev_io.data = (void *)self;
+
+	return Qnil;
 }
 
 static VALUE Rev_IOWatcher_attach(VALUE self, VALUE loop)

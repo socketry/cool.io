@@ -13,7 +13,7 @@ extern VALUE Rev_Watcher;
 VALUE Rev_TimerWatcher = Qnil;
 
 /* Method implementations */
-static VALUE Rev_TimerWatcher_initialize(VALUE self, VALUE io);
+static VALUE Rev_TimerWatcher_initialize(int argc, VALUE *argv, VALUE self);
 static VALUE Rev_TimerWatcher_attach(VALUE self, VALUE loop);
 static VALUE Rev_TimerWatcher_detach(VALUE self);
 static VALUE Rev_TimerWatcher_reset(VALUE self);
@@ -24,9 +24,9 @@ static void Rev_TimerWatcher_libev_callback(struct ev_loop *ev_loop, struct ev_t
 static void Rev_TimerWatcher_dispatch_callback(VALUE self, int revents);
 
 void Init_rev_timer_watcher()
-{	
+{ 
   Rev_TimerWatcher = rb_define_class_under(Rev, "TimerWatcher", Rev_Watcher);
-  rb_define_method(Rev_TimerWatcher, "initialize", Rev_TimerWatcher_initialize, 1);
+  rb_define_method(Rev_TimerWatcher, "initialize", Rev_TimerWatcher_initialize, -1);
   rb_define_method(Rev_TimerWatcher, "attach", Rev_TimerWatcher_attach, 1);
   rb_define_method(Rev_TimerWatcher, "detach", Rev_TimerWatcher_detach, 0);
   rb_define_method(Rev_TimerWatcher, "reset", Rev_TimerWatcher_reset, 0);
@@ -39,22 +39,27 @@ void Init_rev_timer_watcher()
  * 
  * Create a new Rev::TimerWatcher for the given IO object and add it to the given Rev::Loop
  */
-static VALUE Rev_TimerWatcher_initialize(VALUE self, VALUE interval)
+static VALUE Rev_TimerWatcher_initialize(int argc, VALUE *argv, VALUE self)
 {
+	VALUE interval, repeating;
   struct Rev_Watcher *watcher_data;
 
+	rb_scan_args(argc, argv, "11", &interval, &repeating);
+	
   Data_Get_Struct(self, struct Rev_Watcher, watcher_data);
 
   watcher_data->dispatch_callback = Rev_TimerWatcher_dispatch_callback;
-  ev_timer_init(&watcher_data->event_types.ev_timer, Rev_TimerWatcher_libev_callback, NUM2INT(interval), 0);	
-  watcher_data->event_types.ev_timer.data = (void *)self;	
+  ev_timer_init(&watcher_data->event_types.ev_timer, Rev_TimerWatcher_libev_callback, NUM2INT(interval), repeating == Qtrue);  
+  watcher_data->event_types.ev_timer.data = (void *)self;
+
+  return Qnil;
 }
 
 static VALUE Rev_TimerWatcher_attach(VALUE self, VALUE loop)
 {
   Watcher_Attach(timer, Rev_TimerWatcher_detach, self, loop);
 
-  return self;	
+  return self;  
 }
 
 static VALUE Rev_TimerWatcher_detach(VALUE self)
@@ -112,7 +117,7 @@ static void Rev_TimerWatcher_libev_callback(struct ev_loop *ev_loop, struct ev_t
 
 /* Rev::Loop dispatch callback */
 static void Rev_TimerWatcher_dispatch_callback(VALUE self, int revents)
-{	
+{ 
   if(revents & EV_TIMEOUT)
     rb_funcall(self, rb_intern("on_timer"), 0, 0);
   else
