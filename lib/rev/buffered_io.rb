@@ -18,7 +18,7 @@ module Rev
       begin
         on_read @io.read_nonblock(4096)
       rescue EOFError
-        handle_eof
+        close
       end
     end
     
@@ -81,6 +81,15 @@ module Rev
       @writer.detach if @writer and @writer.attached?
       on_write_complete
     end
+    
+    # Close the BufferedIO stream
+    def close
+      detach if attached?
+      @writer.detach if @writer and @writer.attached?
+      @io.close
+
+      on_close
+    end
 
     #########
     protected
@@ -90,14 +99,6 @@ module Rev
       return if @writer and @writer.attached?
       @writer ||= Writer.new(@io, self)
       @writer.attach evloop
-    end
-
-    def handle_eof
-      detach if attached?
-      @writer.detach if @writer and @writer.attached?
-      @io.close
-
-      on_close
     end
 
     class Writer < IOWatcher
