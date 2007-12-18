@@ -44,7 +44,6 @@ module Rev
             else raise ArgumentError, "no such backend: #{backend}"
             end
           end
-        when :default # handled later
         else raise ArgumentError, "no such option: #{option}"
         end
       end

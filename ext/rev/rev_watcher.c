@@ -19,6 +19,7 @@ static VALUE Rev_Watcher_initialize(VALUE self);
 static VALUE Rev_Watcher_attach(VALUE self, VALUE loop);
 static VALUE Rev_Watcher_detach(VALUE self);
 static VALUE Rev_Watcher_evloop(VALUE self);
+static VALUE Rev_Watcher_attached(VALUE self);
 
 void Init_rev_watcher()
 {
@@ -29,6 +30,7 @@ void Init_rev_watcher()
   rb_define_method(Rev_Watcher, "attach", Rev_Watcher_attach, 1);
   rb_define_method(Rev_Watcher, "detach", Rev_Watcher_detach, 0);
   rb_define_method(Rev_Watcher, "evloop", Rev_Watcher_evloop, 0);
+  rb_define_method(Rev_Watcher, "attached?", Rev_Watcher_evloop, 0);
 }
 
 static VALUE Rev_Watcher_allocate(VALUE klass)
@@ -113,4 +115,15 @@ static VALUE Rev_Watcher_evloop(VALUE self)
 
   Data_Get_Struct(self, struct Rev_Watcher, watcher_data);
   return watcher_data->loop;
+}
+
+/**
+ *  call-seq:
+ *    Rev::Watcher.attached? -> Boolean
+ * 
+ * Is the watcher currently attached to an event loop?
+ */
+static VALUE Rev_Watcher_attached(VALUE self)
+{
+  return Rev_Watcher_evloop(self) != Qnil;
 }
