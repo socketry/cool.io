@@ -104,7 +104,7 @@ module Rev
     class Writer < IOWatcher
       def initialize(io, buffered_io)
         @buffered_io = buffered_io
-        super(io)
+        super(io, 'w')
       end
 
       def on_writable
