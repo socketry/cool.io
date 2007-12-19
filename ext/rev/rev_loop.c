@@ -25,6 +25,8 @@ static VALUE Rev_Loop_run_nonblock(VALUE self);
 
 static void Rev_Loop_dispatch_event(struct Rev_Loop *loop_data);
 
+#define DEFAULT_EVENTBUF_SIZE 32
+
 void Init_rev_loop()
 {		
   Rev_Loop = rb_define_class_under(Rev, "Loop", rb_cObject);
@@ -45,6 +47,9 @@ static VALUE Rev_Loop_allocate(VALUE klass)
   loop->ev_loop = 0;
   loop->default_loop = 0;
 
+  loop->eventbuf_size = DEFAULT_EVENTBUF_SIZE;
+  loop->eventbuf = (struct Rev_Event *)xmalloc(sizeof(struct Rev_Event) * DEFAULT_EVENTBUF_SIZE);
+
   return Data_Wrap_Struct(klass, Rev_Loop_mark, Rev_Loop_free, loop);
 }
 
@@ -62,10 +67,11 @@ static void Rev_Loop_free(struct Rev_Loop *loop)
   else
     ev_loop_destroy(loop->ev_loop);
 
+  xfree(loop->eventbuf);
   xfree(loop);
 }
 
-/* Retrieve a singleton for the default loop */
+/* Retrieve a singleton (in the design pattern sense) Rev::Loop for the default loop */
 static VALUE Rev_Loop_default(VALUE klass)
 {
 	struct Rev_Loop *loop_data;
@@ -146,32 +152,35 @@ void Rev_Loop_process_event(VALUE watcher, int revents)
    *  stash event and return -> acquire GVL -> dispatch to Ruby
    *
    *  Which is kinda ugly and confusing, but still gives us 
-   *  an O(1) event loop whose heart is in the kernel itself.
+   *  an O(1) event loop whose heart is in the kernel itself. w00t!
    *
-   *  w00t!
-   */
+   *  So, stash the event in the loop's data struct.  When we return
+   *  the ev_loop() call being made in the Rev_Loop_run_once_blocking()
+   *  function below will also return, at which point the GVL is
+   *  reacquired and we can call out to Ruby */
+  
+  /* Grow the event buffer if it's too small */
+  if(loop_data->events_received >= loop_data->eventbuf_size) {
+    loop_data->eventbuf_size *= 2;
+    loop_data->eventbuf = (struct Rev_Event *)xrealloc(
+        loop_data->eventbuf, 
+        sizeof(struct Rev_Event) * loop_data->eventbuf_size
+    );
+  }
 
-  /* If this assertion fails we're overwriting an already stashed
-   * event.  Wouldn't want to do that */
-  assert(loop_data->active_watcher == Qnil);
+  loop_data->eventbuf[loop_data->events_received].watcher = watcher;
+  loop_data->eventbuf[loop_data->events_received].revents = revents;
 
-  /* Stash the event in the loop's data struct.  When we return
-   * the ev_loop() call being made in the Rev_Loop_run_once_blocking()
-   * function below will also return, at which point the GVL is
-   * reacquired and we can call out to Ruby */
-  loop_data->active_watcher = watcher;
-  loop_data->revents = revents;
+  loop_data->events_received++;
 }
 
 static void *Rev_Loop_setup_run(struct Rev_Loop *loop_data)
 {
-
   if(!loop_data->ev_loop)
     rb_raise(rb_eRuntimeError, "loop not initialized");
 
-  loop_data->active_watcher = Qnil;
+  loop_data->events_received = 0;
 }
-
 
 /**
  *  call-seq:
@@ -220,11 +229,11 @@ static VALUE Rev_Loop_run_nonblock(VALUE self)
 
 static void Rev_Loop_dispatch_event(struct Rev_Loop *loop_data)
 {
+  int i;
   struct Rev_Watcher *watcher_data;
 
-  if(loop_data->active_watcher == Qnil)
-    return;
-
-  Data_Get_Struct(loop_data->active_watcher, struct Rev_Watcher, watcher_data);
-  watcher_data->dispatch_callback(loop_data->active_watcher, loop_data->revents);
+  for(i = 0; i < loop_data->events_received; i++) {
+    Data_Get_Struct(loop_data->eventbuf[i].watcher, struct Rev_Watcher, watcher_data);
+    watcher_data->dispatch_callback(loop_data->eventbuf[i].watcher, loop_data->eventbuf[i].revents);
+  }
 }
