@@ -1,5 +1,3 @@
-#include <assert.h>
-
 #include "ruby.h"
 
 #define EV_STANDALONE 1
@@ -186,7 +184,7 @@ static void *Rev_Loop_setup_run(struct Rev_Loop *loop_data)
  *  call-seq:
  *    Rev::Loop.run_once -> nil
  * 
- * Run the Rev::Loop once, blocking until the next event is received.
+ * Run the Rev::Loop once, blocking until events are received.
  */
 static VALUE Rev_Loop_run_once(VALUE self)
 {
