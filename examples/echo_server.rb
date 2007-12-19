@@ -19,7 +19,7 @@ class EchoServerConnection < Rev::TCPSocket
 end
 
 event_loop = Rev::Loop.new
-Rev::TCPServer.new('localhost', PORT).attach(event_loop, EchoServerConnection)
+Rev::TCPServer.new('localhost', PORT, EchoServerConnection).attach(event_loop)
 
 puts "Echo server listening on port #{PORT}"
 event_loop.run

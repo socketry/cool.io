@@ -2,12 +2,9 @@ require File.dirname(__FILE__) + '/../rev'
 
 module Rev
   class Server
-    def initialize(listener, klass = Socket)
-      raise ArgumentError, "no listener provided" unless listener.is_a? Listener
-      @listener, @klass = listener, klass
-    end
-
-    def attach(evloop, klass = @klass, *args)
+    def initialize(listener, klass = Socket, *args)
+      raise TypeError, "can't convert #{listener.class} into Rev::Listener" unless listener.is_a? Listener
+      
       # Ensure the provided class responds to attach
       unless (klass.instance_method(:attach) rescue nil)
         raise ArgumentError, "provided class must respond to 'attach'"
@@ -20,20 +17,24 @@ module Rev
       if (arity >= 0 and args.size + 1 != expected) or (arity < 0 and args.size + 1 < expected)
         raise ArgumentError, "wrong number of arguments for #{klass}#initialize (#{args.size+1} for #{expected})" 
       end
+      
+      @listener, @klass, @args = listener, klass, args
+    end
 
-      @listener.attach(evloop) { |socket| klass.new(socket, *args).attach(evloop).on_connect }
+    def attach(evloop)
+      @listener.attach(evloop) { |socket| @klass.new(socket, *@args).attach(evloop).on_connect }
     end
   end
 
   class TCPServer < Server
-    def initialize(*args)
-      super(TCPListener.new(*args), TCPSocket)
+    def initialize(host, port, klass = TCPSocket, *args)
+      super(TCPListener.new(host, port), klass, *args)
     end
   end
 
   class UNIXServer < Server
-    def initialize(*args)
-      super(UNIXListener.new(*args), UNIXSocket)
+    def initialize(path, klass = UNIXSocket, *args)
+      super(UNIXListener.new(path), klass, *args)
     end
   end
 end
