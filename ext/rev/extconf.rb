@@ -3,7 +3,7 @@ require 'mkmf'
 flags = []
 
 unless have_func('rb_thread_blocking_region') and have_macro('RB_UBF_DFL', 'ruby.h')
-  abort "Rev requires Ruby 1.9 or greater"
+  abort "Rev requires (a fairly recent) Ruby 1.9 or greater"
 end
 
 if have_header('sys/select.h')

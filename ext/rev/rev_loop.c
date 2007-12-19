@@ -20,6 +20,7 @@ static void Rev_Loop_free(struct Rev_Loop *loop);
 static VALUE Rev_Loop_default(VALUE klass);
 static VALUE Rev_Loop_ev_loop_new(VALUE self, VALUE flags);
 static VALUE Rev_Loop_run_once(VALUE self);
+static VALUE Rev_Loop_run_once_blocking(void *ptr);
 static VALUE Rev_Loop_run_nonblock(VALUE self);
 
 static void Rev_Loop_dispatch_event(struct Rev_Loop *loop_data);
@@ -104,44 +105,73 @@ void Rev_Loop_process_event(VALUE watcher, int revents)
   struct Rev_Loop *loop_data;
   struct Rev_Watcher *watcher_data;
 
+  /* The Global VM lock isn't held right now, but hopefully
+   * we can still do this safely */
   Data_Get_Struct(watcher, struct Rev_Watcher, watcher_data);
   Data_Get_Struct(watcher_data->loop, struct Rev_Loop, loop_data);
 
-  /*
-     And here's where things start to get a little nasty...
+  /*  Well, what better place to explain how this all works than
+   *  where the most wonky and convoluted stuff is going on!
+   *
+   *  Our call path up to here looks a little something like:
+   *
+   *  -> release GVL -> event syscall -> libev callback
+   *  (GVL = Global VM Lock)             ^^^ You are here
+   *
+   *  We released the GVL in the Rev_Loop_run_once() function
+   *  so other Ruby threads can run while we make a blocking 
+   *  system call (one of epoll, kqueue, port, poll, or select,
+   *  depending on the platform).
+   *
+   *  More specifically, this is a libev callback abstraction
+   *  called from a real libev callback in every watcher,
+   *  hence this function not being static.  The real libev
+   *  callbacks are event-specific and handled in a watcher.
+   *
+   *  For syscalls like epoll and kqueue, the kernel tells libev
+   *  a pointer (to a structure with a pointer) to the watcher 
+   *  object.  No data structure lookups are required at all
+   *  (beyond structs), it's smooth O(1) sailing the entire way.  
+   *  Then libev calls out to the watcher's callback, which
+   *  calls this function.
+   *
+   *  Now, you may be curious: if the watcher already knew what
+   *  event fired, why the hell is it telling the loop?  Why
+   *  doesn't it just rb_funcall() the appropriate callback?
+   *
+   *  Well, the problem is the Global VM Lock isn't held right
+   *  now, so we can't rb_funcall() anything.  In order to get
+   *  it back we have to:
+   *
+   *  stash event and return -> acquire GVL -> dispatch to Ruby
+   *
+   *  Which is kinda ugly and confusing, but still gives us 
+   *  an O(1) event loop whose heart is in the kernel itself.
+   *
+   *  w00t!
+   */
 
-     We need to store the watcher and returned events to dispatch them to Ruby.
+  /* If this assertion fails we're overwriting an already stashed
+   * event.  Wouldn't want to do that */
+  assert(loop_data->active_watcher == Qnil);
 
-     Right now we're inside a callback being made from ev_loop().  In the
-     general case, this is probably being made from the rev_loop_blocking
-     function below.
-
-     This function is in turn a callback from rb_thread_blocking_region, which
-     has released Ruby's Global VM Lock.  This means we're pretty limited in
-     what we can do.
-
-     To return the event so it can be dispatched back into Ruby when the
-     Global VM Lock is held by the current thread, it's packed up into the
-     Rev_Loop struct, then immediately dispatched into Ruby as soon as the
-     blocking call completes and the lock is held again.
-
-     Obviously this is a lousy way to couple and a whole can of worms in terms 
-     of thread safety.  Maybe there's a better approach...
-     */
-
-  assert(loop_data->active_watcher == Qnil); /* We expect only one event per iteration of the ev_loop */
-
+  /* Stash the event in the loop's data struct.  When we return
+   * the ev_loop() call being made in the Rev_Loop_run_once_blocking()
+   * function below will also return, at which point the GVL is
+   * reacquired and we can call out to Ruby */
   loop_data->active_watcher = watcher;
   loop_data->revents = revents;
 }
 
-static VALUE rev_loop_blocking(void *ptr) {
+static void *Rev_Loop_setup_run(struct Rev_Loop *loop_data)
+{
 
-  struct ev_loop *loop = (struct ev_loop *)ptr;
+  if(!loop_data->ev_loop)
+    rb_raise(rb_eRuntimeError, "loop not initialized");
 
-  ev_loop(loop, EVLOOP_ONESHOT);
-  return Qnil;
+  loop_data->active_watcher = Qnil;
 }
+
 
 /**
  *  call-seq:
@@ -152,17 +182,21 @@ static VALUE rev_loop_blocking(void *ptr) {
 static VALUE Rev_Loop_run_once(VALUE self)
 {
   struct Rev_Loop *loop_data;
-
   Data_Get_Struct(self, struct Rev_Loop, loop_data);
 
-  if(!loop_data->ev_loop)
-    rb_raise(rb_eRuntimeError, "loop not initialized");
-
-  loop_data->active_watcher = Qnil;
-  rb_thread_blocking_region(rev_loop_blocking, loop_data->ev_loop, RB_UBF_DFL, 0);
-
+  Rev_Loop_setup_run(loop_data);
+  rb_thread_blocking_region(Rev_Loop_run_once_blocking, loop_data->ev_loop, RB_UBF_DFL, 0);
   Rev_Loop_dispatch_event(loop_data);
 
+  return Qnil;
+}
+
+static VALUE Rev_Loop_run_once_blocking(void *ptr) 
+{
+  /* The libev loop has now escaped through the Global VM Lock unscathed! */
+  struct ev_loop *loop = (struct ev_loop *)ptr;
+
+  ev_loop(loop, EVLOOP_ONESHOT);
   return Qnil;
 }
 
@@ -175,15 +209,10 @@ static VALUE Rev_Loop_run_once(VALUE self)
 static VALUE Rev_Loop_run_nonblock(VALUE self)
 {
   struct Rev_Loop *loop_data;
-
   Data_Get_Struct(self, struct Rev_Loop, loop_data);
 
-  if(!loop_data->ev_loop)
-    rb_raise(rb_eRuntimeError, "loop not initialized");
-
-  loop_data->active_watcher = Qnil;
+  Rev_Loop_setup_run(loop_data);
   ev_loop(loop_data->ev_loop, EVLOOP_NONBLOCK);
-
   Rev_Loop_dispatch_event(loop_data);
 
   return Qnil;
