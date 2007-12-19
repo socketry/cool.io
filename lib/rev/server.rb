@@ -2,7 +2,7 @@ require File.dirname(__FILE__) + '/../rev'
 
 module Rev
   class Server
-    def initialize(listener, klass = BufferedIO)
+    def initialize(listener, klass = Socket)
       raise ArgumentError, "no listener provided" unless listener.is_a? Listener
       @listener, @klass = listener, klass
     end
@@ -21,7 +21,7 @@ module Rev
         raise ArgumentError, "wrong number of arguments for #{klass}#initialize (#{args.size+1} for #{expected})" 
       end
 
-      @listener.attach(evloop) { |socket| klass.new(socket, *args).attach(evloop) }
+      @listener.attach(evloop) { |socket| klass.new(socket, *args).attach(evloop).on_connect }
     end
   end
 

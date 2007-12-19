@@ -51,7 +51,7 @@ static VALUE Rev_IOWatcher_initialize(int argc, VALUE *argv, VALUE self)
 	rb_scan_args(argc, argv, "11", &io, &flags);
 	
 	if(flags != Qnil)
-		flags_str = RSTRING_PTR(flags);
+		flags_str = RSTRING_PTR(rb_String(flags));
 	else
 		flags_str = "r";
 		
@@ -62,12 +62,9 @@ static VALUE Rev_IOWatcher_initialize(int argc, VALUE *argv, VALUE self)
 	else if(!strcmp(flags_str, "rw"))
 		events = EV_READ | EV_WRITE;
 	else
-		rb_raise(rb_eArgError, "invalid event type: %s", flags_str);
+		rb_raise(rb_eArgError, "invalid event type: '%s' (must be 'r', 'w', or 'rw')", flags_str);
 
-  /* Try to convert the IO argument into an IO object if it isn't already */
-  io = rb_funcall(rb_cIO, rb_intern("try_convert"), 1, io);
-  GetOpenFile(io, fptr);
-
+  GetOpenFile(rb_convert_type(io, T_FILE, "IO", "to_io"), fptr);
   Data_Get_Struct(self, struct Rev_Watcher, watcher_data);
 
   watcher_data->dispatch_callback = Rev_IOWatcher_dispatch_callback;
