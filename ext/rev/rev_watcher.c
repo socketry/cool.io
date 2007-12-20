@@ -18,6 +18,8 @@ static void Rev_Watcher_free(struct Rev_Watcher *watcher);
 static VALUE Rev_Watcher_initialize(VALUE self);
 static VALUE Rev_Watcher_attach(VALUE self, VALUE loop);
 static VALUE Rev_Watcher_detach(VALUE self);
+static VALUE Rev_Watcher_enable(VALUE self);
+static VALUE Rev_Watcher_disable(VALUE self);
 static VALUE Rev_Watcher_evloop(VALUE self);
 static VALUE Rev_Watcher_attached(VALUE self);
 
@@ -29,8 +31,10 @@ void Init_rev_watcher()
   rb_define_method(Rev_Watcher, "initialize", Rev_Watcher_initialize, 0);
   rb_define_method(Rev_Watcher, "attach", Rev_Watcher_attach, 1);
   rb_define_method(Rev_Watcher, "detach", Rev_Watcher_detach, 0);
+  rb_define_method(Rev_Watcher, "enable", Rev_Watcher_enable, 0);
+  rb_define_method(Rev_Watcher, "disable", Rev_Watcher_disable, 0);
   rb_define_method(Rev_Watcher, "evloop", Rev_Watcher_evloop, 0);
-  rb_define_method(Rev_Watcher, "attached?", Rev_Watcher_evloop, 0);
+  rb_define_method(Rev_Watcher, "attached?", Rev_Watcher_attached, 0);
 }
 
 static VALUE Rev_Watcher_allocate(VALUE klass)
@@ -38,6 +42,7 @@ static VALUE Rev_Watcher_allocate(VALUE klass)
   struct Rev_Watcher *watcher_data = (struct Rev_Watcher *)xmalloc(sizeof(struct Rev_Watcher));
 
   watcher_data->loop = Qnil;
+  watcher_data->enabled = 0;
 
   return Data_Wrap_Struct(klass, Rev_Watcher_mark, Rev_Watcher_free, watcher_data);
 }
@@ -119,11 +124,35 @@ static VALUE Rev_Watcher_detach(VALUE self)
    * events in the buffer but get garbage collected in the meantime */
   for(i = 0; i < loop_data->events_received; i++) {
     if(loop_data->eventbuf[i].watcher == self)
-      loop_data->eventbuf[i].watcher = 0;
+      loop_data->eventbuf[i].watcher = Qnil;
   }
 
   watcher_data->loop = Qnil;
 
+  return self;
+}
+
+/**
+ *  call-seq:
+ *    Rev::Watcher.enable -> Rev::Watcher
+ * 
+ * Re-enable a watcher which has been temporarily disabled.  See the
+ * disable method for a more thorough explanation.
+ */
+static VALUE Rev_Watcher_enable(VALUE self)
+{
+  return self;
+}
+
+/**
+ *  call-seq:
+ *    Rev::Watcher.disable -> Rev::Watcher
+ * 
+ * Temporarily disable an event watcher which is attached to a loop.  
+ * This is useful if you wish to toggle event monitoring on and off.  
+ */
+static VALUE Rev_Watcher_disable(VALUE self)
+{
   return self;
 }
 

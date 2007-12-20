@@ -17,6 +17,8 @@ VALUE Rev_IOWatcher = Qnil;
 static VALUE Rev_IOWatcher_initialize(int argc, VALUE *argv, VALUE self);
 static VALUE Rev_IOWatcher_attach(VALUE self, VALUE loop);
 static VALUE Rev_IOWatcher_detach(VALUE self);
+static VALUE Rev_IOWatcher_enable(VALUE self);
+static VALUE Rev_IOWatcher_disable(VALUE self);
 static VALUE Rev_IOWatcher_on_readable(VALUE self);
 static VALUE Rev_IOWatcher_on_writable(VALUE self);
 
@@ -30,6 +32,8 @@ void Init_rev_io_watcher()
   rb_define_method(Rev_IOWatcher, "initialize", Rev_IOWatcher_initialize, -1);
   rb_define_method(Rev_IOWatcher, "attach", Rev_IOWatcher_attach, 1);
   rb_define_method(Rev_IOWatcher, "detach", Rev_IOWatcher_detach, 0);
+  rb_define_method(Rev_IOWatcher, "enable", Rev_IOWatcher_enable, 0);
+  rb_define_method(Rev_IOWatcher, "disable", Rev_IOWatcher_disable, 0);
   rb_define_method(Rev_IOWatcher, "on_readable", Rev_IOWatcher_on_readable, 0);
   rb_define_method(Rev_IOWatcher, "on_writable", Rev_IOWatcher_on_writable, 0);
 }
@@ -84,6 +88,20 @@ static VALUE Rev_IOWatcher_attach(VALUE self, VALUE loop)
 static VALUE Rev_IOWatcher_detach(VALUE self)
 {
   Watcher_Detach(io, self);
+
+  return self;
+}
+
+static VALUE Rev_IOWatcher_enable(VALUE self)
+{
+  Watcher_Enable(io, self);
+
+  return self;  
+}
+
+static VALUE Rev_IOWatcher_disable(VALUE self)
+{
+  Watcher_Disable(io, self);
 
   return self;
 }

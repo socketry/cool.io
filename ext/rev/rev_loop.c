@@ -230,7 +230,7 @@ static void Rev_Loop_dispatch_events(struct Rev_Loop *loop_data)
     /* A watcher with pending events may have been detached from the loop
      * during the dispatch process.  If so, the watcher clears the pending
      * events, so skip over them */
-    if(!loop_data->eventbuf[i].watcher)
+    if(loop_data->eventbuf[i].watcher == Qnil)
       continue;
 
     Data_Get_Struct(loop_data->eventbuf[i].watcher, struct Rev_Watcher, watcher_data);

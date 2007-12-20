@@ -16,6 +16,8 @@ VALUE Rev_TimerWatcher = Qnil;
 static VALUE Rev_TimerWatcher_initialize(int argc, VALUE *argv, VALUE self);
 static VALUE Rev_TimerWatcher_attach(VALUE self, VALUE loop);
 static VALUE Rev_TimerWatcher_detach(VALUE self);
+static VALUE Rev_TimerWatcher_enable(VALUE self);
+static VALUE Rev_TimerWatcher_disable(VALUE self);
 static VALUE Rev_TimerWatcher_reset(VALUE self);
 static VALUE Rev_TimerWatcher_on_timer(VALUE self);
 
@@ -29,6 +31,8 @@ void Init_rev_timer_watcher()
   rb_define_method(Rev_TimerWatcher, "initialize", Rev_TimerWatcher_initialize, -1);
   rb_define_method(Rev_TimerWatcher, "attach", Rev_TimerWatcher_attach, 1);
   rb_define_method(Rev_TimerWatcher, "detach", Rev_TimerWatcher_detach, 0);
+  rb_define_method(Rev_TimerWatcher, "enable", Rev_TimerWatcher_enable, 0);
+  rb_define_method(Rev_TimerWatcher, "disable", Rev_TimerWatcher_disable, 0);
   rb_define_method(Rev_TimerWatcher, "reset", Rev_TimerWatcher_reset, 0);
   rb_define_method(Rev_TimerWatcher, "on_timer", Rev_TimerWatcher_on_timer, 0);
 }
@@ -65,6 +69,20 @@ static VALUE Rev_TimerWatcher_attach(VALUE self, VALUE loop)
 static VALUE Rev_TimerWatcher_detach(VALUE self)
 {
   Watcher_Detach(timer, self);
+
+  return self;
+}
+
+static VALUE Rev_TimerWatcher_enable(VALUE self)
+{
+  Watcher_Enable(timer, self);
+
+  return self;  
+}
+
+static VALUE Rev_TimerWatcher_disable(VALUE self)
+{
+  Watcher_Disable(timer, self);
 
   return self;
 }

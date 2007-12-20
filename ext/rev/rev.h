@@ -27,7 +27,9 @@ struct Rev_Watcher
     struct ev_timer ev_timer;
   } event_types;
 
+  int enabled;
   VALUE loop;
+
   void (*dispatch_callback)(VALUE self, int revents);
 };
 
