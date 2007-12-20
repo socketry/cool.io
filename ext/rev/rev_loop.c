@@ -1,3 +1,4 @@
+#include <assert.h>
 #include "ruby.h"
 
 #define EV_STANDALONE 1
@@ -21,7 +22,7 @@ static VALUE Rev_Loop_run_once(VALUE self);
 static VALUE Rev_Loop_run_once_blocking(void *ptr);
 static VALUE Rev_Loop_run_nonblock(VALUE self);
 
-static void Rev_Loop_dispatch_event(struct Rev_Loop *loop_data);
+static void Rev_Loop_dispatch_events(struct Rev_Loop *loop_data);
 
 #define DEFAULT_EVENTBUF_SIZE 32
 
@@ -45,6 +46,7 @@ static VALUE Rev_Loop_allocate(VALUE klass)
   loop->ev_loop = 0;
   loop->default_loop = 0;
 
+  loop->events_received = 0;
   loop->eventbuf_size = DEFAULT_EVENTBUF_SIZE;
   loop->eventbuf = (struct Rev_Event *)xmalloc(sizeof(struct Rev_Event) * DEFAULT_EVENTBUF_SIZE);
 
@@ -172,14 +174,6 @@ void Rev_Loop_process_event(VALUE watcher, int revents)
   loop_data->events_received++;
 }
 
-static void *Rev_Loop_setup_run(struct Rev_Loop *loop_data)
-{
-  if(!loop_data->ev_loop)
-    rb_raise(rb_eRuntimeError, "loop not initialized");
-
-  loop_data->events_received = 0;
-}
-
 /**
  *  call-seq:
  *    Rev::Loop.run_once -> nil
@@ -191,9 +185,10 @@ static VALUE Rev_Loop_run_once(VALUE self)
   struct Rev_Loop *loop_data;
   Data_Get_Struct(self, struct Rev_Loop, loop_data);
 
-  Rev_Loop_setup_run(loop_data);
+  assert(loop_data->ev_loop && !loop_data->events_received);
   rb_thread_blocking_region(Rev_Loop_run_once_blocking, loop_data->ev_loop, RB_UBF_DFL, 0);
-  Rev_Loop_dispatch_event(loop_data);
+  Rev_Loop_dispatch_events(loop_data);
+  loop_data->events_received = 0;
 
   return Qnil;
 }
@@ -218,19 +213,26 @@ static VALUE Rev_Loop_run_nonblock(VALUE self)
   struct Rev_Loop *loop_data;
   Data_Get_Struct(self, struct Rev_Loop, loop_data);
 
-  Rev_Loop_setup_run(loop_data);
+  assert(loop_data->ev_loop && !loop_data->events_received);
   ev_loop(loop_data->ev_loop, EVLOOP_NONBLOCK);
-  Rev_Loop_dispatch_event(loop_data);
+  Rev_Loop_dispatch_events(loop_data);
+  loop_data->events_received = 0;
 
   return Qnil;
 }
 
-static void Rev_Loop_dispatch_event(struct Rev_Loop *loop_data)
+static void Rev_Loop_dispatch_events(struct Rev_Loop *loop_data)
 {
   int i;
   struct Rev_Watcher *watcher_data;
 
   for(i = 0; i < loop_data->events_received; i++) {
+    /* A watcher with pending events may have been detached from the loop
+     * during the dispatch process.  If so, the watcher clears the pending
+     * events, so skip over them */
+    if(!loop_data->eventbuf[i].watcher)
+      continue;
+
     Data_Get_Struct(loop_data->eventbuf[i].watcher, struct Rev_Watcher, watcher_data);
     watcher_data->dispatch_callback(loop_data->eventbuf[i].watcher, loop_data->eventbuf[i].revents);
   }

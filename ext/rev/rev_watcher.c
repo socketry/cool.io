@@ -74,6 +74,11 @@ static VALUE Rev_Watcher_attach(VALUE self, VALUE loop)
     rb_iv_set(loop, "@watchers", loop_watchers);
   }
 
+  /* Add us to the loop's array of active watchers.  This is mainly done
+   * to keep the VM from garbage collecting watchers that are associated
+   * with a loop (and also lets you see within Ruby which watchers are
+   * associated with a given loop), but isn't really necessary for any 
+   * other reason */
   rb_ary_push(loop_watchers, self);
 
   return self;
@@ -88,7 +93,10 @@ static VALUE Rev_Watcher_attach(VALUE self, VALUE loop)
 static VALUE Rev_Watcher_detach(VALUE self)
 {
   struct Rev_Watcher *watcher_data;
+  struct Rev_Loop *loop_data;
   VALUE loop_watchers;
+
+  int i;
 
   Data_Get_Struct(self, struct Rev_Watcher, watcher_data);
 
@@ -96,7 +104,23 @@ static VALUE Rev_Watcher_detach(VALUE self)
     rb_raise(rb_eRuntimeError, "not attached to a loop");
 
   loop_watchers = rb_iv_get(watcher_data->loop, "@watchers");
+
+  /* Remove us from the loop's array of active watchers.  This likely
+   * has negative performance and scalability characteristics as this
+   * isn't an O(1) operation.  Hopefully there's a better way... */
   rb_ary_delete(loop_watchers, self);
+
+  Data_Get_Struct(watcher_data->loop, struct Rev_Loop, loop_data);
+
+  /* Iterate through the events in the loop's event buffer.  If there
+   * are any pending events from this watcher, mark them NULL.  The
+   * dispatch loop will skip them.  This prevents watchers earlier
+   * in the event buffer from detaching others which may have pending
+   * events in the buffer but get garbage collected in the meantime */
+  for(i = 0; i < loop_data->events_received; i++) {
+    if(loop_data->eventbuf[i].watcher == self)
+      loop_data->eventbuf[i].watcher = 0;
+  }
 
   watcher_data->loop = Qnil;
 
