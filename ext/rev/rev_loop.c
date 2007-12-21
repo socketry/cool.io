@@ -85,6 +85,7 @@ static VALUE Rev_Loop_default(VALUE klass)
 		loop_data->default_loop = 1;
 		
 		rb_cv_set(klass, "@@default_loop", default_loop);
+		rb_iv_set(default_loop, "@active_watchers", INT2NUM(0));
 	}
 	
 	return default_loop;

@@ -72,7 +72,9 @@ static VALUE Rev_Watcher_initialize(VALUE self)
  */
 static VALUE Rev_Watcher_attach(VALUE self, VALUE loop)
 {
-  VALUE loop_watchers = rb_ivar_get(loop, rb_intern("@watchers"));
+  VALUE loop_watchers, active_watchers;
+    
+  loop_watchers = rb_iv_get(loop, "@watchers");
 
   if(loop_watchers == Qnil) {
     loop_watchers = rb_ary_new();
@@ -85,6 +87,13 @@ static VALUE Rev_Watcher_attach(VALUE self, VALUE loop)
    * associated with a given loop), but isn't really necessary for any 
    * other reason */
   rb_ary_push(loop_watchers, self);
+
+  active_watchers = rb_iv_get(loop, "@active_watchers");
+  if(active_watchers == Qnil)
+    active_watchers = INT2NUM(1);
+  else
+    active_watchers = INT2NUM(NUM2INT(active_watchers) + 1);
+  rb_iv_set(loop, "@active_watchers", active_watchers);
 
   return self;
 }
@@ -115,6 +124,12 @@ static VALUE Rev_Watcher_detach(VALUE self)
    * isn't an O(1) operation.  Hopefully there's a better way... */
   rb_ary_delete(loop_watchers, self);
 
+  rb_iv_set(
+      watcher_data->loop, 
+      "@active_watchers",
+      INT2NUM(NUM2INT(rb_iv_get(watcher_data->loop, "@active_watchers")) - 1)
+  );
+
   Data_Get_Struct(watcher_data->loop, struct Rev_Loop, loop_data);
 
   /* Iterate through the events in the loop's event buffer.  If there
@@ -141,6 +156,15 @@ static VALUE Rev_Watcher_detach(VALUE self)
  */
 static VALUE Rev_Watcher_enable(VALUE self)
 {
+  struct Rev_Watcher *watcher_data;
+  Data_Get_Struct(self, struct Rev_Watcher, watcher_data);
+
+  rb_iv_set(
+      watcher_data->loop, 
+      "@active_watchers",
+      INT2NUM(NUM2INT(rb_iv_get(watcher_data->loop, "@active_watchers")) + 1)
+  );
+
   return self;
 }
 
@@ -153,6 +177,15 @@ static VALUE Rev_Watcher_enable(VALUE self)
  */
 static VALUE Rev_Watcher_disable(VALUE self)
 {
+  struct Rev_Watcher *watcher_data;
+  Data_Get_Struct(self, struct Rev_Watcher, watcher_data);
+
+  rb_iv_set(
+      watcher_data->loop, 
+      "@active_watchers",
+      INT2NUM(NUM2INT(rb_iv_get(watcher_data->loop, "@active_watchers")) - 1)
+  );
+
   return self;
 }
 

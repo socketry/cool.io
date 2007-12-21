@@ -24,6 +24,8 @@ module Rev
     #
     def initialize(options = {})
       @watchers = []
+      @active_watchers = 0
+      
       flags = 0
 
       options.each do |option, value|
@@ -50,13 +52,18 @@ module Rev
 
       @loop = ev_loop_new(flags)
     end
+    
+    # Attach a watcher to the loop
+    def attach(watcher)
+      watcher.attach self
+    end
 
     # Run the event loop and dispatch events back to Ruby
     def run
       raise RuntimeError, "no watchers for this loop" if @watchers.empty?
 
       @running = true
-      while @running and not @watchers.empty?
+      while @running and not @active_watchers.zero?
         run_once
       end
     end

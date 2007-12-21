@@ -49,7 +49,8 @@
   Data_Get_Struct(watcher_data->loop, struct Rev_Loop, loop_data); \
   \
   ev_##watcher_type##_start(loop_data->ev_loop, &watcher_data->event_types.ev_##watcher_type); \
-  watcher_data->enabled = 1;
+  watcher_data->enabled = 1; \
+  rb_call_super(0, 0)
 
 #define Watcher_Disable(watcher_type, watcher) \
   struct Rev_Watcher *watcher_data; \
