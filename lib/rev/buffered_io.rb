@@ -78,7 +78,7 @@ module Rev
 
       return unless @write_buffer.empty?
 
-      @writer.detach if @writer and @writer.attached?
+      @writer.disable if @writer and @writer.attached?
       on_write_complete
     end
     
@@ -96,9 +96,13 @@ module Rev
     #########
     
     def schedule_write
-      return if @writer and @writer.attached?
-      @writer ||= Writer.new(@io, self)
-      @writer.attach evloop
+      return if @writer and @writer.enabled?
+      if @writer 
+        @writer.enable
+      else 
+        @writer = Writer.new(@io, self)
+        @writer.attach(evloop)
+      end
     end
 
     class Writer < IOWatcher
