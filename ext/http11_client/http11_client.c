@@ -33,7 +33,7 @@ void client_http_field(void *data, const char *field, size_t flen, const char *v
 
   /* Yes Children, rb_str_upcase_bang isn't even available as an intern.h function.
    * how incredibly handy to not have that.  Nope, I have to do it by hand.*/
-  for(ch = RSTRING(f)->ptr, end = ch + RSTRING(f)->len; ch < end; ch++) {
+  for(ch = RSTRING_PTR(f), end = ch + RSTRING_LEN(f); ch < end; ch++) {
     if(*ch == '-') {
       *ch = '_';
     } else {
@@ -215,8 +215,8 @@ VALUE HttpClientParser_execute(VALUE self, VALUE req_hash, VALUE data, VALUE sta
   DATA_GET(self, httpclient_parser, http);
 
   from = FIX2INT(start);
-  dptr = RSTRING(data)->ptr;
-  dlen = RSTRING(data)->len;
+  dptr = RSTRING_PTR(data);
+  dlen = RSTRING_LEN(data);
 
   if(from >= dlen) {
     rb_raise(eHttpClientParserError, "Requested start is after data buffer end.");
