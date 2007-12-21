@@ -5,7 +5,7 @@
   struct Rev_Watcher *watcher_data; \
   struct Rev_Loop *loop_data; \
   \
-  if(!rb_obj_is_kind_of(loop, Rev_Loop)) \
+  if(!rb_obj_is_kind_of(loop, cRev_Loop)) \
     rb_raise(rb_eArgError, "expected loop to be an instance of Rev::Loop"); \
   \
   Data_Get_Struct(watcher, struct Rev_Watcher, watcher_data); \

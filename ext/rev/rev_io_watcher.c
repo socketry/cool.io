@@ -8,10 +8,10 @@
 #include "rev_watcher.h"
 
 /* Module and object handles */
-extern VALUE Rev;
-extern VALUE Rev_Loop;
-extern VALUE Rev_Watcher;
-VALUE Rev_IOWatcher = Qnil;
+static VALUE mRev = Qnil;
+static VALUE cRev_Watcher = Qnil;
+static VALUE cRev_Loop = Qnil;
+static VALUE cRev_IOWatcher = Qnil;
 
 /* Method implementations */
 static VALUE Rev_IOWatcher_initialize(int argc, VALUE *argv, VALUE self);
@@ -27,15 +27,19 @@ static void Rev_IOWatcher_libev_callback(struct ev_loop *ev_loop, struct ev_io *
 static void Rev_IOWatcher_dispatch_callback(VALUE self, int revents);
 
 void Init_rev_io_watcher()
-{   
-  Rev_IOWatcher = rb_define_class_under(Rev, "IOWatcher", Rev_Watcher);
-  rb_define_method(Rev_IOWatcher, "initialize", Rev_IOWatcher_initialize, -1);
-  rb_define_method(Rev_IOWatcher, "attach", Rev_IOWatcher_attach, 1);
-  rb_define_method(Rev_IOWatcher, "detach", Rev_IOWatcher_detach, 0);
-  rb_define_method(Rev_IOWatcher, "enable", Rev_IOWatcher_enable, 0);
-  rb_define_method(Rev_IOWatcher, "disable", Rev_IOWatcher_disable, 0);
-  rb_define_method(Rev_IOWatcher, "on_readable", Rev_IOWatcher_on_readable, 0);
-  rb_define_method(Rev_IOWatcher, "on_writable", Rev_IOWatcher_on_writable, 0);
+{
+  mRev = rb_define_module("Rev");
+  cRev_Watcher = rb_define_class_under(mRev, "Watcher", rb_cObject);
+  cRev_IOWatcher = rb_define_class_under(mRev, "IOWatcher", cRev_Watcher);
+  cRev_Loop = rb_define_class_under(mRev, "Loop", rb_cObject);
+
+  rb_define_method(cRev_IOWatcher, "initialize", Rev_IOWatcher_initialize, -1);
+  rb_define_method(cRev_IOWatcher, "attach", Rev_IOWatcher_attach, 1);
+  rb_define_method(cRev_IOWatcher, "detach", Rev_IOWatcher_detach, 0);
+  rb_define_method(cRev_IOWatcher, "enable", Rev_IOWatcher_enable, 0);
+  rb_define_method(cRev_IOWatcher, "disable", Rev_IOWatcher_disable, 0);
+  rb_define_method(cRev_IOWatcher, "on_readable", Rev_IOWatcher_on_readable, 0);
+  rb_define_method(cRev_IOWatcher, "on_writable", Rev_IOWatcher_on_writable, 0);
 }
 
 /**

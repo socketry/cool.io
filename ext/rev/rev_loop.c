@@ -7,8 +7,8 @@
 #include "rev.h"
 
 /* Module and object handles */
-extern VALUE Rev;
-VALUE Rev_Loop = Qnil;
+static VALUE mRev = Qnil;
+static VALUE cRev_Loop = Qnil;
 
 /* Data allocators and deallocators */
 static VALUE Rev_Loop_allocate(VALUE klass);
@@ -27,16 +27,17 @@ static void Rev_Loop_dispatch_events(struct Rev_Loop *loop_data);
 #define DEFAULT_EVENTBUF_SIZE 32
 
 void Init_rev_loop()
-{		
-  Rev_Loop = rb_define_class_under(Rev, "Loop", rb_cObject);
-  rb_define_alloc_func(Rev_Loop, Rev_Loop_allocate);
-	rb_define_singleton_method(Rev_Loop, "default", Rev_Loop_default, 0);
+{
+  mRev = rb_define_module("Rev");
+  cRev_Loop = rb_define_class_under(mRev, "Loop", rb_cObject);
+  rb_define_alloc_func(cRev_Loop, Rev_Loop_allocate);
+	rb_define_singleton_method(cRev_Loop, "default", Rev_Loop_default, 0);
 
-  rb_define_private_method(Rev_Loop, "ev_loop_new", Rev_Loop_ev_loop_new, 1);
-  rb_define_method(Rev_Loop, "run_once", Rev_Loop_run_once, 0);
-  rb_define_method(Rev_Loop, "run_nonblock", Rev_Loop_run_nonblock, 0);
+  rb_define_private_method(cRev_Loop, "ev_loop_new", Rev_Loop_ev_loop_new, 1);
+  rb_define_method(cRev_Loop, "run_once", Rev_Loop_run_once, 0);
+  rb_define_method(cRev_Loop, "run_nonblock", Rev_Loop_run_nonblock, 0);
 
-	rb_cv_set(Rev_Loop, "@@default_loop", Qnil);
+	rb_cv_set(cRev_Loop, "@@default_loop", Qnil);
 }
 
 static VALUE Rev_Loop_allocate(VALUE klass)

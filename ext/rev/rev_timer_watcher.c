@@ -7,10 +7,10 @@
 #include "rev_watcher.h"
 
 /* Module and object handles */
-extern VALUE Rev;
-extern VALUE Rev_Loop;
-extern VALUE Rev_Watcher;
-VALUE Rev_TimerWatcher = Qnil;
+static VALUE mRev = Qnil;
+static VALUE cRev_Watcher = Qnil;
+static VALUE cRev_TimerWatcher = Qnil;
+static VALUE cRev_Loop = Qnil;
 
 /* Method implementations */
 static VALUE Rev_TimerWatcher_initialize(int argc, VALUE *argv, VALUE self);
@@ -27,14 +27,18 @@ static void Rev_TimerWatcher_dispatch_callback(VALUE self, int revents);
 
 void Init_rev_timer_watcher()
 { 
-  Rev_TimerWatcher = rb_define_class_under(Rev, "TimerWatcher", Rev_Watcher);
-  rb_define_method(Rev_TimerWatcher, "initialize", Rev_TimerWatcher_initialize, -1);
-  rb_define_method(Rev_TimerWatcher, "attach", Rev_TimerWatcher_attach, 1);
-  rb_define_method(Rev_TimerWatcher, "detach", Rev_TimerWatcher_detach, 0);
-  rb_define_method(Rev_TimerWatcher, "enable", Rev_TimerWatcher_enable, 0);
-  rb_define_method(Rev_TimerWatcher, "disable", Rev_TimerWatcher_disable, 0);
-  rb_define_method(Rev_TimerWatcher, "reset", Rev_TimerWatcher_reset, 0);
-  rb_define_method(Rev_TimerWatcher, "on_timer", Rev_TimerWatcher_on_timer, 0);
+  mRev = rb_define_module("Rev");
+  cRev_Watcher = rb_define_class_under(mRev, "Watcher", rb_cObject);
+  cRev_TimerWatcher = rb_define_class_under(mRev, "TimerWatcher", cRev_Watcher);
+  cRev_Loop = rb_define_class_under(mRev, "Loop", rb_cObject);
+
+  rb_define_method(cRev_TimerWatcher, "initialize", Rev_TimerWatcher_initialize, -1);
+  rb_define_method(cRev_TimerWatcher, "attach", Rev_TimerWatcher_attach, 1);
+  rb_define_method(cRev_TimerWatcher, "detach", Rev_TimerWatcher_detach, 0);
+  rb_define_method(cRev_TimerWatcher, "enable", Rev_TimerWatcher_enable, 0);
+  rb_define_method(cRev_TimerWatcher, "disable", Rev_TimerWatcher_disable, 0);
+  rb_define_method(cRev_TimerWatcher, "reset", Rev_TimerWatcher_reset, 0);
+  rb_define_method(cRev_TimerWatcher, "on_timer", Rev_TimerWatcher_on_timer, 0);
 }
 
 /**
