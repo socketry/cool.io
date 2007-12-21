@@ -1,3 +1,107 @@
-Sorry, not much to see here for now.
+= Rev
 
-Soon, soon, I will write a README file, I swear.
+Rev is a high performance event library for Ruby 1.9.  It uses the libev C
+library to handle support for underlying system calls.  This includes the
+epoll system call for Linux, the kqueue system call for BSDs and OS X, and the
+completion ports interface for Solaris.
+
+Rev also binds asynchronous wrappers to Ruby's core socket classes so you can
+use them in conjunction with Rev to build asynchronous event-driven 
+applications.
+
+== Anatomy
+
+Rev builds on two core classes which bind to the libev API:
+
+* Rev::Loop - This class represents an event loop which uses underlying high
+  performance system calls to wait for events.
+
+* Rev::Watcher - This is the base class for event observers.  Once you attach
+  an event observer to a loop and start running it, you will begin receiving
+  callbacks to particlar methods when events occur.
+
+== Watchers
+
+There are presently two types of watchers:
+
+* Rev::IOWatcher - This class waits for an IO object to become readable,
+  writable, or both.
+
+* Rev::TimerWatcher - This class waits for a specified duration then fires
+  an event.  You can also configure it to fire an event at specified intervals.
+
+== Using Watchers
+
+Watchers have five important methods:
+
+* attach(loop) - This binds a watcher to the specified event loop.  If the
+  watcher is already bound to a loop it will be detached first, then attached
+  to the new one.
+
+* detach - This completely unbinds a watcher from an event loop.
+
+* disable - This stops the watcher from receiving events but does not unbind
+  it from the loop.  If you are trying to toggle a watcher on and off, it's
+  best to use this method (and enable) as it performs better than completely
+  removing the watcher from the event loop.
+
+* enable - This re-enables a watcher which has been disabled in the past.
+  The watcher must still be bound to an event loop.
+
+* evloop - This returns the Rev::Loop object which the watcher is currently
+  bound to.
+
+== Asynchronous Wrappers
+
+Several classes which provide asynchronous event-driven wrappers for Ruby's
+core socket classes are also provided.  Among these are:
+
+* Rev::TCPSocket - A buffered wrapper to core Ruby's Socket class for use with
+  TCP sockets.  You can asynchronously create outgoing TCP connections using 
+  its Rev::TCPSocket.connect method.  Rev::TCPSocket provides write buffering
+  to ensure that writing never blocks, and has asynchronous callbacks for
+  several events, including when the connection is opened (or failed), when
+  data is received, when the write buffer has been written out completely,
+  and when the connection closes.
+
+* Rev::TCPServer - A wrapper for TCPServer which creates new instances of
+  Rev::TCPSocket (or any subclass you wish to provide) whenever an incoming
+  connection is received.
+
+== Example Program
+
+Below is an example of how to write an echo server:
+
+  PORT = 4321
+
+  class EchoServerConnection < Rev::TCPSocket
+    def initialize(socket)
+      super
+
+      puts "Received connection from #{remote_addr}:#{remote_port}"
+    end
+
+    def on_close
+      puts "Connection closed from #{remote_addr}:#{remote_port}"
+    end
+
+    def on_read(data)
+      write data
+    end
+  end
+
+  event_loop = Rev::Loop.new
+  Rev::TCPServer.new('localhost', PORT, EchoServerConnection).attach(event_loop)
+
+  puts "Echo server listening on port #{PORT}"
+  event_loop.run
+
+Here a new observer type (EchoServerConnection) is made by subclassing an
+existing one and adding new implementations to existing event handlers.
+
+A new event loop is created, and a new Rev::TCPServer (whose base class is
+Rev::Watcher) is created and attached to the event loop.
+
+Once this is done, the event loop is started with event_loop.run.  This method
+will block until there are no active watchers for the loop or the loop is
+stopped explicitly with event_loop.stop.
