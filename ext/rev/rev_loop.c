@@ -72,7 +72,13 @@ static void Rev_Loop_free(struct Rev_Loop *loop)
   xfree(loop);
 }
 
-/* Retrieve a singleton (in the design pattern sense) Rev::Loop for the default loop */
+
+/**
+ *  call-seq:
+ *    Rev::Loop.default -> Rev::Loop
+ *
+ * Retrieve a singleton instance of the default loop for the application
+ */ 
 static VALUE Rev_Loop_default(VALUE klass)
 {
 	struct Rev_Loop *loop_data;

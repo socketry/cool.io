@@ -9,7 +9,7 @@ include FileUtils
 
 setup_tests
 setup_clean ['ext/rev/Makefile', 'pkg']
-setup_rdoc ['README', 'LICENSE', 'lib/**/*.rb', 'doc/**/*.rdoc', 'ext/rev/*.c']
+setup_rdoc ['README', 'LICENSE', 'lib/**/*.rb', 'doc/**/*.rdoc', 'ext/rev/*.c', 'ext/http11_client/*.c']
 
 desc "Does a full compile, test run"
 task :default => [:compile] #, :test]
