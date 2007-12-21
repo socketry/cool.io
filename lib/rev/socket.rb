@@ -13,7 +13,7 @@ module Rev
     
     def attach(evloop)
       if @connector        
-        raise RuntimeError, "connection failed" if @connector.failed?
+        raise RuntimeError, "connection failed" if @failed
         
         unless @connector.complete?
           @connector.attach(evloop)
@@ -26,7 +26,34 @@ module Rev
       
       super
     end
-    
+
+    def detach
+      if @connector
+        @connector.detach
+        return self
+      end
+
+      super
+    end
+
+    def enable
+      if @connector
+        @connector.enable
+        return self
+      end
+
+      super
+    end
+
+    def disable
+      if @connector
+        @connector.disable
+        return self
+      end
+
+      super
+    end
+
     # Called upon completion of a socket connection
     def on_connect
     end
@@ -50,10 +77,6 @@ module Rev
         @complete
       end
       
-      def failed? 
-        @failed
-      end
-      
       def on_writable
         l = evloop
         detach
@@ -63,8 +86,8 @@ module Rev
           @rev_socket.attach(l)
           @rev_socket.on_connect
         else
-          @failed = true
           @rev_socket.on_connect_failed
+          @rev_socket.instance_eval { @failed = true }
         end
       end      
     end
@@ -75,7 +98,26 @@ module Rev
     
     # Perform a non-blocking connect to the given host and port
     def self.connect(addr, port, *args)
-      super(TCPConnectSocket.new(addr, port), *args)
+      if family = address_family(addr)
+        return super(TCPConnectSocket.new(addr, port, family), *args)
+      end
+
+      if host = Rev::DNSResolver.hosts(addr)
+        return connect(host, port, *args)
+      end
+
+      return allocate.instance_eval {
+        @resolver = TCPConnectResolver.new(self, addr, port, *args)
+      }
+    end
+
+    # Determine the family of an address
+    def self.address_family(addr)
+      if (Resolv::IPv4.create(addr) rescue nil)
+        ::Socket::AF_INET
+      elsif(Resolv::IPv6.create(addr) rescue nil)
+        ::Socket::AF_INET6
+      end
     end
     
     def initialize(socket)
@@ -87,31 +129,59 @@ module Rev
       
       @address_family, @remote_port, @remote_host, @remote_addr = socket.peeraddr  
     end
+
+    def attach(evloop)
+      if @resolver
+        @resolver.attach(evloop)
+        return self
+      end
+
+      super
+    end
+
+    def detach
+      if @resolver
+        @resolver.detach
+        return self
+      end
+
+      super
+    end
+
+    def enable(evloop)
+      if @resolver
+        @resolver.enable
+        return self
+      end
+
+      super
+    end
+
+    def disable(evloop)
+      if @resolver
+        @resolver.disable
+        return self
+      end
+
+      super
+    end
     
     #########
     protected
     #########
-    
+
     class TCPConnectSocket < ::Socket
-      def initialize(addr, port)
+      def initialize(addr, port, family)
         @addr, @port = addr, port
         @address_family = nil
 
-        if (Resolv::IPv4.create(addr) rescue nil)
-          @address_family = ::Socket::AF_INET
-        elsif(Resolv::IPv6.create(addr) rescue nil)
-          @address_family = ::Socket::AF_INET6
-        else raise ArgumentError, "address #{addr} not recognized (DNS is not yet supported)"
-        end
-
-        socket = super(@address_family, ::Socket::SOCK_STREAM, 0)
-
+        @socket = super(family, ::Socket::SOCK_STREAM, 0)
         begin
-          socket.connect_nonblock(::Socket.sockaddr_in(port, addr))
+          @socket.connect_nonblock(::Socket.sockaddr_in(port, addr))
         rescue Errno::EINPROGRESS
         end
       end
-      
+
       def peeraddr
         [
           @address_family == ::Socket::AF_INET ? 'AF_INET' : 'AF_INET6',
@@ -120,6 +190,41 @@ module Rev
           @addr
         ]
       end
+    end
+
+    class TCPConnectResolver < Rev::DNSResolver
+      def initialize(socket, host, port, *args)
+        @sock, @port, @args = socket, port, args
+        super(host)
+      end
+
+      def on_success(addr)
+        unless family = TCPSocket.address_family(addr)
+          @sock.on_connect_failed
+          unbind
+          return
+        end
+
+        port, args = @port, @args
+        @sock.instance_eval {
+          socket = TCPConnectSocket.new(addr, port, family)
+          initialize(socket, *args)
+          @connector = Connector.new(self, socket)
+          @resolver = nil
+        }
+        @sock.attach(evloop)
+      end
+
+      def on_failure
+        @sock.on_connect_failed
+        @sock.instance_eval { 
+          @resolver = nil 
+          @failed = true
+        }
+        return
+      end
+
+      alias_method :on_timeout, :on_failure
     end
   end
   
