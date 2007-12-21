@@ -78,7 +78,7 @@ module Rev
 
       return unless @write_buffer.empty?
 
-      @writer.disable if @writer and @writer.attached?
+      @writer.disable if @writer and @writer.enabled?
       on_write_complete
     end
     
