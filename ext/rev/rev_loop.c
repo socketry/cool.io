@@ -31,13 +31,13 @@ void Init_rev_loop()
   mRev = rb_define_module("Rev");
   cRev_Loop = rb_define_class_under(mRev, "Loop", rb_cObject);
   rb_define_alloc_func(cRev_Loop, Rev_Loop_allocate);
-	rb_define_singleton_method(cRev_Loop, "default", Rev_Loop_default, 0);
+  rb_define_singleton_method(cRev_Loop, "default", Rev_Loop_default, 0);
 
   rb_define_private_method(cRev_Loop, "ev_loop_new", Rev_Loop_ev_loop_new, 1);
   rb_define_method(cRev_Loop, "run_once", Rev_Loop_run_once, 0);
   rb_define_method(cRev_Loop, "run_nonblock", Rev_Loop_run_nonblock, 0);
 
-	rb_cv_set(cRev_Loop, "@@default_loop", Qnil);
+  rb_cv_set(cRev_Loop, "@@default_loop", Qnil);
 }
 
 static VALUE Rev_Loop_allocate(VALUE klass)
@@ -81,21 +81,22 @@ static void Rev_Loop_free(struct Rev_Loop *loop)
  */ 
 static VALUE Rev_Loop_default(VALUE klass)
 {
-	struct Rev_Loop *loop_data;
-	VALUE default_loop = rb_cv_get(klass, "@@default_loop");
-	
-	if(default_loop == Qnil) {
-		default_loop = rb_obj_alloc(klass);
-		Data_Get_Struct(default_loop, struct Rev_Loop, loop_data);
-		
-		loop_data->ev_loop = ev_default_loop(0);
-		loop_data->default_loop = 1;
-		
-		rb_cv_set(klass, "@@default_loop", default_loop);
-		rb_iv_set(default_loop, "@active_watchers", INT2NUM(0));
-	}
-	
-	return default_loop;
+  struct Rev_Loop *loop_data;
+  VALUE default_loop = rb_cv_get(klass, "@@default_loop");
+
+  if(default_loop == Qnil) {
+    default_loop = rb_obj_alloc(klass);
+    Data_Get_Struct(default_loop, struct Rev_Loop, loop_data);
+
+    loop_data->ev_loop = ev_default_loop(0);
+    loop_data->default_loop = 1;
+
+    rb_cv_set(klass, "@@default_loop", default_loop);
+    rb_iv_set(default_loop, "@active_watchers", INT2NUM(0));
+    rb_iv_set(default_loop, "@watchers", rb_ary_new());
+  }
+
+  return default_loop;
 }
 
 /* Wrapper for populating a Rev_Loop struct with a new event loop */
@@ -166,14 +167,14 @@ void Rev_Loop_process_event(VALUE watcher, int revents)
    *  the ev_loop() call being made in the Rev_Loop_run_once_blocking()
    *  function below will also return, at which point the GVL is
    *  reacquired and we can call out to Ruby */
-  
+
   /* Grow the event buffer if it's too small */
   if(loop_data->events_received >= loop_data->eventbuf_size) {
     loop_data->eventbuf_size *= 2;
     loop_data->eventbuf = (struct Rev_Event *)xrealloc(
         loop_data->eventbuf, 
         sizeof(struct Rev_Event) * loop_data->eventbuf_size
-    );
+        );
   }
 
   loop_data->eventbuf[loop_data->events_received].watcher = watcher;
