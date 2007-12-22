@@ -58,7 +58,12 @@ module Rev
       watcher.attach self
     end
 
-    # Run the event loop and dispatch events back to Ruby
+    # Run the event loop and dispatch events back to Ruby.  If there
+    # are no watchers associated with the event loop it will return
+    # immediately.  Otherwise, run will continue blocking and making
+    # event callbacks to watchers until all watchers associated with
+    # the loop have been disabled or detached.  The loop may be 
+    # explicitly stopped by calling the stop method on the loop object.
     def run
       raise RuntimeError, "no watchers for this loop" if @watchers.empty?
 
@@ -70,6 +75,7 @@ module Rev
 
     # Stop the event loop if it's running
     def stop
+      raise RuntimeError, "loop not running" unless @running
       @running = false
     end
     
