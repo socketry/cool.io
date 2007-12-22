@@ -98,8 +98,16 @@ module Rev
     
     # Perform a non-blocking connect to the given host and port
     def self.connect(addr, port, *args)
-      if family = address_family(addr)
-        return super(TCPConnectSocket.new(addr, port, family), *args)
+      family = nil
+
+      if (Resolv::IPv4.create(addr) rescue nil)
+        family = ::Socket::AF_INET
+      elsif(Resolv::IPv6.create(addr) rescue nil)
+        family = ::Socket::AF_INET6
+      end
+ 
+      if family
+        return super(TCPConnectSocket.new(family, addr, port), *args)
       end
 
       if host = Rev::DNSResolver.hosts(addr)
@@ -107,17 +115,9 @@ module Rev
       end
 
       return allocate.instance_eval {
+        @remote_host, @remote_addr, @remote_port = addr, addr, port
         @resolver = TCPConnectResolver.new(self, addr, port, *args)
       }
-    end
-
-    # Determine the family of an address
-    def self.address_family(addr)
-      if (Resolv::IPv4.create(addr) rescue nil)
-        ::Socket::AF_INET
-      elsif(Resolv::IPv6.create(addr) rescue nil)
-        ::Socket::AF_INET6
-      end
     end
     
     def initialize(socket)
@@ -171,8 +171,8 @@ module Rev
     #########
 
     class TCPConnectSocket < ::Socket
-      def initialize(addr, port, family)
-        @addr, @port = addr, port
+      def initialize(family, addr, port, host = addr)
+        @host, @addr, @port = host, addr, port
         @address_family = nil
 
         @socket = super(family, ::Socket::SOCK_STREAM, 0)
@@ -186,7 +186,7 @@ module Rev
         [
           @address_family == ::Socket::AF_INET ? 'AF_INET' : 'AF_INET6',
           @port,
-          @addr,
+          @host,
           @addr
         ]
       end
@@ -194,20 +194,16 @@ module Rev
 
     class TCPConnectResolver < Rev::DNSResolver
       def initialize(socket, host, port, *args)
-        @sock, @port, @args = socket, port, args
+        @sock, @host, @port, @args = socket, host, port, args
         super(host)
       end
 
       def on_success(addr)
-        unless family = TCPSocket.address_family(addr)
-          @sock.on_connect_failed
-          unbind
-          return
-        end
+        # DNSResolver only supports IPv4 so we can safely assume an IPv4 address
 
-        port, args = @port, @args
+        host, port, args = @host, @port, @args
         @sock.instance_eval {
-          socket = TCPConnectSocket.new(addr, port, family)
+          socket = TCPConnectSocket.new(::Socket::AF_INET, addr, port, host)
           initialize(socket, *args)
           @connector = Connector.new(self, socket)
           @resolver = nil

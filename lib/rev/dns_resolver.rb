@@ -149,6 +149,9 @@ module Rev
         rdata = message[12..(12 + rdlength - 1)]
         message = message[(12+rdlength)..message.size]
 
+        # Only IPv4 supported
+        next unless rdlength == 4
+
         return rdata.unpack('CCCC').join('.') if type == 1
       end
 
