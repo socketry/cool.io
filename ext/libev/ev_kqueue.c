@@ -39,8 +39,6 @@
 void inline_speed
 kqueue_change (EV_P_ int fd, int filter, int flags, int fflags)
 {
-  struct kevent *ke;
-
   ++kqueue_changecnt;
   array_needsize (struct kevent, kqueue_changes, kqueue_changemax, kqueue_changecnt, EMPTY2);
 
@@ -145,8 +143,6 @@ kqueue_poll (EV_P_ ev_tstamp timeout)
 int inline_size
 kqueue_init (EV_P_ int flags)
 {
-  struct kevent ch, ev;
-
   /* Initalize the kernel queue */
   if ((backend_fd = kqueue ()) < 0)
     return 0;

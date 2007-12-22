@@ -1,3 +1,5 @@
+All files in libev are Copyright (C)2007 Marc Alexander Lehmann.
+
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
 met:
@@ -10,10 +12,6 @@ met:
       disclaimer in the documentation and/or other materials provided
       with the distribution.
 
-    * The name of the author may not be used to endorse or promote
-      products derived from this software without specific prior written
-      permission.
-
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -25,13 +23,3 @@ DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
 THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-NOTE: the core parts of this library are under the so-called 2-clause
-BSD style license, which is compatible with this one, but lacks the
-restriction that you must not use the name of the author(s) of those parts
-to endorse any product. So feel free to use the authors name and any
-others that helped write the core parts :)
-
-Additionally, if you embed libev, care has been taken that all embeddable
-parts are under the 2-clause BSD license as well.
-

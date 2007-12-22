@@ -56,6 +56,14 @@ extern "C" {
 #  endif
 # endif
 
+# ifndef EV_USE_NANOSLEEP
+#  if HAVE_NANOSLEEP
+#   define EV_USE_NANOSLEEP 1
+#  else
+#   define EV_USE_NANOSLEEP 0
+#  endif
+# endif
+
 # ifndef EV_USE_SELECT
 #  if HAVE_SELECT && HAVE_SYS_SELECT_H
 #   define EV_USE_SELECT 1
@@ -148,6 +156,10 @@ extern "C" {
 # define EV_USE_REALTIME 0
 #endif
 
+#ifndef EV_USE_NANOSLEEP
+# define EV_USE_NANOSLEEP 0
+#endif
+
 #ifndef EV_USE_SELECT
 # define EV_USE_SELECT 1
 #endif
@@ -209,6 +221,12 @@ extern "C" {
 # define EV_USE_INOTIFY 0
 #endif
 
+#if !EV_USE_NANOSLEEP
+# ifndef _WIN32
+#  include <sys/select.h>
+# endif
+#endif
+
 #if EV_USE_INOTIFY
 # include <sys/inotify.h>
 #endif
@@ -264,7 +282,9 @@ typedef ev_watcher *W;
 typedef ev_watcher_list *WL;
 typedef ev_watcher_time *WT;
 
-static int have_monotonic; /* did clock_gettime (CLOCK_MONOTONIC) work? */
+/* sig_atomic_t is used to avoid per-thread variables or locking but still */
+/* giving it a reasonably high chance of working on typical architetcures */
+static sig_atomic_t have_monotonic; /* did clock_gettime (CLOCK_MONOTONIC) work? */
 
 #ifdef _WIN32
 # include "ev_win32.c"
@@ -409,6 +429,33 @@ ev_now (EV_P)
   return ev_rt_now;
 }
 #endif
+
+void
+ev_sleep (ev_tstamp delay)
+{
+  if (delay > 0.)
+    {
+#if EV_USE_NANOSLEEP
+      struct timespec ts;
+
+      ts.tv_sec  = (time_t)delay;
+      ts.tv_nsec = (long)((delay - (ev_tstamp)(ts.tv_sec)) * 1e9);
+
+      nanosleep (&ts, 0);
+#elif defined(_WIN32)
+      Sleep (delay * 1e3);
+#else
+      struct timeval tv;
+
+      tv.tv_sec  = (time_t)delay;
+      tv.tv_usec = (long)((delay - (ev_tstamp)(tv.tv_sec)) * 1e6);
+
+      select (0, 0, 0, 0, &tv);
+#endif
+    }
+}
+
+/*****************************************************************************/
 
 int inline_size
 array_nextsize (int elem, int cur, int cnt)
@@ -927,9 +974,13 @@ ev_recommended_backends (void)
 unsigned int
 ev_embeddable_backends (void)
 {
-  return EVBACKEND_EPOLL
-       | EVBACKEND_KQUEUE
-       | EVBACKEND_PORT;
+  int flags = EVBACKEND_EPOLL | EVBACKEND_KQUEUE | EVBACKEND_PORT;
+
+  /* epoll embeddability broken on all linux versions up to at least 2.6.23 */
+  /* please fix it and tell me how to detect the fix */
+  flags &= ~EVBACKEND_EPOLL;
+
+  return flags;
 }
 
 unsigned int
@@ -942,6 +993,18 @@ unsigned int
 ev_loop_count (EV_P)
 {
   return loop_count;
+}
+
+void
+ev_set_io_collect_interval (EV_P_ ev_tstamp interval)
+{
+  io_blocktime = interval;
+}
+
+void
+ev_set_timeout_collect_interval (EV_P_ ev_tstamp interval)
+{
+  timeout_blocktime = interval;
 }
 
 static void noinline
@@ -961,6 +1024,9 @@ loop_init (EV_P_ unsigned int flags)
       mn_now    = get_clock ();
       now_floor = mn_now;
       rtmn_diff = ev_rt_now - mn_now;
+
+      io_blocktime      = 0.;
+      timeout_blocktime = 0.;
 
       /* pid check not overridable via env */
 #ifndef _WIN32
@@ -1040,11 +1106,16 @@ loop_destroy (EV_P)
 #endif
     }
 
+  ev_free (anfds); anfdmax = 0;
+
   /* have to use the microsoft-never-gets-it-right macro */
   array_free (fdchange, EMPTY);
   array_free (timer, EMPTY);
 #if EV_PERIODIC_ENABLE
   array_free (periodic, EMPTY);
+#endif
+#if EV_FORK_ENABLE
+  array_free (fork, EMPTY);
 #endif
   array_free (prepare, EMPTY);
   array_free (check, EMPTY);
@@ -1453,39 +1524,50 @@ ev_loop (EV_P_ int flags)
 
       /* calculate blocking time */
       {
-        ev_tstamp block;
+        ev_tstamp waittime  = 0.;
+        ev_tstamp sleeptime = 0.;
 
-        if (expect_false (flags & EVLOOP_NONBLOCK || idleall || !activecnt))
-          block = 0.; /* do not block at all */
-        else
+        if (expect_true (!(flags & EVLOOP_NONBLOCK || idleall || !activecnt)))
           {
             /* update time to cancel out callback processing overhead */
             time_update (EV_A_ 1e100);
 
-            block = MAX_BLOCKTIME;
+            waittime = MAX_BLOCKTIME;
 
             if (timercnt)
               {
                 ev_tstamp to = ((WT)timers [0])->at - mn_now + backend_fudge;
-                if (block > to) block = to;
+                if (waittime > to) waittime = to;
               }
 
 #if EV_PERIODIC_ENABLE
             if (periodiccnt)
               {
                 ev_tstamp to = ((WT)periodics [0])->at - ev_rt_now + backend_fudge;
-                if (block > to) block = to;
+                if (waittime > to) waittime = to;
               }
 #endif
 
-            if (expect_false (block < 0.)) block = 0.;
+            if (expect_false (waittime < timeout_blocktime))
+              waittime = timeout_blocktime;
+
+            sleeptime = waittime - backend_fudge;
+
+            if (expect_true (sleeptime > io_blocktime))
+              sleeptime = io_blocktime;
+
+            if (sleeptime)
+              {
+                ev_sleep (sleeptime);
+                waittime -= sleeptime;
+              }
           }
 
         ++loop_count;
-        backend_poll (EV_A_ block);
+        backend_poll (EV_A_ waittime);
 
         /* update ev_rt_now, do magic */
-        time_update (EV_A_ block);
+        time_update (EV_A_ waittime + sleeptime);
       }
 
       /* queue pending timers and reschedule them */
@@ -2179,19 +2261,43 @@ ev_check_stop (EV_P_ ev_check *w)
 void noinline
 ev_embed_sweep (EV_P_ ev_embed *w)
 {
-  ev_loop (w->loop, EVLOOP_NONBLOCK);
+  ev_loop (w->other, EVLOOP_NONBLOCK);
 }
 
 static void
-embed_cb (EV_P_ ev_io *io, int revents)
+embed_io_cb (EV_P_ ev_io *io, int revents)
 {
   ev_embed *w = (ev_embed *)(((char *)io) - offsetof (ev_embed, io));
 
   if (ev_cb (w))
     ev_feed_event (EV_A_ (W)w, EV_EMBED);
   else
-    ev_embed_sweep (loop, w);
+    ev_loop (w->other, EVLOOP_NONBLOCK);
 }
+
+static void
+embed_prepare_cb (EV_P_ ev_prepare *prepare, int revents)
+{
+  ev_embed *w = (ev_embed *)(((char *)prepare) - offsetof (ev_embed, prepare));
+
+  {
+    struct ev_loop *loop = w->other;
+
+    while (fdchangecnt)
+      {
+        fd_reify (EV_A);
+        ev_loop (EV_A_ EVLOOP_NONBLOCK);
+      }
+  }
+}
+
+#if 0
+static void
+embed_idle_cb (EV_P_ ev_idle *idle, int revents)
+{
+  ev_idle_stop (EV_A_ idle);
+}
+#endif
 
 void
 ev_embed_start (EV_P_ ev_embed *w)
@@ -2200,13 +2306,19 @@ ev_embed_start (EV_P_ ev_embed *w)
     return;
 
   {
-    struct ev_loop *loop = w->loop;
+    struct ev_loop *loop = w->other;
     assert (("loop to be embedded is not embeddable", backend & ev_embeddable_backends ()));
-    ev_io_init (&w->io, embed_cb, backend_fd, EV_READ);
+    ev_io_init (&w->io, embed_io_cb, backend_fd, EV_READ);
   }
 
   ev_set_priority (&w->io, ev_priority (w));
   ev_io_start (EV_A_ &w->io);
+
+  ev_prepare_init (&w->prepare, embed_prepare_cb);
+  ev_set_priority (&w->prepare, EV_MINPRI);
+  ev_prepare_start (EV_A_ &w->prepare);
+
+  /*ev_idle_init (&w->idle, e,bed_idle_cb);*/
 
   ev_start (EV_A_ (W)w, 1);
 }
@@ -2219,6 +2331,7 @@ ev_embed_stop (EV_P_ ev_embed *w)
     return;
 
   ev_io_stop (EV_A_ &w->io);
+  ev_prepare_stop (EV_A_ &w->prepare);
 
   ev_stop (EV_A_ (W)w);
 }
@@ -2316,6 +2429,10 @@ ev_once (EV_P_ int fd, int events, ev_tstamp timeout, void (*cb)(int revents, vo
       ev_timer_start (EV_A_ &once->to);
     }
 }
+
+#if EV_MULTIPLICITY
+  #include "ev_wrap.h"
+#endif
 
 #ifdef __cplusplus
 }

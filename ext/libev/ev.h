@@ -285,8 +285,14 @@ typedef struct ev_embed
 {
   EV_WATCHER (ev_embed)
 
-  ev_io io; /* private */
-  struct ev_loop *loop; /* ro */
+  struct ev_loop *other; /* ro */
+  ev_io io;              /* private */
+  ev_prepare prepare;    /* private */
+  ev_check check;        /* unused */
+  ev_timer timer;        /* unused */
+  ev_periodic periodic;  /* unused */
+  ev_idle idle;          /* unused */
+  ev_fork fork;          /* unused */
 } ev_embed;
 #endif
 
@@ -340,6 +346,7 @@ unsigned int ev_recommended_backends (void);
 unsigned int ev_embeddable_backends (void);
 
 ev_tstamp ev_time (void);
+void ev_sleep (ev_tstamp delay); /* sleep for a while */
 
 /* Sets the allocation function to use, works like realloc.
  * It is used to allocate and free memory.
@@ -397,8 +404,8 @@ void ev_default_destroy (void); /* destroy the default loop */
 /* you can actually call it at any time, anywhere :) */
 void ev_default_fork (void);
 
-unsigned int ev_backend (EV_P);
-unsigned int ev_loop_count (EV_P);
+unsigned int ev_backend (EV_P);    /* backend in use by loop */
+unsigned int ev_loop_count (EV_P); /* number of loop iterations */
 #endif
 
 #define EVLOOP_NONBLOCK	1 /* do not block/wait */
@@ -410,6 +417,9 @@ unsigned int ev_loop_count (EV_P);
 #if EV_PROTOTYPES
 void ev_loop (EV_P_ int flags);
 void ev_unloop (EV_P_ int how); /* set to 1 to break out of event loop, set to 2 to break out of all event loops */
+
+void ev_set_io_collect_interval (EV_P_ ev_tstamp interval); /* sleep at least this time, default 0 */
+void ev_set_timeout_collect_interval (EV_P_ ev_tstamp interval); /* sleep at least this time, default 0 */
 
 /*
  * ref/unref can be used to add or remove a refcount on the mainloop. every watcher
@@ -442,7 +452,7 @@ void ev_once (EV_P_ int fd, int events, ev_tstamp timeout, void (*cb)(int revent
 #define ev_idle_set(ev)                     /* nop, yes, this is a serious in-joke */
 #define ev_prepare_set(ev)                  /* nop, yes, this is a serious in-joke */
 #define ev_check_set(ev)                    /* nop, yes, this is a serious in-joke */
-#define ev_embed_set(ev,loop_)              do { (ev)->loop = (loop_); } while (0)
+#define ev_embed_set(ev,other_)             do { (ev)->other = (other_); } while (0)
 #define ev_fork_set(ev)                     /* nop, yes, this is a serious in-joke */
 
 #define ev_io_init(ev,cb,fd,events)         do { ev_init ((ev), (cb)); ev_io_set ((ev),(fd),(events)); } while (0)
@@ -454,7 +464,7 @@ void ev_once (EV_P_ int fd, int events, ev_tstamp timeout, void (*cb)(int revent
 #define ev_idle_init(ev,cb)                 do { ev_init ((ev), (cb)); ev_idle_set ((ev)); } while (0)
 #define ev_prepare_init(ev,cb)              do { ev_init ((ev), (cb)); ev_prepare_set ((ev)); } while (0)
 #define ev_check_init(ev,cb)                do { ev_init ((ev), (cb)); ev_check_set ((ev)); } while (0)
-#define ev_embed_init(ev,cb,loop)           do { ev_init ((ev), (cb)); ev_embed_set ((ev),(loop)); } while (0)
+#define ev_embed_init(ev,cb,other)          do { ev_init ((ev), (cb)); ev_embed_set ((ev),(other)); } while (0)
 #define ev_fork_init(ev,cb)                 do { ev_init ((ev), (cb)); ev_fork_set ((ev)); } while (0)
 
 #define ev_is_pending(ev)                   (0 + ((ev_watcher *)(void *)(ev))->pending) /* ro, true when watcher is waiting for callback invocation */

@@ -3,14 +3,18 @@
 VARx(ev_tstamp, now_floor) /* last time we refreshed rt_time */
 VARx(ev_tstamp, mn_now)    /* monotonic clock "now" */
 VARx(ev_tstamp, rtmn_diff) /* difference realtime - monotonic time */
+
+VARx(ev_tstamp, io_blocktime)
+VARx(ev_tstamp, timeout_blocktime)
+
 VARx(int, backend)
 VARx(int, activecnt) /* total number of active events ("refcount") */
-VARx(unsigned int, loop_count); /* total number of loop iterations/blocks */
+VARx(unsigned int, loop_count) /* total number of loop iterations/blocks */
 
+VARx(int, backend_fd)
 VARx(ev_tstamp, backend_fudge) /* assumed typical timer resolution */
 VAR (backend_modify, void (*backend_modify)(EV_P_ int fd, int oev, int nev))
 VAR (backend_poll  , void (*backend_poll)(EV_P_ ev_tstamp timeout))
-VARx(int, backend_fd)
 
 #if !defined(_WIN32) || EV_GENWRAP
 VARx(pid_t, curpid)
