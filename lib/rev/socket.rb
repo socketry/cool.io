@@ -43,16 +43,17 @@ module Rev
       end
       
       def on_writable
+        evl = evloop
+        detach
+
         if connect_successful?
           @rev_socket.instance_eval { @connector = nil }
-          @rev_socket.attach(evloop)
+          @rev_socket.attach(evl)
           @rev_socket.on_connect
         else
           @rev_socket.instance_eval { @failed = true }
           @rev_socket.on_connect_failed
         end
-
-        detach
       end      
 
       #######
