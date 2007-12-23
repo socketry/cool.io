@@ -11,56 +11,26 @@ module Rev
       }
     end
     
+    watcher_proxy :@connector
+
     def attach(evloop)
-      if @connector        
-        raise RuntimeError, "connection failed" if @failed
-        
-        unless @connector.complete?
-          @connector.attach(evloop)
-          return self
-        end
-        
-        # Unset the connector and allow it to be GCed
-        @connector = nil
+      raise RuntimeError, "connection failed" if @failed
+      
+      if @connector
+        @connector.attach(evloop)
+        return self
       end
       
       super
     end
 
-    def detach
-      if @connector
-        @connector.detach
-        return self
-      end
-
-      super
-    end
-
-    def enable
-      if @connector
-        @connector.enable
-        return self
-      end
-
-      super
-    end
-
-    def disable
-      if @connector
-        @connector.disable
-        return self
-      end
-
-      super
-    end
-
     # Called upon completion of a socket connection
-    def on_connect
-    end
+    def on_connect; end
+    event_callback :on_connect
     
     # Called if a socket connection failed to complete
-    def on_connect_failed
-    end
+    def on_connect_failed; end
+    event_callback :on_connect_failed
     
     #########
     protected
@@ -69,32 +39,35 @@ module Rev
     class Connector < IOWatcher
       def initialize(rev_socket, ruby_socket)
         @rev_socket, @ruby_socket = rev_socket, ruby_socket
-        @failed = @complete = false        
         super(ruby_socket, :w)
       end
       
-      def complete?
-        @complete
-      end
-      
       def on_writable
-        l = evloop
-        detach
-                
-        if(@ruby_socket.getsockopt(::Socket::SOL_SOCKET, ::Socket::SO_ERROR).unpack('i').first == 0)
-          @complete = true
-          @rev_socket.attach(l)
+        if connect_successful?
+          @rev_socket.instance_eval { @connector = nil }
+          @rev_socket.attach(evloop)
           @rev_socket.on_connect
         else
-          @rev_socket.on_connect_failed
           @rev_socket.instance_eval { @failed = true }
+          @rev_socket.on_connect_failed
         end
+
+        detach
       end      
+
+      #######
+      private
+      #######
+
+      def connect_successful?
+        @ruby_socket.getsockopt(::Socket::SOL_SOCKET, ::Socket::SO_ERROR).unpack('i').first == 0
+      end
     end
   end
   
   class TCPSocket < Socket
     attr_reader :remote_host, :remote_addr, :remote_port, :address_family
+    watcher_proxy :@resolver
     
     # Perform a non-blocking connect to the given host and port
     def self.connect(addr, port, *args)
@@ -128,42 +101,6 @@ module Rev
       super
       
       @address_family, @remote_port, @remote_host, @remote_addr = socket.peeraddr  
-    end
-
-    def attach(evloop)
-      if @resolver
-        @resolver.attach(evloop)
-        return self
-      end
-
-      super
-    end
-
-    def detach
-      if @resolver
-        @resolver.detach
-        return self
-      end
-
-      super
-    end
-
-    def enable(evloop)
-      if @resolver
-        @resolver.enable
-        return self
-      end
-
-      super
-    end
-
-    def disable(evloop)
-      if @resolver
-        @resolver.disable
-        return self
-      end
-
-      super
     end
     
     #########

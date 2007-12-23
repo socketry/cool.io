@@ -24,7 +24,7 @@ module Rev
       File.open(HOSTS).each_line do |host_entry|
         entries = host_entry.gsub(/#.*$/, '').gsub(/\s+/, ' ').split(' ')
         addr = entries.shift
-        entries.each { |e| hosts[e] = addr }
+        entries.each { |e| hosts[e] ||= addr }
       end
 
       hosts[host]
@@ -57,7 +57,7 @@ module Rev
     end
 
     def detach
-      @timer.detach
+      @timer.detach if @timer.attached?
       super
     end
 
