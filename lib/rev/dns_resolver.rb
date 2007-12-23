@@ -5,7 +5,7 @@ require File.dirname(__FILE__) + '/../rev'
 #
 # Word to the wise: I don't know what I'm doing here.  This was cobbled together as
 # best I could with extremely limited knowledge of the DNS format.  There's obviously
-# a ton of stuff it doesn't support (like TCP).
+# a ton of stuff it doesn't support (like IPv6 and TCP).
 #
 # If you do know what you're doing with DNS, feel free to improve this! 
 #++
@@ -16,8 +16,8 @@ module Rev
     HOSTS = '/etc/hosts'
     DNS_PORT = 53
     DATAGRAM_SIZE = 512
-    TIMEOUT = 3
-    RETRIES = 3
+    TIMEOUT = 3 # Retry timeout for each datagram sent
+    RETRIES = 4 # Number of retries to attempt
 
     def self.hosts(host)
       hosts = {}
@@ -46,11 +46,6 @@ module Rev
     end
 
     def attach(evloop)
-      if @hostname
-        on_success @hostname
-        return self
-      end
-
       send_request
       @timer.attach(evloop)
       super
@@ -70,16 +65,16 @@ module Rev
     end
 
     # Called when the name has successfully resolved to an address
-    def on_success(address)
-    end
+    def on_success(address); end
+    event_callback :on_success
 
     # Called when we receive a response indicating the name didn't resolve
-    def on_failure
-    end
+    def on_failure; end
+    event_callback :on_failure
 
     # Called if we don't receive a response
-    def on_timeout
-    end
+    def on_timeout; end
+    event_callback :on_failure
 
     # Send a request to the DNS server
     def send_request
@@ -170,7 +165,7 @@ module Rev
         return @resolver.send_request if @attempts <= RETRIES 
         
         @resolver.on_timeout
-        detach
+        @resolver.detach
       end
     end
   end
