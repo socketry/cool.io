@@ -6,7 +6,7 @@ module Rev
     # if it is presently assigned.  This is useful if you are waiting for
     # an event to occur before the current watcher can be used in earnest,
     # such as making an outgoing TCP connection.
-    def self.watcher_proxy(proxy_var)
+    def self.watcher_delegate(proxy_var)
       %w{attach detach enable disable}.each do |method|
         module_eval <<-EOD
           def #{method}(*args)

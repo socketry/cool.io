@@ -3,16 +3,22 @@ require File.dirname(__FILE__) + '/../rev'
 
 module Rev
   class Listener < IOWatcher
-    # Listener yields new connections to the block passed to it
-    def attach(evloop, &callback)
-      raise ArgumentError, "no block given" unless block_given?
-      @callback = callback
-      super(evloop)
+    def initialize(listen_socket)
+      @listen_socket = listen_socket
+      super(@listen_socket)
     end
+
+    # Called whenever the server receives a new connection
+    def on_connection(socket); end
+    event_callback :on_connection
+
+    #########
+    protected
+    #########
 
     # Rev callback for handling new connections
     def on_readable
-      @callback.(@listen_socket.accept_nonblock)
+      on_connection @listen_socket.accept_nonblock
     end
   end
 
@@ -21,9 +27,9 @@ module Rev
     #
     # Accepts the same arguments as TCPServer.new
     def initialize(*args)
-      @listen_socket = ::TCPServer.new(*args)
-      @listen_socket.instance_eval { listen(1024) }
-      super(@listen_socket)
+      listen_socket = ::TCPServer.new(*args)
+      listen_socket.instance_eval { listen(1024) } # Change listen backlog to 1024
+      super(listen_socket)
     end
   end
 
@@ -32,8 +38,7 @@ module Rev
     #
     # Accepts the same arguments as UNIXServer.new
     def initialize(*args)
-      @listen_socket = ::UNIXServer.new(*args)
-      super(@listen_socket)
+      super(::UNIXServer.new(*args))
     end
   end
 end

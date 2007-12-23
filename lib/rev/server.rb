@@ -1,10 +1,8 @@
 require File.dirname(__FILE__) + '/../rev'
 
 module Rev
-  class Server
-    def initialize(listener, klass = Socket, *args)
-      raise TypeError, "can't convert #{listener.class} into Rev::Listener" unless listener.is_a? Listener
-      
+  class Server < Listener
+    def initialize(listen_socket, klass = Socket, *args, &block)
       # Ensure the provided class responds to attach
       unless (klass.instance_method(:attach) rescue nil)
         raise ArgumentError, "provided class must respond to 'attach'"
@@ -17,24 +15,33 @@ module Rev
       if (arity >= 0 and args.size + 1 != expected) or (arity < 0 and args.size + 1 < expected)
         raise ArgumentError, "wrong number of arguments for #{klass}#initialize (#{args.size+1} for #{expected})" 
       end
-      
-      @listener, @klass, @args = listener, klass, args
+     
+      @klass, @args, @block = klass, args, block
+      super(listen_socket)
     end
 
-    def attach(evloop)
-      @listener.attach(evloop) { |socket| @klass.new(socket, *@args).attach(evloop).on_connect }
+    #########
+    protected
+    #########
+    
+    def on_connection(socket)
+      connection = @klass.new(socket, *@args).attach(evloop)
+      connection.on_connect
+      @block.(connection) if @block
     end
   end
 
   class TCPServer < Server
-    def initialize(host, port, klass = TCPSocket, *args)
-      super(TCPListener.new(host, port), klass, *args)
+    def initialize(host, port, klass = TCPSocket, *args, &block)
+      listen_socket = ::TCPServer.new(host, port)
+      listen_socket.instance_eval { listen(1024) } # Change listen backlog to 1024
+      super(listen_socket, klass, *args, &block)
     end
   end
 
   class UNIXServer < Server
-    def initialize(path, klass = UNIXSocket, *args)
-      super(UNIXListener.new(path), klass, *args)
+    def initialize(path, klass = UNIXSocket, *args, &block)
+      super(::UNIXServer.new(*args), klass, *args, &block)
     end
   end
 end

@@ -1,11 +1,10 @@
 require File.dirname(__FILE__) + '/../lib/rev'
 
+ADDR = '127.0.0.1'
 PORT = 4321
 
 class EchoServerConnection < Rev::TCPSocket
-  def initialize(socket)
-    super
-
+  def on_connect
     puts "Received connection from #{remote_addr}:#{remote_port}"
   end
 
@@ -19,7 +18,7 @@ class EchoServerConnection < Rev::TCPSocket
 end
 
 event_loop = Rev::Loop.new
-Rev::TCPServer.new('localhost', PORT, EchoServerConnection).attach(event_loop)
+Rev::TCPServer.new(ADDR, PORT, EchoServerConnection).attach(event_loop)
 
-puts "Echo server listening on port #{PORT}"
+puts "Echo server listening on #{ADDR}:#{PORT}"
 event_loop.run

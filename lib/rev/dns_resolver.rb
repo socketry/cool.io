@@ -56,12 +56,10 @@ module Rev
       super
     end
 
-    # Called by the subclass when the DNS response is available
-    def on_readable
-      datagram = @socket.recvfrom(DATAGRAM_SIZE).first
-      address = response_address datagram rescue nil
-      address ? on_success(address) : on_failure
-      detach
+    # Send a request to the DNS server
+    def send_request
+      @socket.connect @nameservers.first, DNS_PORT
+      @socket.send @request, 0
     end
 
     # Called when the name has successfully resolved to an address
@@ -76,15 +74,17 @@ module Rev
     def on_timeout; end
     event_callback :on_failure
 
-    # Send a request to the DNS server
-    def send_request
-      @socket.connect @nameservers.first, DNS_PORT
-      @socket.send @request, 0
-    end
-
     #########
     protected
     #########
+    
+    # Called by the subclass when the DNS response is available
+    def on_readable
+      datagram = @socket.recvfrom_nonblock(DATAGRAM_SIZE).first
+      address = response_address datagram rescue nil
+      address ? on_success(address) : on_failure
+      detach
+    end
 
     def request_message(hostname)
       # Standard query header

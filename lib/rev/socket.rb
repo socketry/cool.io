@@ -11,7 +11,7 @@ module Rev
       }
     end
     
-    watcher_proxy :@connector
+    watcher_delegate :@connector
 
     def attach(evloop)
       raise RuntimeError, "connection failed" if @failed
@@ -68,7 +68,7 @@ module Rev
   
   class TCPSocket < Socket
     attr_reader :remote_host, :remote_addr, :remote_port, :address_family
-    watcher_proxy :@resolver
+    watcher_delegate :@resolver
     
     # Perform a non-blocking connect to the given host and port
     def self.connect(addr, port, *args)
@@ -137,10 +137,10 @@ module Rev
       end
 
       def on_success(addr)
-        # DNSResolver only supports IPv4 so we can safely assume an IPv4 address
-
         host, port, args = @host, @port, @args
+
         @sock.instance_eval {
+          # DNSResolver only supports IPv4 so we can safely assume an IPv4 address
           socket = TCPConnectSocket.new(::Socket::AF_INET, addr, port, host)
           initialize(socket, *args)
           @connector = Connector.new(self, socket)
