@@ -34,7 +34,7 @@ module Rev
               return
             end
 
-            @#{method}_callback.(*args) if @#{method}_callback
+            @#{method}_callback.(*([self] + args)) if @#{method}_callback
           end
         EOD
       end

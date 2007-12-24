@@ -72,7 +72,7 @@ module Rev
 
     # Called if we don't receive a response
     def on_timeout; end
-    event_callback :on_failure
+    event_callback :on_timeout
 
     #########
     protected

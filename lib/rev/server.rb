@@ -26,8 +26,8 @@ module Rev
     
     def on_connection(socket)
       connection = @klass.new(socket, *@args).attach(evloop)
-      connection.on_connect
       @block.(connection) if @block
+      connection.on_connect
     end
   end
 

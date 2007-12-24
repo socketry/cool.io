@@ -12,31 +12,20 @@ module Rev
     end
 
     #
-    # Inherited callback from IOWatcher
-    #
-    def on_readable
-      begin
-        on_read @io.read_nonblock(4096)
-      rescue EOFError
-        close
-      end
-    end
-    
-    #
     # Callbacks for asynchronous events
     #
 
     # Called whenever the IO object receives data
-    def on_read(data)
-    end
+    def on_read(data); end
+    event_callback :on_read
 
     # Called whenever a write completes and the output buffer is empty
-    def on_write_complete
-    end
+    def on_write_complete; end
+    event_callback :on_write_complete
 
     # Called whenever the IO object hits EOF
-    def on_close
-    end
+    def on_close; end
+    event_callback :on_close
 
     #
     # Write interface
@@ -95,6 +84,15 @@ module Rev
     protected
     #########
     
+    # Inherited callback from IOWatcher
+    def on_readable
+      begin
+        on_read @io.read_nonblock(4096)
+      rescue EOFError
+        close
+      end
+    end
+     
     def schedule_write
       return if @writer and @writer.enabled?
       if @writer 
