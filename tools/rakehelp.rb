@@ -29,7 +29,7 @@ end
 def setup_rdoc files
     Rake::RDocTask.new do |rdoc|
         rdoc.rdoc_dir = 'doc/rdoc'
-        rdoc.options << '--line-numbers'
+        rdoc.options << '--title Rev --main README --line-numbers'
         rdoc.rdoc_files.add(files)
     end
 end
@@ -77,11 +77,12 @@ def setup_gem(pkg_name, pkg_version, author, summary, executables, test_file)
         s.summary = summary
         s.test_file = test_file
         s.has_rdoc = true
-        s.extra_rdoc_files = [ "README" ]
+        s.extra_rdoc_files = ["README", "LICENSE"] + FileList["ext/**/*.c"]
+        s.rdoc_options = %w(--title Rev --main README --line-numbers)
         s.required_ruby_version = '>= 1.9.0'
 
         s.files = %w(LICENSE README) +
-        Dir.glob("{bin,doc,test}/**/*") + 
+        Dir.glob("{lib,doc,test}/**/*") + 
         Dir.glob("ext/**/*.{h,c,rb}")
     
         s.require_path = "lib"
