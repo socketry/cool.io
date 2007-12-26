@@ -29,7 +29,7 @@ end
 def setup_rdoc files
     Rake::RDocTask.new do |rdoc|
         rdoc.rdoc_dir = 'doc/rdoc'
-        rdoc.options << '--title Rev --main README --line-numbers'
+        rdoc.options = %w{--title Rev --main README --line-numbers}
         rdoc.rdoc_files.add(files)
     end
 end
