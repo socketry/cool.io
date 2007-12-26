@@ -1,3 +1,9 @@
+/*
+ * Copyright (C) 2007 Tony Arcieri
+ * You may redistribute this under the terms of the Ruby license.
+ * See LICENSE for details
+ */
+
 #include "ruby.h"
 
 #define EV_STANDALONE 1
