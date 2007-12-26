@@ -22,4 +22,4 @@ setup_extension("rev", "rev_ext")
 
 summary = "Ruby 1.9 binding to the libev high performance event library"
 test_file = "spec/rev_spec.rb"
-setup_gem("rev", "0.1.0",  "Tony Arcieri", summary, [], test_file)
+setup_gem("rev", "0.1.1",  "Tony Arcieri", summary, [], test_file)

@@ -16,6 +16,6 @@ require File.dirname(__FILE__) + '/rev/socket'
 require File.dirname(__FILE__) + '/rev/server'
 
 module Rev
-  Rev::VERSION = '0.1.0' unless defined? Rev::VERSION
+  Rev::VERSION = '0.1.1' unless defined? Rev::VERSION
   def self.version() VERSION end
 end
