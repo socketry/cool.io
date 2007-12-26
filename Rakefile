@@ -15,10 +15,11 @@ desc "Does a full compile, test run"
 task :default => [:compile] #, :test]
 
 desc "Compiles all extensions"
-task :compile => [:rev_ext]
+task :compile => [:rev_ext, :http11_client]
 task :package => [:clean]
 
 setup_extension("rev", "rev_ext")
+setup_extension("http11_client", "http11_client")
 
 summary = "Ruby 1.9 binding to the libev high performance event library"
 test_file = "spec/rev_spec.rb"
