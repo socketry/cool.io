@@ -37,17 +37,17 @@ module Rev
     end
 
     def initialize(hostname, *nameservers)
-      if nameservers.nil? or nameservers.empty?
+      if nameservers.empty?
         nameservers = File.read(RESOLV_CONF).scan(/^\s*nameserver\s+([0-9.:]+)/).flatten
         raise RuntimeError, "no nameservers found in #{RESOLV_CONF}" if nameservers.empty?
       end
 
       @nameservers = nameservers
-      @request = request_message hostname
       @question = request_question hostname
 
       @socket = UDPSocket.new
       @timer = Timeout.new(self)
+      
       super(@socket)
     end
 
@@ -65,7 +65,7 @@ module Rev
     # Send a request to the DNS server
     def send_request
       @socket.connect @nameservers.first, DNS_PORT
-      @socket.send @request, 0
+      @socket.send request_message, 0
     end
 
     # Called when the name has successfully resolved to an address
@@ -83,7 +83,7 @@ module Rev
     #########
     protected
     #########
-    
+
     # Called by the subclass when the DNS response is available
     def on_readable
       datagram = @socket.recvfrom_nonblock(DATAGRAM_SIZE).first
@@ -92,23 +92,9 @@ module Rev
       detach
     end
 
-    def request_message(hostname)
-      # Standard query header
-      message = "\000\002\001\000"
-
-      # One entry
-      qdcount = 1
-
-      # No answer, authority, or additional records
-      ancount = nscount = arcount = 0 
-
-      message << [qdcount, ancount, nscount, arcount].pack('nnnn')
-      message << request_question(hostname)
-   end
-
     def request_question(hostname)
       # Query name
-      message = hostname.split('.').map { |s| [s.size].pack('C') << s }.join + "\000"
+      message = hostname.split('.').map { |s| [s.size].pack('C') << s }.join + "\0"
 
       # Host address query
       qtype = 1
@@ -117,6 +103,20 @@ module Rev
       qclass = 1
 
       message << [qtype, qclass].pack('nn')
+    end
+
+    def request_message
+      # Standard query header
+      message = [2, 1, 0].pack('nCC')
+
+      # One entry
+      qdcount = 1
+
+      # No answer, authority, or additional records
+      ancount = nscount = arcount = 0 
+
+      message << [qdcount, ancount, nscount, arcount].pack('nnnn')
+      message << @question
     end
 
     def response_address(message)
@@ -128,7 +128,7 @@ module Rev
       qr = message[2].unpack('B1').first.to_i
       return unless qr == 1
 
-      # Check the RCODE and ensure there wasn't an error
+      # Check the RCODE (lower nibble) and ensure there wasn't an error
       rcode = message[3].unpack('B8').first[4..7].to_i(2)
       return unless rcode == 0
 
@@ -137,22 +137,23 @@ module Rev
 
       # We only asked one question
       return unless qdcount == 1
-      message = message[12..message.size] # slice! would be nice but I think I hit a 1.9 bug...
+      message.slice!(0, 12)
 
       # Make sure it's the same question
       return unless message[0..(@question.size-1)] == @question
-      message = message[@question.size..message.size]
+      message.slice!(0, @question.size)
 
       # Extract the RDLENGTH
       while not message.empty?
         type = message[2..3].unpack('n').first.to_i
         rdlength = message[10..11].unpack('n').first.to_i
         rdata = message[12..(12 + rdlength - 1)]
-        message = message[(12+rdlength)..message.size]
+        message.slice!(0, 12 + rdlength)
 
         # Only IPv4 supported
         next unless rdlength == 4
 
+        # If we got an Internet address back, return it
         return rdata.unpack('CCCC').join('.') if type == 1
       end
 
@@ -169,7 +170,7 @@ module Rev
       def on_timer
         @attempts += 1
         return @resolver.send_request if @attempts <= RETRIES 
-        
+
         @resolver.on_timeout
         @resolver.detach
       end

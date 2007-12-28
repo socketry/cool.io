@@ -69,7 +69,7 @@ module Rev
       return if @write_buffer.empty?
 
       written = @io.write_nonblock @write_buffer
-      @write_buffer.slice!(written, @write_buffer.size)
+      @write_buffer.slice!(0, written)
 
       return unless @write_buffer.empty?
 
