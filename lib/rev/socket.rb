@@ -97,6 +97,7 @@ module Rev
       return allocate.instance_eval {
         @remote_host, @remote_addr, @remote_port = addr, addr, port
         @resolver = TCPConnectResolver.new(self, addr, port, *args)
+        self
       }
     end
     
