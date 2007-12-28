@@ -28,6 +28,7 @@ static VALUE Rev_Watcher_enable(VALUE self);
 static VALUE Rev_Watcher_disable(VALUE self);
 static VALUE Rev_Watcher_evloop(VALUE self);
 static VALUE Rev_Watcher_attached(VALUE self);
+static VALUE Rev_Watcher_enabled(VALUE self);
 
 void Init_rev_watcher()
 {
@@ -42,6 +43,7 @@ void Init_rev_watcher()
   rb_define_method(cRev_Watcher, "disable", Rev_Watcher_disable, 0);
   rb_define_method(cRev_Watcher, "evloop", Rev_Watcher_evloop, 0);
   rb_define_method(cRev_Watcher, "attached?", Rev_Watcher_attached, 0);
+  rb_define_method(cRev_Watcher, "enabled?", Rev_Watcher_enabled, 0);
 }
 
 static VALUE Rev_Watcher_allocate(VALUE klass)
@@ -219,4 +221,18 @@ static VALUE Rev_Watcher_evloop(VALUE self)
 static VALUE Rev_Watcher_attached(VALUE self)
 {
   return Rev_Watcher_evloop(self) != Qnil;
+}
+
+/**
+ *  call-seq:
+ *    Rev::Watcher.enabled? -> Boolean
+ * 
+ * Is the watcher currently enabled?
+ */
+static VALUE Rev_Watcher_enabled(VALUE self)
+{
+	struct Rev_Watcher *watcher_data;
+  Data_Get_Struct(self, struct Rev_Watcher, watcher_data);
+  
+	return watcher_data->enabled ? Qtrue : Qfalse;
 }
