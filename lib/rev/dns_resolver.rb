@@ -171,7 +171,7 @@ module Rev
         @attempts += 1
         return @resolver.send_request if @attempts <= RETRIES 
 
-        @resolver.on_timeout
+        @resolver.__send__(:on_timeout)
         @resolver.detach
       end
     end
