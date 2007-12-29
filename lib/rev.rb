@@ -14,6 +14,7 @@ require File.dirname(__FILE__) + '/rev/buffered_io'
 require File.dirname(__FILE__) + '/rev/dns_resolver'
 require File.dirname(__FILE__) + '/rev/socket'
 require File.dirname(__FILE__) + '/rev/server'
+require File.dirname(__FILE__) + '/rev/http_client'
 
 module Rev
   Rev::VERSION = '0.1.1' unless defined? Rev::VERSION
