@@ -41,7 +41,7 @@ module Rev
     def write(data)
       # Attempt a zero copy write
       if @write_buffer.empty?
-        written = @io.write_nonblock data
+        written = write_nonblock data
 
         # If we lucked out and wrote out the whole buffer, return
         if written == data.size
@@ -49,12 +49,11 @@ module Rev
           return data.size
         end
 
-        # Otherwise append the remaining data to the buffer 
-        @write_buffer << data[written..data.size]
-      else
-        @write_buffer << data
+        # Otherwise slice what we wrote out and begin buffered writing
+        data.slice!(0, written) if written
       end
-
+      
+      @write_buffer << data
       schedule_write
       data.size
     end
@@ -68,8 +67,8 @@ module Rev
     def write_output_buffer
       return if @write_buffer.empty?
 
-      written = @io.write_nonblock @write_buffer
-      @write_buffer.slice!(0, written)
+      written = write_nonblock @write_buffer
+      @write_buffer.slice!(0, written) if written
 
       return unless @write_buffer.empty?
 
@@ -90,6 +89,16 @@ module Rev
     protected
     #########
     
+    # Wrapper for handling reset connections and EAGAIN
+    def write_nonblock(data)
+      begin
+        @io.write_nonblock(data)
+      rescue Errno::ECONNRESET
+        close
+      rescue Errno::EAGAIN
+      end
+    end
+
     # Inherited callback from IOWatcher
     def on_readable
       begin
