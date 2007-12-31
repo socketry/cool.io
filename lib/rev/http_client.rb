@@ -9,16 +9,61 @@ require File.dirname(__FILE__) + '/../rev'
 require File.dirname(__FILE__) + '/../http11_client'
 
 module Rev
-  class HTTPClient < TCPSocket
+  # A simple hash is returned for each request made by HttpClient with
+  # the headers that were given by the server for that request.
+  class HttpResponse < Hash
+    # The reason returned in the http response ("OK","File not found",etc.)
+    attr_accessor :http_reason
+
+    # The HTTP version returned.
+    attr_accessor :http_version
+
+    # The status code (as a string!)
+    attr_accessor :http_status
+
+    # When parsing chunked encodings this is set
+    attr_accessor :http_chunk_size
+
+    def chunk_size
+      return @chunk_size unless @chunk_size.nil?
+      @chunk_size = @http_chunk_size ? @http_chunk_size.to_i(base=16) : 0
+    end
+
+    def last_chunk?
+      chunk_size == 0
+    end
+  end
+
+  class HttpClient < TCPSocket
+    TRANSFER_ENCODING="TRANSFER_ENCODING"
+    CONTENT_LENGTH="CONTENT_LENGTH"
+    SET_COOKIE="SET_COOKIE"
+    LOCATION="LOCATION"
+    HOST="HOST"
     HTTP_REQUEST_HEADER="%s %s HTTP/1.1\r\n"
     FIELD_ENCODING = "%s: %s\r\n"
-    CRLF = "\r\n"
-    
+    REQ_CONTENT_LENGTH="Content-Length"
+    REQ_HOST="Host"
+    CHUNK_SIZE=1024 * 16
+    CRLF="\r\n"
+
+    def self.connect(addr, port = 80, *args)
+      super
+    end
+
     def initialize(socket)
       super
       
       @parser = HttpClientParser.new
-      @requested = false
+      @parser_nbytes = 0
+
+      @header_data = ''
+      @header_parsed = false
+      @response = HttpResponse.new
+
+      @chunk_header_data = ''
+      @chunk_header_parsed = false
+      @chunk_header = HttpResponse.new
     end
     
     def request(method, uri, options = {})
@@ -33,6 +78,22 @@ module Rev
       return unless @connected
       send_request
     end
+
+    # Called when response header has been received
+    def on_response_header(response)
+      puts response.http_reason, response.http_version
+      puts response.http_status, response.inspect
+      puts chunked_encoding?.to_s
+    end
+
+    # Called when part of the body has been read
+    def on_body_data(data)
+      puts data
+    end
+
+    # Called when the request has completed
+    def on_request_complete
+    end
     
     #########
     protected
@@ -44,7 +105,67 @@ module Rev
     end
     
     def on_read(data)
-      puts data
+      return parse_response_header(data) unless @header_parsed
+      decode_body(data)
+    end
+
+    def parse_response_header(data)
+      @header_data << data
+      @parser_nbytes = @parser.execute(@response, @header_data, @parser_nbytes)
+      return unless @parser.finished?
+
+      @header_parsed = true
+      process_response_header
+
+      # The remaining data is part of the body, so process it as such
+      @header_data.slice!(0, @parser_nbytes)
+      @parser_nbytes = 0
+      @parser.reset
+
+      decode_body(@header_data)
+      @header_data = ''
+    end
+
+    def process_response_header
+      on_response_header(@response)
+    end
+
+    def chunked_encoding?
+      /chunked/i === @response[TRANSFER_ENCODING]
+    end
+
+    def decode_body(data)
+      return on_body_data(data) unless chunked_encoding?
+      return parse_chunk_header(data) unless @chunk_header_parsed
+      return if @chunk_remaining.zero?
+
+      if data.size < @chunk_remaining
+        @chunk_remaining -= data.size
+        return on_body_data data
+      end
+
+      on_body_data data.slice!(0, @chunk_remaining)
+      @chunk_header_parsed = false
+      
+      parse_chunk_header data
+    end
+
+    # This is really the same as parse_response_header and should be DRYed out
+    def parse_chunk_header(data)
+      @chunk_header_data << data
+      @parser_nbytes = @parser.execute(@chunk_header, @chunk_header_data, @parser_nbytes)
+      return unless @parser.finished?
+
+      @chunk_header_parsed = true
+      @chunk_remaining = @chunk_header.chunk_size
+
+      @chunk_header_data.slice!(0, @parser_nbytes)
+      @parser_nbytes = 0
+      @parser.reset
+
+      decode_body(@chunk_header_data)
+      @chunk_header_data = ''
+      @chunk_header = HttpResponse.new
     end
     
     def send_request
@@ -61,6 +182,9 @@ module Rev
       
       # Set the User-Agent if it hasn't been specified
       head['user-agent'] ||= "Rev #{Rev::VERSION}"
+
+      # Default to Connection: close
+      head['connection'] ||= 'close'
       
       # Build the request
       request = encode_request(@method, @uri, query)

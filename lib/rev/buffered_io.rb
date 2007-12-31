@@ -8,6 +8,9 @@ require File.dirname(__FILE__) + '/../rev'
 
 module Rev
   class BufferedIO < IOWatcher
+    # Maximum number of bytes to consume at once
+    INPUT_SIZE = 16384
+
     def initialize(io)
       # Output buffer
       @write_buffer = ''
@@ -63,19 +66,6 @@ module Rev
       @write_buffer.size
     end
 
-    # Attempt to write the contents of the output buffer
-    def write_output_buffer
-      return if @write_buffer.empty?
-
-      written = write_nonblock @write_buffer
-      @write_buffer.slice!(0, written) if written
-
-      return unless @write_buffer.empty?
-
-      @writer.disable if @writer and @writer.enabled?
-      on_write_complete
-    end
-    
     # Close the BufferedIO stream
     def close
       detach if attached?
@@ -88,7 +78,20 @@ module Rev
     #########
     protected
     #########
-    
+ 
+    # Attempt to write the contents of the output buffer
+    def write_output_buffer
+      return if @write_buffer.empty?
+
+      written = write_nonblock @write_buffer
+      @write_buffer.slice!(0, written) if written
+
+      return unless @write_buffer.empty?
+
+      @writer.disable if @writer and @writer.enabled?
+      on_write_complete
+    end
+ 
     # Wrapper for handling reset connections and EAGAIN
     def write_nonblock(data)
       begin
@@ -102,7 +105,7 @@ module Rev
     # Inherited callback from IOWatcher
     def on_readable
       begin
-        on_read @io.read_nonblock(4096)
+        on_read @io.read_nonblock(INPUT_SIZE)
       rescue EOFError
         close
       end
@@ -125,7 +128,7 @@ module Rev
       end
 
       def on_writable
-        @buffered_io.write_output_buffer
+        @buffered_io.__send__(:write_output_buffer)
       end
     end
   end
