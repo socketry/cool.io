@@ -106,7 +106,7 @@ module Rev
     def on_readable
       begin
         on_read @io.read_nonblock(INPUT_SIZE)
-      rescue EOFError
+      rescue Errno::ECONNRESET, EOFError
         close
       end
     end
