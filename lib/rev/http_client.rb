@@ -41,16 +41,14 @@ module Rev
     # When parsing chunked encodings this is set
     attr_accessor :http_chunk_size
 
+    # Size of the chunk as an integer
     def chunk_size
       return @chunk_size unless @chunk_size.nil?
       @chunk_size = @http_chunk_size ? @http_chunk_size.to_i(base=16) : 0
     end
-
-    def last_chunk?
-      chunk_size == 0
-    end
   end
 
+  # Methods for building HTTP requests
   module HttpEncoding
     HTTP_REQUEST_HEADER="%s %s HTTP/1.1\r\n"
     FIELD_ENCODING = "%s: %s\r\n"
@@ -113,9 +111,22 @@ module Rev
     end
   end
 
+  # HTTP client class implemented as a subclass of Rev::TCPSocket.  Encodes
+  # requests and allows streaming consumption of the response.  Response is
+  # parsed with a Ragel-generated whitelist parser which supports chunked
+  # HTTP encoding.
+  #
+  # == Example
+  #
+  #   loop = Rev::Loop.default
+  #   client = Rev::HttpClient.connect("www.google.com").attach
+  #   client.get('/search', query: {q: 'foobar'})
+  #   loop.run
+  #
   class HttpClient < TCPSocket
     include HttpEncoding
 
+    ALLOWED_METHODS=[:put, :get, :post, :delete, :head]
     TRANSFER_ENCODING="TRANSFER_ENCODING"
     CONTENT_LENGTH="CONTENT_LENGTH"
     SET_COOKIE="SET_COOKIE"
@@ -123,6 +134,7 @@ module Rev
     HOST="HOST"
     CRLF="\r\n"
 
+    # Connect to the given server, with port 80 as the default
     def self.connect(addr, port = 80, *args)
       super
     end
@@ -140,17 +152,34 @@ module Rev
       @chunk_header = HttpChunkHeader.new
     end
 
+    # Send an HTTP request and consume the response.  
+    # Supports the following options:
+    #
+    #   head: {Key: Value}
+    #     Specify an HTTP header, e.g. {'Connection': 'close'} 
+    #
+    #   query: {Key: Value}
+    #     Specify query string parameters (auto-escaped)
+    #
+    #   cookies: {Key: Value}
+    #     Specify hash of cookies (auto-escaped)
+    #
+    #   body: String
+    #     Specify the request body (you must encode it for now)
+    #
     def request(method, uri, options = {})
       raise RuntimeError, "request already sent" if @requested
-
-      @allowed_methods = options[:allowed_methods] || [:put, :get, :post, :delete, :head]
-      raise ArgumentError, "method not supported" unless @allowed_methods.include? method.to_sym
 
       @method, @uri, @options = method, uri, options
       @requested = true
 
       return unless @connected
       send_request
+    end
+
+    def method_missing(method, *args)
+      raise NoMethodError, "method not supported" unless ALLOWED_METHODS.include? method.to_sym
+      request method, *args
     end
 
     # Called when response header has been received
@@ -176,6 +205,21 @@ module Rev
     #########
     protected
     #########
+
+    #
+    # Rev callbacks
+    #
+    
+    def on_connect
+      @connected = true
+      send_request if @method and @uri
+    end
+
+    def on_read(data)
+      until @state == :finished or @state == :invalid or data.empty?
+        @state, data = dispatch_data(@state, data)
+      end
+    end
 
     #
     # Request sending
@@ -218,32 +262,23 @@ module Rev
     end  
  
     #
-    # Rev callbacks
-    #
-    
-    def on_connect
-      @connected = true
-      send_request if @method and @uri
-    end
-
-    def on_read(data)
-      until @state == :finished or @state == :invalid or data.empty?
-        @state, data = dispatch_data(@state, data)
-      end
-    end
-
-    #
     # Response processing
     #
 
     def dispatch_data(state, data)
       case state
-      when :response_header then parse_response_header(data)
-      when :chunk_header then parse_chunk_header(data)
-      when :chunk_body then process_chunk_body(data)
-      when :chunk_footer then process_chunk_footer(data)
-      when :response_footer then process_response_footer(data)
-      when :body then process_body(data)
+      when :response_header
+        parse_response_header(data)
+      when :chunk_header
+        parse_chunk_header(data)
+      when :chunk_body
+        process_chunk_body(data)
+      when :chunk_footer
+        process_chunk_footer(data)
+      when :response_footer
+        process_response_footer(data)
+      when :body
+        process_body(data)
       else raise RuntimeError, "invalid state: #{@state}"
       end
     end
@@ -348,6 +383,14 @@ module Rev
     end
 
     def process_body(data)
+      # FIXME the proper thing to do here is probably to keep reading until
+      # the socket closes, then assume that's the end of the body, provided
+      # the server has specified Connection: close
+      if @bytes_remaining.nil?
+        on_error "no content length specified"
+        return :invalid
+      end
+
       if data.size < @bytes_remaining
         @bytes_remaining -= data.size
         on_body_data data
