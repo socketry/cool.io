@@ -177,6 +177,14 @@ module Rev
       send_request
     end
 
+    # Requests can be made through method missing by invoking the HTTP method to use, i.e.:
+    #
+    #   httpclient.get(path, options)
+    #
+    # Valid for: get, post, put, delete, head
+    #
+    # To use other HTTP methods, invoke the request method directly
+    #
     def method_missing(method, *args)
       raise NoMethodError, "method not supported" unless ALLOWED_METHODS.include? method.to_sym
       request method, *args
