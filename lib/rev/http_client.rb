@@ -244,8 +244,6 @@ module Rev
       when :chunk_footer then process_chunk_footer(data)
       when :response_footer then process_response_footer(data)
       when :body then process_body(data)
-      when :finished
-      when :invalid
       else raise RuntimeError, "invalid state: #{@state}"
       end
     end
