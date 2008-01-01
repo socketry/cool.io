@@ -70,7 +70,7 @@ module Rev
     def close
       detach if attached?
       @writer.detach if @writer and @writer.attached?
-      @io.close
+      @io.close unless @io.closed?
 
       on_close
     end
@@ -96,7 +96,7 @@ module Rev
     def write_nonblock(data)
       begin
         @io.write_nonblock(data)
-      rescue Errno::ECONNRESET
+      rescue Errno::ECONNRESET, Errno::EPIPE
         close
       rescue Errno::EAGAIN
       end
@@ -115,8 +115,13 @@ module Rev
       return if @writer and @writer.enabled?
       if @writer 
         @writer.enable
-      else 
-        @writer = Writer.new(@io, self)
+      else
+        begin
+          @writer = Writer.new(@io, self)
+        rescue IOError
+          return
+        end
+
         @writer.attach(evloop)
       end
     end
