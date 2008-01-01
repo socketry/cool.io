@@ -1,3 +1,15 @@
+0.1.1:
+
+* Added Rev::HttpClient, an asynchronous HTTP/1.1 client written on top of
+  the Rev::TCPSocket class
+
+* Imported HTTP response parser from the RFuzz project
+
+* Added exception handling for Errno::ECONNRESET and Errno::EAGAIN
+
+* Fixed bugs in buffered writer which resulted in exceptions if all data
+  couldn't be written with a nonblocking write.
+
 0.1.0:
 
 * Initial public release

@@ -68,6 +68,9 @@ core socket classes are also provided.  Among these are:
   Rev::TCPSocket (or any subclass you wish to provide) whenever an incoming
   connection is received.
 
+* Rev::HttpClient - An HTTP/1.1 client with support for chunked encoding
+  and streaming response processing through asynchronous callbacks.
+
 == Example Program
 
 Below is an example of how to write an echo server:
