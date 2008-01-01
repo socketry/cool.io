@@ -62,12 +62,6 @@ module Rev
       super
     end
 
-    # Send a request to the DNS server
-    def send_request
-      @socket.connect @nameservers.first, DNS_PORT
-      @socket.send request_message, 0
-    end
-
     # Called when the name has successfully resolved to an address
     def on_success(address); end
     event_callback :on_success
@@ -83,6 +77,12 @@ module Rev
     #########
     protected
     #########
+
+    # Send a request to the DNS server
+    def send_request
+      @socket.connect @nameservers.first, DNS_PORT
+      @socket.send request_message, 0
+    end
 
     # Called by the subclass when the DNS response is available
     def on_readable
@@ -169,7 +169,7 @@ module Rev
 
       def on_timer
         @attempts += 1
-        return @resolver.send_request if @attempts <= RETRIES 
+        return @resolver.__send__(:send_request) if @attempts <= RETRIES 
 
         @resolver.__send__(:on_timeout)
         @resolver.detach
