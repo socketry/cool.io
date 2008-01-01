@@ -268,7 +268,8 @@ module Rev
       return :response_header, '' if data.nil?
 
       unless @response_header.http_status and @response_header.http_reason
-        return on_error("no HTTP response") 
+        on_error "no HTTP response"
+        return :invalid
       end
 
       on_response_header(@response_header)
@@ -365,5 +366,5 @@ module Rev
       on_request_complete
       return :finished
     end
- end
+  end
 end
