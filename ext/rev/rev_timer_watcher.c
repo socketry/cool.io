@@ -51,7 +51,11 @@ void Init_rev_timer_watcher()
  *  call-seq:
  *    Rev::TimerWatcher.initialize(interval, repeating = false) -> Rev::TimerWatcher
  * 
- * Create a new Rev::TimerWatcher for the given IO object and add it to the given Rev::Loop
+ * Create a new Rev::TimerWatcher for the given IO object and add it to the 
+ * given Rev::Loop.  Interval defines a duration in seconds to wait for events,
+ * and can be specified as an Integer or Float.  Repeating is a boolean 
+ * indicating whether the timer is one shot or should fire on the given 
+ * interval.
  */
 static VALUE Rev_TimerWatcher_initialize(int argc, VALUE *argv, VALUE self)
 {
@@ -59,11 +63,17 @@ static VALUE Rev_TimerWatcher_initialize(int argc, VALUE *argv, VALUE self)
   struct Rev_Watcher *watcher_data;
 
 	rb_scan_args(argc, argv, "11", &interval, &repeating);
-	
+  interval = rb_convert_type(interval, T_FLOAT, "Float", "to_f");
+
   Data_Get_Struct(self, struct Rev_Watcher, watcher_data);
 
   watcher_data->dispatch_callback = Rev_TimerWatcher_dispatch_callback;
-  ev_timer_init(&watcher_data->event_types.ev_timer, Rev_TimerWatcher_libev_callback, NUM2INT(interval), repeating == Qtrue);  
+  ev_timer_init(
+      &watcher_data->event_types.ev_timer, 
+      Rev_TimerWatcher_libev_callback, 
+      RFLOAT_VALUE(interval), 
+      repeating == Qtrue ? RFLOAT_VALUE(interval) : 0
+  );  
   watcher_data->event_types.ev_timer.data = (void *)self;
 
   return Qnil;
