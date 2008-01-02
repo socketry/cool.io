@@ -23,4 +23,4 @@ setup_extension("http11_client", "http11_client")
 
 summary = "Ruby 1.9 binding to the libev high performance event library"
 test_file = "spec/rev_spec.rb"
-setup_gem("rev", "0.1.2",  "Tony Arcieri", summary, [], test_file)
+setup_gem("rev", "0.2.0",  "Tony Arcieri", summary, [], test_file)

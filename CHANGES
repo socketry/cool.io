@@ -1,3 +1,9 @@
+0.2.0:
+
+* Committed initial implementation of Revactor
+
+* Subsecond precision for Rev::TimerWatchers
+
 0.1.1:
 
 * Added Rev::HttpClient, an asynchronous HTTP/1.1 client written on top of
