@@ -42,6 +42,34 @@ module Rev
 
     # Write data in a buffered, non-blocking manner
     def write(data)
+      buffered_write data
+    end
+
+    # Number of bytes are currently in the output buffer
+    def output_buffer_size
+      @write_buffer.size
+    end
+
+    # Close the BufferedIO stream
+    def close
+      detach if attached?
+      @writer.detach if @writer and @writer.attached?
+      @io.close unless @io.closed?
+
+      on_close
+    end
+
+    # Is the IO object closed?
+    def closed?
+      @io.closed?
+    end
+
+    #########
+    protected
+    #########
+ 
+    # Buffered writer
+    def buffered_write(data)
       # Attempt a zero copy write
       if @write_buffer.empty?
         written = write_nonblock data
@@ -61,24 +89,6 @@ module Rev
       data.size
     end
 
-    # Number of bytes are currently in the output buffer
-    def output_buffer_size
-      @write_buffer.size
-    end
-
-    # Close the BufferedIO stream
-    def close
-      detach if attached?
-      @writer.detach if @writer and @writer.attached?
-      @io.close unless @io.closed?
-
-      on_close
-    end
-
-    #########
-    protected
-    #########
- 
     # Attempt to write the contents of the output buffer
     def write_output_buffer
       return if @write_buffer.empty?
