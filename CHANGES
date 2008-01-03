@@ -2,6 +2,10 @@
 
 * Committed initial implementation of Revactor
 
+* Changed event_callbacks to use instance_exec rather than passing the
+  watcher object as an argument.  Documented use of defining an event
+  callback as a block
+
 * Subsecond precision for Rev::TimerWatchers
 
 0.1.1:

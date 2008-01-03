@@ -75,17 +75,16 @@ core socket classes are also provided.  Among these are:
 
 Below is an example of how to write an echo server:
 
+  HOST = 'localhost'
   PORT = 4321
 
   class EchoServerConnection < Rev::TCPSocket
-    def initialize(socket)
-      super
-
-      puts "Received connection from #{remote_addr}:#{remote_port}"
+    def on_connect
+      puts "#{remote_addr}:#{remote_port} connected"
     end
 
     def on_close
-      puts "Connection closed from #{remote_addr}:#{remote_port}"
+      puts "#{remote_addr}:#{remote_port} disconnected"
     end
 
     def on_read(data)
@@ -93,11 +92,11 @@ Below is an example of how to write an echo server:
     end
   end
 
-  event_loop = Rev::Loop.new
-  Rev::TCPServer.new('localhost', PORT, EchoServerConnection).attach(event_loop)
+  server = Rev::TCPServer.new('localhost', PORT, EchoServerConnection)
+  server.attach(Rev::Loop.default)
 
-  puts "Echo server listening on port #{PORT}"
-  event_loop.run
+  puts "Echo server listening on #{HOST}:#{PORT}"
+  Rev::Loop.default.run
 
 Here a new observer type (EchoServerConnection) is made by subclassing an
 existing one and adding new implementations to existing event handlers.
@@ -108,3 +107,40 @@ Rev::Watcher) is created and attached to the event loop.
 Once this is done, the event loop is started with event_loop.run.  This method
 will block until there are no active watchers for the loop or the loop is
 stopped explicitly with event_loop.stop.
+
+== Defining Callbacks at Runtime
+
+It's often tedious to subclass in order to just change one callback.  Rev 
+gives you the ability to change event callbacks on the fly (provided you
+haven't overridden them in a subclass).  This is especially useful for small
+one off programs or just experimenting with the API.
+
+Any callback (methods prefixed with on_*) can be set on the fly by passing it
+a block.
+
+Below is an example of using this syntax.  It implements an echo server
+identical to the one above:
+
+  HOST = '127.0.0.1'
+  PORT = 4321
+
+  server = Rev::TCPServer.new(ADDR, PORT) do |c|
+    c.on_connect { puts "#{remote_addr}:#{remote_port} connected" }
+    c.on_close   { puts "#{remote_addr}:#{remote_port} disconnected" }
+    c.on_read    { |data| write data }
+  end
+
+  server.attach(Rev::Loop.default)
+
+  puts "Echo server listening on #{HOST}:#{PORT}"
+  Rev::Loop.default.run
+
+As you can see, it provides a more concise (albeint slightly slower) 
+expression of the same server as above, without the need to subclass.
+
+Rev::TCPServer will automatically yield new connections if a block is
+given.  In this case the "c" variable being passed to the block is
+a new instance of Rev::TCPSocket representing the newly created connection.
+
+The above example sets the on_connect, on_close, and on_read callbacks each
+time a new connection is created.
