@@ -40,7 +40,7 @@ module Rev
               return
             end
 
-            @#{method}_callback.(*([self] + args)) if @#{method}_callback
+            instance_exec(*args, &@#{method}_callback) if @#{method}_callback
           end
         EOD
       end
