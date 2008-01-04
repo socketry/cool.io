@@ -24,6 +24,8 @@ require 'fiber'
 # additional features will not get in the way of Rubinius / Rev compatibility.
 #
 class Actor < Fiber
+  # Actor::ANY can be used in a filter match any message
+  ANY = Object unless defined? Actor::ANY
   @@registered = {}
 
   class << self
@@ -32,12 +34,18 @@ class Actor < Fiber
     # Create a new Actor with the given block and arguments
     def new(*args, &block)
       raise ArgumentError, "no block given" unless block
-      actor = super(&block)
+      actor = super do 
+        block.call(*args)
+        Fiber.current.instance_eval { @dead = true }
+      end
 
       # For whatever reason #initialize is never called in subclasses of Fiber
-      actor.instance_eval { @mailbox = Mailbox.new; initialize(*args, &block) }
-      
-      Scheduler << [actor, args]
+      actor.instance_eval do 
+        @dead = false
+        @mailbox = Mailbox.new
+      end
+
+      Scheduler << actor
       actor
     end
     
@@ -84,8 +92,13 @@ class Actor < Fiber
     end
   end
   
+  # Is the current actor dead?
+  def dead?; @dead; end
+  
   # Send a message to an actor
   def <<(message)
+    raise RuntimeError, "actor is dead" if dead?
+    
     @mailbox << message
     Scheduler << self
     message
@@ -114,7 +127,7 @@ class Actor < Fiber
         while not @@queue.empty?
           run_queue = @@queue
           @@queue = []
-          run_queue.each { |actor, args| args ||= []; actor.resume(*args) }
+          run_queue.each { |actor| actor.resume }
           Rev::Loop.default.run unless Rev::Loop.default.watchers.empty?
         end
         @@running = false
