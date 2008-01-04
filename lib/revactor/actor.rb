@@ -53,6 +53,17 @@ class Actor < Fiber
     
     alias_method :spawn, :new
     
+    # This will be defined differently in the future, but now the two are the same
+    alias_method :start, :new
+    
+    # Obtain a handle to the current Actor
+    def current
+      actor = super
+      raise ActorError, "current Fiber is not an Actor" unless actor.is_a? Actor
+      
+      actor 
+    end
+    
     # Wait for messages matching a given filter.  The filter object is yielded
     # to be block passed to receive.  You can then invoke the when argument
     # which takes a parameter and a block.  Messages are compared (using ===)
