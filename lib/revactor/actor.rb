@@ -7,6 +7,8 @@
 require File.dirname(__FILE__) + '/../rev'
 require 'fiber'
 
+class ActorError < StandardError; end
+
 # Actors are lightweight concurrency primitives which communiucate via message
 # passing.  Each actor has a mailbox which it scans for matching messages.
 # An actor sleeps until it receives a message, at which time it scans messages
@@ -23,7 +25,7 @@ require 'fiber'
 # actor dictionary (used for networking functionality).  Hopefully these 
 # additional features will not get in the way of Rubinius / Rev compatibility.
 #
-class Actor < Fiber
+class Actor < Fiber  
   # Actor::ANY can be used in a filter match any message
   ANY = Object unless defined? Actor::ANY
   @@registered = {}
@@ -61,7 +63,7 @@ class Actor < Fiber
     # filters match then the actor sleeps.
     def receive(&filter)
       unless current.is_a?(Actor)
-        raise RuntimeError, "receive must be called in the context of an Actor"
+        raise ActorError, "receive must be called in the context of an Actor"
       end
 
       current.instance_eval { @mailbox.receive(&filter) }
@@ -97,7 +99,7 @@ class Actor < Fiber
   
   # Send a message to an actor
   def <<(message)
-    raise RuntimeError, "actor is dead" if dead?
+    raise ActorError, "actor is dead" if dead?
     
     @mailbox << message
     Scheduler << self
@@ -211,7 +213,7 @@ class Actor < Fiber
       end
 
       def after(timeout, &action)
-        raise RuntimeError, "timeout already specified" if @mailbox.timer
+        raise ArgumentError, "timeout already specified" if @mailbox.timer
         @mailbox.timer = Timer.new(timeout, Actor.current)
         @mailbox.timer.attach(Rev::Loop.default)
         @ruleset << [:timeout, action]
