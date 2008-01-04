@@ -39,8 +39,10 @@ module Rev
               @#{method}_callback = block
               return
             end
-
-            instance_exec(*args, &@#{method}_callback) if @#{method}_callback
+            
+            if @#{method}_callback
+              instance_exec(*args, &@#{method}_callback) 
+            end
           end
         EOD
       end
