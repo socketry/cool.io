@@ -29,24 +29,19 @@ class Actor < Fiber
   class << self
     include Enumerable
 
-    # Start the Actor scheduler and create an actor within the given block
-    def start(&routine)
-      Actor.spawn(&routine)
-      Scheduler.run
-      nil
-    end
-
     # Create a new Actor with the given block and arguments
-    def spawn(*args, &routine)
-      raise ArgumentError, "no block given" unless routine
-      actor = new &routine
+    def new(*args, &block)
+      raise ArgumentError, "no block given" unless block
+      actor = super(&block)
 
       # For whatever reason #initialize is never called in subclasses of Fiber
-      actor.instance_eval { @mailbox = Mailbox.new }
+      actor.instance_eval { @mailbox = Mailbox.new; initialize(*args, &block) }
       
       Scheduler << [actor, args]
       actor
     end
+    
+    alias_method :spawn, :new
     
     # Wait for messages matching a given filter.  The filter object is yielded
     # to be block passed to receive.  You can then invoke the when argument
@@ -88,7 +83,7 @@ class Actor < Fiber
       @@registered.each(&block)
     end
   end
-
+  
   # Send a message to an actor
   def <<(message)
     @mailbox << message
