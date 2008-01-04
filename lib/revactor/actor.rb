@@ -78,6 +78,11 @@ class Actor < Fiber
       @@registered[key]
     end
 
+    # Delete an actor from the global dictionary
+    def delete(key, &block)
+      @@registered.delete(key, &block)
+    end
+
     # Iterate over the actors in the global dictionary
     def each(&block)
       @@registered.each(&block)
