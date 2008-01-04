@@ -6,6 +6,5 @@
 
 require File.dirname(__FILE__) + '/rev'
 require File.dirname(__FILE__) + '/revactor/actor'
-
-module Revactor
-end
+require File.dirname(__FILE__) + '/revactor/server'
+require File.dirname(__FILE__) + '/revactor/behaviors/server'

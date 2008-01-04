@@ -4,7 +4,7 @@
 # See file LICENSE for details
 #++
 
-require File.dirname(__FILE__) + '/../rev'
+require File.dirname(__FILE__) + '/../revactor'
 require 'fiber'
 
 class ActorError < StandardError; end
@@ -99,7 +99,9 @@ class Actor < Fiber
   
   # Send a message to an actor
   def <<(message)
-    raise ActorError, "actor is dead" if dead?
+    # Erlang discards messages sent to dead actors, and if Erlang does it,
+    # it must be the right thing to do, right?
+    return message if dead?
     
     @mailbox << message
     Scheduler << self

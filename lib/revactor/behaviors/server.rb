@@ -17,9 +17,9 @@ module Revactor
       # Initialize the server state.  Can return:
       #
       #   start(*args) 
-      #     -> Tuple[:ok, state]
-      #     -> Tuple[:ok, state, timeout]
-      #     -> Tuple[:stop, reason]
+      #     -> [:ok, state]
+      #     -> [:ok, state, timeout]
+      #     -> [:stop, reason]
       #
       # The state variable allows you to provide a set of state whose mutation
       # can be controlled a lot more closely than is possible with standard
@@ -36,12 +36,12 @@ module Revactor
       # behavior: the callee will block until this method completss and a
       # reply is sent back to them.  Can return:
       #
-      #   handle_call(state, from, message, *args)
+      #   handle_call(message, from, state)
       #     -> [:reply, reply, new_state]
       #     -> [:reply, reply, new_state, timeout]
       #     -> [:noreply, new_state]
       #     -> [:noreply, new_state, timeout]
-      #     -> [:stop, reason, reply, state]
+      #     -> [:stop, reason, reply, new_state]
       #
       def handle_call(message, from, state)
         return :reply, :ok, state
@@ -52,7 +52,7 @@ module Revactor
       #   handle_cast(message, state)
       #     -> [:noreply, new_state]
       #     -> [:noreply, new_state, timeout]
-      #     -> [:stop, reason, state]
+      #     -> [:stop, reason, new_state]
       #
       def handle_cast(message, state)
         return :noreply, state
@@ -64,7 +64,7 @@ module Revactor
       #   handle_info(info, state)
       #     -> [:noreply, new_state]
       #     -> [:noreply, new_state, timeout]
-      #     -> [:stop, reason, state]
+      #     -> [:stop, reason, new_state]
       #
       def handle_info(info, state)
         return :noreply, state
