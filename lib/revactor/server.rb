@@ -1,3 +1,11 @@
+#--
+# Copyright (C)2007 Tony Arcieri
+# You can redistribute this under the terms of the Ruby license
+# See file LICENSE for details
+#++
+
+require File.dirname(__FILE__) + '/../revactor'
+
 module Revactor
   # Revactor::Server wraps an Actor's receive loop and issues callbacks to
   # a class which implements Revactor::Behaviors::Server.  It eases the
@@ -10,22 +18,42 @@ module Revactor
   #
   # The design is modeled off Erlang/OTP's gen_server
   class Server
+    class << self
+      # Construct a call message
+      def call_message(message, from = Actor.current)
+        [:call, from, message]
+      end
+      
+      # Construct a call reply message
+      def call_reply_message(message, actor = Actor.current)
+        [:call_reply, from, message]
+      end
+      
+      # Construct a call error message
+      def call_error_message(message, from = Actor.current)
+        [:call_error, from, message]
+      end
+    end
+    
     # How long to wait for a response to a call before timing out
     # This value also borrowed from Erlang
     DEFAULT_CALL_TIMEOUT = 5
     
-    def initialize(obj, *args)
+    def initialize(obj, options = {}, *args)
       @obj = obj
       @actor = Actor.new(&method(:start).to_proc)
+      
+      Actor[options[:register]] = @actor if options[:register]
       
       @timeout = nil
       @state = obj.start(*args)
     end
     
+    # Call the server with the given message
     def call(message, options = {})
       options[:timeout] ||= DEFAULT_CALL_TIMEOUT
       
-      @actor << [:call, Actor.current, message]
+      @actor << Server.call_message(message)
       Actor.receive do |filter|
         filter.when(proc {|m| m[0] == :call_reply and m[1] == @actor}) { |m| m[3] }
         filter.when(proc {|m| m[0] == :call_error and m[1] == @actor}) { |m| raise m[3] }
@@ -33,12 +61,10 @@ module Revactor
       end
     end
     
+    # Send a cast to the server
     def cast(message)
       @actor << [:cast, message]
-    end
-    
-    def method_missing(message, *args)
-      call(args.empty? ? message : [message, *args])
+      message
     end
     
     def start
@@ -73,16 +99,16 @@ module Revactor
         case result.first
         when :reply
           _, reply, @state, @timeout = result
-          from << [:call_reply, Actor.current, reply]
+          from << Server.call_reply_message(reply)
         when :noreply
           _, @state, @timeout = result
         when :stop
           _, reason, @state = result
           stop(reason)
         end
-      rescue Exception => e
-        log_exception(e)
-        from << [:call_error, Actor.current, e]
+      rescue Exception => ex
+        log_exception(ex)
+        from << Server.call_error_message(ex)
       end
     end
     

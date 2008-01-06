@@ -38,7 +38,7 @@ class Actor < Fiber
       raise ArgumentError, "no block given" unless block
       actor = super do 
         block.call(*args)
-        Fiber.current.instance_eval { @dead = true }
+        Actor.current.instance_eval { @dead = true }
       end
 
       # For whatever reason #initialize is never called in subclasses of Fiber
@@ -59,7 +59,7 @@ class Actor < Fiber
     # Obtain a handle to the current Actor
     def current
       actor = super
-      raise ActorError, "current Fiber is not an Actor" unless actor.is_a? Actor
+      raise ActorError, "current fiber is not an actor" unless actor.is_a? Actor
       
       actor 
     end
@@ -139,11 +139,22 @@ class Actor < Fiber
         return if @@running
         
         @@running = true
-        while not @@queue.empty?
+        until @@queue.empty? and Rev::Loop.default.watchers.empty?
           run_queue = @@queue
           @@queue = []
-          run_queue.each { |actor| actor.resume }
-          Rev::Loop.default.run unless Rev::Loop.default.watchers.empty?
+          
+          run_queue.each do |actor|
+            begin
+              actor.resume
+            rescue FiberError # Fiber may have died since being scheduled 
+            end
+          end
+          
+          # Don't run Rev if there are still outstanding messages
+          next unless @@queue.empty?
+          
+          puts Rev::Loop.default.watchers.inspect
+          Rev::Loop.default.run_once unless Rev::Loop.default.watchers.empty?
         end
         @@running = false
       end
@@ -151,8 +162,7 @@ class Actor < Fiber
   end
 
   # Actor mailbox.  For purposes of efficiency the mailbox also handles 
-  # suspending and resuming an actor when no messages match its filter
-  # set.
+  # suspending and resuming an actor when no messages match its filter set.
   class Mailbox
     attr_accessor :timer
 
@@ -191,7 +201,7 @@ class Actor < Fiber
       end
 
       if @timer
-        @timer.disable if @timer.enabled?
+        @timer.detach if @timer.attached?
         @timer = nil
       end
       

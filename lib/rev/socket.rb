@@ -38,6 +38,10 @@ module Rev
     def on_connect_failed; end
     event_callback :on_connect_failed
     
+    # Called if a hostname failed to resolve when connecting
+    # Defaults to being aliased to on_connect_failed
+    alias_method :on_resolve_failed, :on_connect_failed
+    
     #########
     protected
     #########
@@ -157,15 +161,13 @@ module Rev
       end
 
       def on_failure
-        @sock.on_connect_failed
+        @sock.__send__(:on_resolve_failed)
         @sock.instance_eval { 
           @resolver = nil 
           @failed = true
         }
         return
       end
-
-      alias_method :on_timeout, :on_failure
     end
   end
   

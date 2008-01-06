@@ -1,6 +1,9 @@
-0.2.0:
+0.1.2:
 
-* Committed initial implementation of Revactor
+* Made backlog for Rev::TCPListener user-definable
+
+* Rev::TCPSocket now implements an on_resolve_failed callback for failed DNS
+  resolution.  By default it's aliased to on_connect_failed.
 
 * Changed event_callbacks to use instance_exec rather than passing the
   watcher object as an argument.  Documented use of defining an event

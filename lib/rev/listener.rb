@@ -29,12 +29,18 @@ module Rev
   end
 
   class TCPListener < Listener
-    # Create a new Rev::TCPListener
+    DEFAULT_BACKLOG = 1024
+    
+    # Create a new Rev::TCPListener on the specified address and port.
+    # Accepts the following options:
     #
-    # Accepts the same arguments as TCPServer.new
-    def initialize(*args)
-      listen_socket = ::TCPServer.new(*args)
-      listen_socket.instance_eval { listen(1024) } # Change listen backlog to 1024
+    #  :backlog - Max size of the pending connection queue (default 1024)
+    #
+    def initialize(addr, port, options = {})
+      options[:backlog] ||= DEFAULT_BACKLOG
+      
+      listen_socket = ::TCPServer.new(addr, port)
+      listen_socket.instance_eval { listen(options[:backlog]) }
       super(listen_socket)
     end
   end

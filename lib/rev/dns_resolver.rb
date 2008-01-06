@@ -70,9 +70,8 @@ module Rev
     def on_failure; end
     event_callback :on_failure
 
-    # Called if we don't receive a response
-    def on_timeout; end
-    event_callback :on_timeout
+    # Called if we don't receive a response, defaults to on_failure
+    alias_method :on_timeout, :on_failure
 
     #########
     protected
