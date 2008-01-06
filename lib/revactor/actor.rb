@@ -137,25 +137,20 @@ class Actor < Fiber
       
       def run
         return if @@running
-        
         @@running = true
+        
         until @@queue.empty? and Rev::Loop.default.watchers.empty?
-          run_queue = @@queue
-          @@queue = []
-          
-          run_queue.each do |actor|
+          @@queue.each do |actor|
             begin
               actor.resume
             rescue FiberError # Fiber may have died since being scheduled 
             end
           end
           
-          # Don't run Rev if there are still outstanding messages
-          next unless @@queue.empty?
-          
-          puts Rev::Loop.default.watchers.inspect
+          @@queue.clear
           Rev::Loop.default.run_once unless Rev::Loop.default.watchers.empty?
         end
+        
         @@running = false
       end
     end

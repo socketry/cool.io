@@ -117,6 +117,9 @@ module Revactor
         @controller = controller
       end
       
+      # Read data from the socket synchronously.  If a length is specified
+      # then the call blocks until the given length has been read.  Otherwise
+      # the call blocks until it has read any data.
       def read(length = nil)
         unless @read_buffer.empty?
           if length.nil?
@@ -157,6 +160,7 @@ module Revactor
         end
       end
       
+      # Write data to the socket.  The call blocks until all data has been written.
       def write(data)
         super
         
