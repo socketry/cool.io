@@ -57,6 +57,7 @@ module Rev
       @io.close unless @io.closed?
 
       on_close
+      nil
     end
 
     # Is the IO object closed?
