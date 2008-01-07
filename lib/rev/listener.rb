@@ -35,8 +35,10 @@ module Rev
     # Accepts the following options:
     #
     #  :backlog - Max size of the pending connection queue (default 1024)
+    #  :reverse_lookup - Retain BasicSocket's reverse DNS functionality (default false)
     #
     def initialize(addr, port, options = {})
+      BasicSocket.do_not_reverse_lookup = true unless options[:reverse_lookup]
       options[:backlog] ||= DEFAULT_BACKLOG
       
       listen_socket = ::TCPServer.new(addr, port)

@@ -1,5 +1,11 @@
 0.1.2:
 
+* Rev::Loop.default used to call ev_loop_default() (in C).  However, this
+  registers signal handlers which conflict with Ruby's own.  Now the behavior
+  has been changed to return a thread-local singleton of Rev::Loop.
+
+* Creating a new Rev::TCPListener will disable reverse lookups in BasicSocket
+
 * Made backlog for Rev::TCPListener user-definable
 
 * Rev::TCPSocket now implements an on_resolve_failed callback for failed DNS
