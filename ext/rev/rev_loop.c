@@ -22,7 +22,6 @@ static void Rev_Loop_mark(struct Rev_Loop *loop);
 static void Rev_Loop_free(struct Rev_Loop *loop);
 
 /* Method implementations */
-static VALUE Rev_Loop_default(VALUE klass);
 static VALUE Rev_Loop_ev_loop_new(VALUE self, VALUE flags);
 static VALUE Rev_Loop_run_once(VALUE self);
 static VALUE Rev_Loop_run_once_blocking(void *ptr);
@@ -37,8 +36,7 @@ void Init_rev_loop()
   mRev = rb_define_module("Rev");
   cRev_Loop = rb_define_class_under(mRev, "Loop", rb_cObject);
   rb_define_alloc_func(cRev_Loop, Rev_Loop_allocate);
-  rb_define_singleton_method(cRev_Loop, "default", Rev_Loop_default, 0);
-
+  
   rb_define_private_method(cRev_Loop, "ev_loop_new", Rev_Loop_ev_loop_new, 1);
   rb_define_method(cRev_Loop, "run_once", Rev_Loop_run_once, 0);
   rb_define_method(cRev_Loop, "run_nonblock", Rev_Loop_run_nonblock, 0);
@@ -76,33 +74,6 @@ static void Rev_Loop_free(struct Rev_Loop *loop)
 
   xfree(loop->eventbuf);
   xfree(loop);
-}
-
-
-/**
- *  call-seq:
- *    Rev::Loop.default -> Rev::Loop
- *
- * Retrieve a singleton instance of the default loop for the application
- */ 
-static VALUE Rev_Loop_default(VALUE klass)
-{
-  struct Rev_Loop *loop_data;
-  VALUE default_loop = rb_cv_get(klass, "@@default_loop");
-
-  if(default_loop == Qnil) {
-    default_loop = rb_obj_alloc(klass);
-    Data_Get_Struct(default_loop, struct Rev_Loop, loop_data);
-
-    loop_data->ev_loop = ev_default_loop(0);
-    loop_data->default_loop = 1;
-
-    rb_cv_set(klass, "@@default_loop", default_loop);
-    rb_iv_set(default_loop, "@active_watchers", INT2NUM(0));
-    rb_iv_set(default_loop, "@watchers", rb_ary_new());
-  }
-
-  return default_loop;
 }
 
 /* Wrapper for populating a Rev_Loop struct with a new event loop */

@@ -5,11 +5,11 @@ PORT = 4321
 
 class EchoServerConnection < Rev::TCPSocket
   def on_connect
-    puts "Received connection from #{remote_addr}:#{remote_port}"
+    puts "#{remote_addr}:#{remote_port} connected"
   end
 
   def on_close
-    puts "Connection closed from #{remote_addr}:#{remote_port}"
+    puts "#{remote_addr}:#{remote_port} disconnected"
   end
 
   def on_read(data)
@@ -17,7 +17,7 @@ class EchoServerConnection < Rev::TCPSocket
   end
 end
 
-event_loop = Rev::Loop.new
+event_loop = Rev::Loop.default
 Rev::TCPServer.new(ADDR, PORT, EchoServerConnection).attach(event_loop)
 
 puts "Echo server listening on #{ADDR}:#{PORT}"

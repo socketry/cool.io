@@ -9,6 +9,16 @@ require File.dirname(__FILE__) + '/../rev'
 module Rev
   class Loop
     attr_reader :watchers
+    
+    # Retrieve the default event loop for the current thread
+    def self.default
+      # FIXME well awesome, variables stashed in Thread.current
+      # are only accessible in the context of the Fiber where
+      # they were stored.  Can't do this for now if we want
+      # Rev to play nicely with Fibers (and we do, believe me):
+      #Thread.current[:_rev_loop] ||= Loop.new
+      @@default_loop ||= Loop.new
+    end
 
     # Create a new Rev::Loop
     #
