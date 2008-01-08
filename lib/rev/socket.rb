@@ -115,6 +115,10 @@ module Rev
       @address_family, @remote_port, @remote_host, @remote_addr = socket.peeraddr  
     end
     
+    def peeraddr
+      [@address_family, @remote_port, @remote_host, @remote_addr]
+    end
+    
     #########
     protected
     #########
