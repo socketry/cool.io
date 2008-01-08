@@ -1,5 +1,7 @@
 0.1.2:
 
+* Added Rev::Listener.close for clean shutdown of a listener
+
 * Rev::Loop.default used to call ev_loop_default() (in C).  However, this
   registers signal handlers which conflict with Ruby's own.  Now the behavior
   has been changed to return a thread-local singleton of Rev::Loop.

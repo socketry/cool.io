@@ -13,6 +13,11 @@ module Rev
       @listen_socket = listen_socket
       super(@listen_socket)
     end
+    
+    def close
+      detach if attached?
+      @listen_socket.close
+    end
 
     # Called whenever the server receives a new connection
     def on_connection(socket); end
