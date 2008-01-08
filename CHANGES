@@ -1,5 +1,7 @@
 0.1.2:
 
+* Implement Rev::TCPSocket#peeraddr to improve compatibility with Ruby sockets
+
 * Added Rev::Listener.close for clean shutdown of a listener
 
 * Rev::Loop.default used to call ev_loop_default() (in C).  However, this
