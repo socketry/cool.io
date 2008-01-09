@@ -345,7 +345,11 @@ module Rev
         return :chunk_body, ''
       end
 
-      on_body_data data.slice!(0, @bytes_remaining)
+      # Slow in Ruby 1.9 :(
+      # on_body_data data.slice!(0, @bytes_remaining)
+      on_body_data data[0..(@bytes_remaining - 1)]
+      data = data[@bytes_remaining..data.size]
+      
       @bytes_remaining = 2
       return :chunk_footer, data
     end

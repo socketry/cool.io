@@ -81,8 +81,10 @@ module Rev
           return data.size
         end
 
-        # Otherwise slice what we wrote out and begin buffered writing
-        data.slice!(0, written) if written
+        # Otherwise extract what we wrote out and begin buffered writing
+        # Note: slice! is nice, but slow in Ruby 1.9
+        # data.slice!(0, written) if written
+        data = data[written..data.size] if written
       end
       
       @write_buffer << data
@@ -95,8 +97,10 @@ module Rev
       return if @write_buffer.empty?
 
       written = write_nonblock @write_buffer
-      @write_buffer.slice!(0, written) if written
-
+      
+      # @write_buffer.slice!(0, written) if written :(
+      @write_buffer = @write_buffer[written..@write_buffer.size] if written
+      
       return unless @write_buffer.empty?
 
       @writer.disable if @writer and @writer.enabled?
