@@ -10,17 +10,17 @@
 /* Maximum age of a buffer node in a memory pool, in seconds */
 #define MAX_AGE 900
 
-struct buffer_node {
-  unsigned start, end;
-  unsigned char data[NODE_SIZE];
-  struct buffer_node *next;
-  time_t last_used_at;
-};
-
 struct buffer {
-  unsigned size;
+  unsigned size, node_size;
   struct buffer_node *head, *tail;
   struct buffer_node *pool_head, *pool_tail;
+};
+
+struct buffer_node {
+  unsigned start, end;
+  struct buffer_node *next;
+  time_t last_used_at;
+  unsigned char data[0];
 };
 
 void *xmalloc(int len)
@@ -34,6 +34,7 @@ struct buffer *buffer_new(void)
   buf = (struct buffer *)xmalloc(sizeof(struct buffer));
   buf->head = buf->tail = buf->pool_head = buf->pool_tail = 0;
   buf->size = 0;
+  buf->node_size = NODE_SIZE;
 
   return buf;
 }
@@ -106,7 +107,7 @@ struct buffer_node *buffer_node_new(struct buffer *buf)
     else
       buf->pool_tail = 0;
   } else {
-    node = (struct buffer_node *)xmalloc(sizeof(struct buffer_node));
+    node = (struct buffer_node *)xmalloc(sizeof(struct buffer_node) + buf->node_size);
     node->next = 0;
   }
 
@@ -139,9 +140,9 @@ void buffer_prepend(struct buffer *buf, char *string, unsigned len)
     buf->head = node;
     if(!buf->tail) buf->tail = node;
 
-    while(len > NODE_SIZE) {
-      memcpy(node->data, string, NODE_SIZE);
-      node->end = NODE_SIZE;
+    while(len > buf->node_size) {
+      memcpy(node->data, string, buf->node_size);
+      node->end = buf->node_size;
 
       tmp = buffer_node_new(buf);
       tmp->next = node->next;
@@ -150,8 +151,8 @@ void buffer_prepend(struct buffer *buf, char *string, unsigned len)
       if(buf->tail == node) buf->tail = tmp;
       node = tmp;
 
-      string += NODE_SIZE;
-      len -= NODE_SIZE;
+      string += buf->node_size;
+      len -= buf->node_size;
     }
 
     if(len > 0) {
@@ -167,7 +168,7 @@ void buffer_append(struct buffer *buf, char *string, unsigned len)
   buf->size += len;
 
   /* If it fits in the remaining space in the tail */
-  if(buf->tail && len <= NODE_SIZE - buf->tail->end) {
+  if(buf->tail && len <= buf->node_size - buf->tail->end) {
     memcpy(buf->tail->data + buf->tail->end, string, len);
     buf->tail->end += len;
     return;
@@ -181,7 +182,7 @@ void buffer_append(struct buffer *buf, char *string, unsigned len)
 
   /* Build links out of the data */
   while(len > 0) {
-    nbytes = NODE_SIZE - buf->tail->end;
+    nbytes = buf->node_size - buf->tail->end;
     if(len < nbytes) nbytes = len;
 
     memcpy(buf->tail->data + buf->tail->end, string, nbytes);
@@ -193,6 +194,34 @@ void buffer_append(struct buffer *buf, char *string, unsigned len)
       buf->tail = buf->tail->next;
     }
   }
+}
+
+void buffer_read(struct buffer *buf, char *string, unsigned len)
+{
+  unsigned nbytes;
+  struct buffer_node *tmp;
+  
+  while(buf->size > 0 && len > 0) {
+    nbytes = buf->head->end - buf->head->start;
+    if(len < nbytes) nbytes = len;
+
+    memcpy(string, buf->head->data, nbytes);
+    len -= nbytes;
+    buf->head->start += nbytes;
+    buf->size -= nbytes;
+
+    if(buf->head->start == buf->head->end) {
+      tmp = buf->head;
+      buf->head = tmp->next;
+
+      buffer_node_free(buf, tmp);
+    }
+  }
+}
+
+int buffer_write_to(struct buffer *buf, int sock, unsigned len)
+{
+  return 0;
 }
 
 /*
