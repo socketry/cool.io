@@ -3,6 +3,8 @@
 
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
+#include <errno.h>
 
 /* Number of bytes in each node's buffer */
 #define NODE_SIZE 65536
@@ -213,15 +215,43 @@ void buffer_read(struct buffer *buf, char *string, unsigned len)
     if(buf->head->start == buf->head->end) {
       tmp = buf->head;
       buf->head = tmp->next;
-
       buffer_node_free(buf, tmp);
     }
   }
 }
 
-int buffer_write_to(struct buffer *buf, int sock, unsigned len)
+int buffer_write_to(struct buffer *buf, int fd)
 {
-  return 0;
+  int written, total_written = 0;
+  struct buffer_node *tmp;
+
+  while(buf->head) {
+    written = write(fd, buf->head->data + buf->head->start, buf->head->end - buf->head->start);
+
+    /* If the write failed... */
+    if(written < -1) {
+      if(errno == EAGAIN)
+        errno = 0;
+
+      return total_written;
+    }
+
+    total_written += written;
+    buf->size -= written;
+
+    /* If the write blocked... */
+    if(written < buf->head->end - buf->head->start) {
+      buf->head->start += written;
+      return total_written;
+    }
+
+    /* Otherwise we wrote the whole buffer */
+    tmp = buf->head;
+    buf->head = tmp->next;
+    buffer_node_free(buf, tmp);
+  }
+
+  return total_written;
 }
 
 /*
@@ -241,6 +271,7 @@ int main()
   buffer_append(buf, "bar", 3);
   buffer_append(buf, "baz", 3);
   buffer_prepend(buf, "quux", 4);
+  buffer_write_to(buf, 1);
 
   buffer_free(buf);
   free(hugeicus);
