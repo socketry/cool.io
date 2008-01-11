@@ -15,7 +15,6 @@
 
 /* Default number of bytes in each node's buffer */
 #define DEFAULT_NODE_SIZE 65536
-#define MAX_NODE_SIZE			10 * 1024 * 1024
 
 /* Maximum age of a buffer node in a memory pool, in seconds */
 #define MAX_AGE 900
@@ -72,6 +71,7 @@ void Init_rev_buffer()
   rb_define_method(cRev_Buffer, "clear", Rev_Buffer_clear, 0);
 	rb_define_method(cRev_Buffer, "size", Rev_Buffer_size, 0);
 	rb_define_method(cRev_Buffer, "empty?", Rev_Buffer_empty, 0);
+	rb_define_method(cRev_Buffer, "<<", Rev_Buffer_append, 1);
   rb_define_method(cRev_Buffer, "append", Rev_Buffer_append, 1);
   rb_define_method(cRev_Buffer, "prepend", Rev_Buffer_prepend, 1);
   rb_define_method(cRev_Buffer, "read", Rev_Buffer_read, -1);
@@ -109,8 +109,7 @@ static VALUE Rev_Buffer_initialize(int argc, VALUE *argv, VALUE self)
 	if(rb_scan_args(argc, argv, "01", &node_size_obj) == 1) {
 		node_size = NUM2INT(node_size_obj);
 		
-		if(node_size < 1 || node_size > MAX_NODE_SIZE)
-			rb_raise(rb_eArgError, "invalid buffer size");
+		if(node_size < 1) rb_raise(rb_eArgError, "invalid buffer size");
 		
 		Data_Get_Struct(self, struct buffer, buf);
 		

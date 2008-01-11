@@ -13,7 +13,7 @@ module Rev
 
     def initialize(io)
       # Output buffer
-      @write_buffer = ''
+      @write_buffer = Rev::Buffer.new
 
       # Coerce the argument into an IO object if possible
       @io = IO.try_convert(io)
@@ -96,11 +96,7 @@ module Rev
     def write_output_buffer
       return if @write_buffer.empty?
 
-      written = write_nonblock @write_buffer
-      
-      # @write_buffer.slice!(0, written) if written :(
-      @write_buffer = @write_buffer[written..@write_buffer.size] if written
-      
+      @write_buffer.write_to(@io)
       return unless @write_buffer.empty?
 
       @writer.disable if @writer and @writer.enabled?
