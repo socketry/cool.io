@@ -69,13 +69,13 @@ void Init_rev_buffer()
 
   rb_define_method(cRev_Buffer, "initialize", Rev_Buffer_initialize, -1);
   rb_define_method(cRev_Buffer, "clear", Rev_Buffer_clear, 0);
-	rb_define_method(cRev_Buffer, "size", Rev_Buffer_size, 0);
-	rb_define_method(cRev_Buffer, "empty?", Rev_Buffer_empty, 0);
-	rb_define_method(cRev_Buffer, "<<", Rev_Buffer_append, 1);
+  rb_define_method(cRev_Buffer, "size", Rev_Buffer_size, 0);
+  rb_define_method(cRev_Buffer, "empty?", Rev_Buffer_empty, 0);
+  rb_define_method(cRev_Buffer, "<<", Rev_Buffer_append, 1);
   rb_define_method(cRev_Buffer, "append", Rev_Buffer_append, 1);
   rb_define_method(cRev_Buffer, "prepend", Rev_Buffer_prepend, 1);
   rb_define_method(cRev_Buffer, "read", Rev_Buffer_read, -1);
-	rb_define_method(cRev_Buffer, "write_to", Rev_Buffer_write_to, 1);
+  rb_define_method(cRev_Buffer, "write_to", Rev_Buffer_write_to, 1);
 }
 
 static VALUE Rev_Buffer_allocate(VALUE klass)
@@ -85,7 +85,7 @@ static VALUE Rev_Buffer_allocate(VALUE klass)
 
 static void Rev_Buffer_mark(struct buffer *buf)
 {
-	/* Walks the pool of unused chunks and frees any that are beyond a certain age */
+  /* Walks the pool of unused chunks and frees any that are beyond a certain age */
   buffer_gc(buf);
 }
 
@@ -102,25 +102,25 @@ static void Rev_Buffer_free(struct buffer *buf)
  */
 static VALUE Rev_Buffer_initialize(int argc, VALUE *argv, VALUE self)
 {
-	VALUE node_size_obj;
-	int node_size;
-	struct buffer *buf;
-	
-	if(rb_scan_args(argc, argv, "01", &node_size_obj) == 1) {
-		node_size = NUM2INT(node_size_obj);
-		
-		if(node_size < 1) rb_raise(rb_eArgError, "invalid buffer size");
-		
-		Data_Get_Struct(self, struct buffer, buf);
-		
-		/* Make sure we're not changing the buffer size after data has been allocated */
-		assert(!buf->head);
-		assert(!buf->pool_head);
-		
-		buf->node_size = node_size;
-	}
-	
-	return Qnil;
+  VALUE node_size_obj;
+  int node_size;
+  struct buffer *buf;
+
+  if(rb_scan_args(argc, argv, "01", &node_size_obj) == 1) {
+    node_size = NUM2INT(node_size_obj);
+
+    if(node_size < 1) rb_raise(rb_eArgError, "invalid buffer size");
+
+    Data_Get_Struct(self, struct buffer, buf);
+
+    /* Make sure we're not changing the buffer size after data has been allocated */
+    assert(!buf->head);
+    assert(!buf->pool_head);
+
+    buf->node_size = node_size;
+  }
+
+  return Qnil;
 }
 
 /**
@@ -131,12 +131,12 @@ static VALUE Rev_Buffer_initialize(int argc, VALUE *argv, VALUE self)
  */
 static VALUE Rev_Buffer_clear(VALUE self)
 {
-	struct buffer *buf;
-	Data_Get_Struct(self, struct buffer, buf);
-	
-	buffer_clear(buf);
-	
-	return Qnil;
+  struct buffer *buf;
+  Data_Get_Struct(self, struct buffer, buf);
+
+  buffer_clear(buf);
+
+  return Qnil;
 }
 
 /**
@@ -147,10 +147,10 @@ static VALUE Rev_Buffer_clear(VALUE self)
  */
 static VALUE Rev_Buffer_size(VALUE self) 
 {
-	struct buffer *buf;
-	Data_Get_Struct(self, struct buffer, buf);
-	
-	return INT2NUM(buf->size);
+  struct buffer *buf;
+  Data_Get_Struct(self, struct buffer, buf);
+
+  return INT2NUM(buf->size);
 }
 
 /**
@@ -161,10 +161,10 @@ static VALUE Rev_Buffer_size(VALUE self)
  */
 static VALUE Rev_Buffer_empty(VALUE self) 
 {
-	struct buffer *buf;
-	Data_Get_Struct(self, struct buffer, buf);
-	
-	return buf->size > 0 ? Qfalse : Qtrue;	
+  struct buffer *buf;
+  Data_Get_Struct(self, struct buffer, buf);
+
+  return buf->size > 0 ? Qfalse : Qtrue;	
 }
 
 /**
@@ -175,14 +175,14 @@ static VALUE Rev_Buffer_empty(VALUE self)
  */
 static VALUE Rev_Buffer_append(VALUE self, VALUE data)
 {
-	struct buffer *buf;
-	Data_Get_Struct(self, struct buffer, buf);
-	
-	/* Is this needed?  Never seen anyone else do it... */
-	data = rb_convert_type(data, T_STRING, "String", "to_str");
-	buffer_append(buf, RSTRING_PTR(data), RSTRING_LEN(data));
-	
-	return data;
+  struct buffer *buf;
+  Data_Get_Struct(self, struct buffer, buf);
+
+  /* Is this needed?  Never seen anyone else do it... */
+  data = rb_convert_type(data, T_STRING, "String", "to_str");
+  buffer_append(buf, RSTRING_PTR(data), RSTRING_LEN(data));
+
+  return data;
 }
 
 /**
@@ -193,13 +193,13 @@ static VALUE Rev_Buffer_append(VALUE self, VALUE data)
  */
 static VALUE Rev_Buffer_prepend(VALUE self, VALUE data)
 {
-	struct buffer *buf;
-	Data_Get_Struct(self, struct buffer, buf);
-	
-	data = rb_convert_type(data, T_STRING, "String", "to_str");
-	buffer_prepend(buf, RSTRING_PTR(data), RSTRING_LEN(data));
-	
-	return data;
+  struct buffer *buf;
+  Data_Get_Struct(self, struct buffer, buf);
+
+  data = rb_convert_type(data, T_STRING, "String", "to_str");
+  buffer_prepend(buf, RSTRING_PTR(data), RSTRING_LEN(data));
+
+  return data;
 }
 
 /**
@@ -212,35 +212,35 @@ static VALUE Rev_Buffer_prepend(VALUE self, VALUE data)
  */
 static VALUE Rev_Buffer_read(int argc, VALUE *argv, VALUE self)
 {
-	VALUE length_obj, str;
-	long length;
-	struct buffer *buf;
-	
-	Data_Get_Struct(self, struct buffer, buf);
-	
-	if(rb_scan_args(argc, argv, "01", &length_obj) == 1) {
-		length = NUM2INT(length_obj);
-	} else {
-		if(buf->size == 0)
-			return rb_str_new2("");
-			
-		length = buf->size;
-	}
-	
-	if(length > buf->size)
-		length = buf->size;
-		
-	if(length < 1)
-		rb_raise(rb_eArgError, "length must be greater than zero");
-		
-	str = rb_str_buf_new(length);
-	
-	/* FIXME There really has to be a better way to do this */
-	buffer_read(buf, RSTRING_PTR(str), length);
-	RSTRING(str)->as.heap.len = length; /* <-- something tells me this is bad */
-	RSTRING_PTR(str)[length] = '\0'; /* sentinel */
-	
-	return str;
+  VALUE length_obj, str;
+  long length;
+  struct buffer *buf;
+
+  Data_Get_Struct(self, struct buffer, buf);
+
+  if(rb_scan_args(argc, argv, "01", &length_obj) == 1) {
+    length = NUM2INT(length_obj);
+  } else {
+    if(buf->size == 0)
+      return rb_str_new2("");
+
+    length = buf->size;
+  }
+
+  if(length > buf->size)
+    length = buf->size;
+
+  if(length < 1)
+    rb_raise(rb_eArgError, "length must be greater than zero");
+
+  str = rb_str_buf_new(length);
+
+  /* FIXME There really has to be a better way to do this */
+  buffer_read(buf, RSTRING_PTR(str), length);
+  RSTRING(str)->as.heap.len = length; /* <-- something tells me this is bad */
+  RSTRING_PTR(str)[length] = '\0'; /* sentinel */
+
+  return str;
 }
 
 /**
@@ -252,14 +252,14 @@ static VALUE Rev_Buffer_read(int argc, VALUE *argv, VALUE self)
  * Any data which is written is removed from the buffer.
  */
 static VALUE Rev_Buffer_write_to(VALUE self, VALUE io) {
-	struct buffer *buf;
-	rb_io_t *fptr;
-	
-	Data_Get_Struct(self, struct buffer, buf);
-	GetOpenFile(rb_convert_type(io, T_FILE, "IO", "to_io"), fptr);
-	rb_io_set_nonblock(fptr);
-  
-	return INT2NUM(buffer_write_to(buf, fptr->fd));
+  struct buffer *buf;
+  rb_io_t *fptr;
+
+  Data_Get_Struct(self, struct buffer, buf);
+  GetOpenFile(rb_convert_type(io, T_FILE, "IO", "to_io"), fptr);
+  rb_io_set_nonblock(fptr);
+
+  return INT2NUM(buffer_write_to(buf, fptr->fd));
 }
 
 /*
@@ -290,15 +290,15 @@ static void buffer_clear(struct buffer *buf)
     free(tmp);
   }
 
-	buf->tail = 0;
-	buf->size = 0;
+  buf->tail = 0;
+  buf->size = 0;
 }
 
 /* Free a buffer */
 static void buffer_free(struct buffer *buf) 
 {
-	struct buffer_node *tmp;
-	
+  struct buffer_node *tmp;
+
   buffer_clear(buf);
 
   while(buf->pool_head) {
@@ -370,8 +370,8 @@ static void buffer_node_free(struct buffer *buf, struct buffer_node *node)
   node->next = buf->pool_head;
   buf->pool_head = node;
 
-	if(!buf->pool_tail)
-		buf->pool_tail = node;
+  if(!buf->pool_tail)
+    buf->pool_tail = node;
 }
 
 /* Prepend data to the front of the buffer */
@@ -452,24 +452,24 @@ static void buffer_read(struct buffer *buf, char *str, unsigned len)
 {
   unsigned nbytes;
   struct buffer_node *tmp;
-	
+
   while(buf->size > 0 && len > 0) {
     nbytes = buf->head->end - buf->head->start;
     if(len < nbytes) nbytes = len;
 
     memcpy(str, buf->head->data + buf->head->start, nbytes);
-		str += nbytes;
+    str += nbytes;
     len -= nbytes;
 
     buf->head->start += nbytes;
     buf->size -= nbytes;
-		
+
     if(buf->head->start == buf->head->end) {
       tmp = buf->head;
       buf->head = tmp->next;
       buffer_node_free(buf, tmp);
 
-			if(!buf->head) buf->tail = 0;
+      if(!buf->head) buf->tail = 0;
     }
   }
 }
@@ -505,7 +505,7 @@ static int buffer_write_to(struct buffer *buf, int fd)
     buf->head = tmp->next;
     buffer_node_free(buf, tmp);
 
-		if(!buf->head) buf->tail = 0;
+    if(!buf->head) buf->tail = 0;
   }
 
   return total_written;
