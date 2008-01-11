@@ -1,6 +1,6 @@
 0.1.2:
 
-* Totally inexplicable performance improvements... WTF?  Why is slice! slow? :(
+* Added Rev::Buffer C extension to provide high speed buffered writes
 
 * Implement Rev::TCPSocket#peeraddr to improve compatibility with Ruby sockets
 

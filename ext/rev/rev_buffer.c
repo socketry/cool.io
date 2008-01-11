@@ -266,31 +266,6 @@ static VALUE Rev_Buffer_write_to(VALUE self, VALUE io) {
  * the underlying data structures.
  */
 
-#if 0
-/* Yay fun debugging crap */
-void buffer_debug(struct buffer *buf)
-{
-	struct buffer_node *node;
-	char printbuf[DEFAULT_NODE_SIZE + 1];
-	
-	printf("\n-- head: %p tail: %p\n", buf->head, buf->tail);
-	
-	node = buf->head;
-	while(node) {
-		printf(" - node: start: %d end: %d\n", node->start, node->end);
-		
-		assert(node->end - node->start < DEFAULT_NODE_SIZE);
-		memset(printbuf, 0, DEFAULT_NODE_SIZE + 1);
-		memcpy(printbuf, node->data, node->end - node->start);
-	
-		printf("   data: %s\n", printbuf);
-		printf("   next: %p\n", node->next);
-		
-		node = node->next;
-	}
-}
-#endif
-
 static struct buffer *buffer_new(void)
 {
   struct buffer *buf;
