@@ -44,7 +44,7 @@ module Rev
 
       @nameservers = nameservers
       @question = request_question hostname
-
+      
       @socket = UDPSocket.new
       @timer = Timeout.new(self)
       

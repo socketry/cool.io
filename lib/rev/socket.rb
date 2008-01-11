@@ -9,7 +9,7 @@ require 'resolv'
 require File.dirname(__FILE__) + '/../rev'
 
 module Rev
-  class Socket < BufferedIO
+  class Socket < BufferedIO    
     def self.connect(socket, *args)
       new(socket, *args).instance_eval {
         @connector = Connector.new(self, socket)
@@ -80,6 +80,17 @@ module Rev
     attr_reader :remote_host, :remote_addr, :remote_port, :address_family
     watcher_delegate :@resolver
     
+    # Similar to .new, but used in cases where the resulting object is in a
+    # "half-open" state.  This is primarily used for when asynchronous
+    # DNS resolution is taking place.  We don't actually have a handle to
+    # the socket we want to use to create the watcher yet, since we don't
+    # know the IP address to connect to.
+    def self.precreate(*args, &block)
+      obj = allocate
+      obj.__send__(:preinitialize, *args, &block)
+      obj
+    end
+    
     # Perform a non-blocking connect to the given host and port
     def self.connect(addr, port, *args)
       family = nil
@@ -98,12 +109,16 @@ module Rev
         return connect(host, port, *args)
       end
 
-      return allocate.instance_eval {
-        @remote_host, @remote_addr, @remote_port = addr, addr, port
-        @resolver = TCPConnectResolver.new(self, addr, port, *args)
-        self
-      }
+      precreate(addr, port, *args)
     end
+    
+    # Called by precreate during asyncronous DNS resolution
+    def preinitialize(addr, port, *args)
+      @remote_host, @remote_addr, @remote_port = addr, addr, port
+      @resolver = TCPConnectResolver.new(self, addr, port, *args)
+    end
+    
+    private :preinitialize
     
     def initialize(socket)
       unless socket.is_a?(::TCPSocket) or socket.is_a?(TCPConnectSocket)
