@@ -50,6 +50,7 @@ static VALUE Rev_Buffer_empty(VALUE self);
 static VALUE Rev_Buffer_append(VALUE self, VALUE data);
 static VALUE Rev_Buffer_prepend(VALUE self, VALUE data);
 static VALUE Rev_Buffer_read(int argc, VALUE *argv, VALUE self);
+static VALUE Rev_Buffer_write_to(VALUE self, VALUE io);
 
 /* Prototypes for internal functions */
 static struct buffer *buffer_new(void);
@@ -59,7 +60,7 @@ static void buffer_gc(struct buffer *buf);
 static void buffer_prepend(struct buffer *buf, char *str, unsigned len);
 static void buffer_append(struct buffer *buf, char *str, unsigned len);
 static void buffer_read(struct buffer *buf, char *str, unsigned len);
-/* int buffer_write_to(struct buffer *buf, int fd); */
+static int buffer_write_to(struct buffer *buf, int fd);
 
 void Init_rev_buffer()
 {
@@ -74,7 +75,7 @@ void Init_rev_buffer()
   rb_define_method(cRev_Buffer, "append", Rev_Buffer_append, 1);
   rb_define_method(cRev_Buffer, "prepend", Rev_Buffer_prepend, 1);
   rb_define_method(cRev_Buffer, "read", Rev_Buffer_read, -1);
-  /* rb_define_method(cRev_Buffer, "write_to", Rev_Buffer_write_to, 1); */
+	rb_define_method(cRev_Buffer, "write_to", Rev_Buffer_write_to, 1);
 }
 
 static VALUE Rev_Buffer_allocate(VALUE klass)
@@ -171,6 +172,7 @@ static VALUE Rev_Buffer_read(int argc, VALUE *argv, VALUE self)
 	VALUE length_obj, str;
 	long length;
 	struct buffer *buf;
+	
 	Data_Get_Struct(self, struct buffer, buf);
 	
 	if(rb_scan_args(argc, argv, "01", &length_obj) == 1) {
@@ -196,6 +198,16 @@ static VALUE Rev_Buffer_read(int argc, VALUE *argv, VALUE self)
 	RSTRING_PTR(str)[length] = '\0'; /* sentinel */
 	
 	return str;
+}
+
+static VALUE Rev_Buffer_write_to(VALUE self, VALUE io) {
+	struct buffer *buf;
+	rb_io_t *fptr;
+	
+	Data_Get_Struct(self, struct buffer, buf);
+	GetOpenFile(rb_convert_type(io, T_FILE, "IO", "to_io"), fptr);
+	
+	return INT2NUM(buffer_write_to(buf, fptr->fd));
 }
 
 /*
@@ -400,7 +412,7 @@ static void buffer_read(struct buffer *buf, char *str, unsigned len)
 {
   unsigned nbytes;
   struct buffer_node *tmp;
-
+	
   while(buf->size > 0 && len > 0) {
     nbytes = buf->head->end - buf->head->start;
     if(len < nbytes) nbytes = len;
@@ -422,7 +434,6 @@ static void buffer_read(struct buffer *buf, char *str, unsigned len)
   }
 }
 
-#if 0
 static int buffer_write_to(struct buffer *buf, int fd)
 {
   int written, total_written = 0;
@@ -452,8 +463,9 @@ static int buffer_write_to(struct buffer *buf, int fd)
     tmp = buf->head;
     buf->head = tmp->next;
     buffer_node_free(buf, tmp);
+
+		if(!buf->head) buf->tail = 0;
   }
 
   return total_written;
 }
-#endif
