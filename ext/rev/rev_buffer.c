@@ -257,7 +257,8 @@ static VALUE Rev_Buffer_write_to(VALUE self, VALUE io) {
 	
 	Data_Get_Struct(self, struct buffer, buf);
 	GetOpenFile(rb_convert_type(io, T_FILE, "IO", "to_io"), fptr);
-	
+	rb_io_set_nonblock(fptr);
+  
 	return INT2NUM(buffer_write_to(buf, fptr->fd));
 }
 
@@ -266,6 +267,7 @@ static VALUE Rev_Buffer_write_to(VALUE self, VALUE io) {
  * the underlying data structures.
  */
 
+/* Create a new buffer */
 static struct buffer *buffer_new(void)
 {
   struct buffer *buf;
@@ -277,6 +279,7 @@ static struct buffer *buffer_new(void)
   return buf;
 }
 
+/* Clear all data from a buffer */
 static void buffer_clear(struct buffer *buf)
 {
   struct buffer_node *tmp;
@@ -291,6 +294,7 @@ static void buffer_clear(struct buffer *buf)
 	buf->size = 0;
 }
 
+/* Free a buffer */
 static void buffer_free(struct buffer *buf) 
 {
 	struct buffer_node *tmp;
@@ -306,10 +310,7 @@ static void buffer_free(struct buffer *buf)
   free(buf);
 }
 
-/* Run through the pool and find elements that haven't been used for awhile
- * This is the only case which is O(n) for an n sized pool.  It could be
- * O(1) if the whole implementation were switched to doubly linked lists.  
- * But uhh, honestly, who cares?  It's a stupid garbage collector */
+/* Run through the pool and find elements that haven't been used for awhile */
 static void buffer_gc(struct buffer *buf)
 {
   struct buffer_node *cur, *tmp;
@@ -337,6 +338,7 @@ static void buffer_gc(struct buffer *buf)
   }
 }
 
+/* Create a new buffer_node (or pull one from the memory pool) */
 static struct buffer_node *buffer_node_new(struct buffer *buf)
 {
   struct buffer_node *node;
@@ -359,6 +361,7 @@ static struct buffer_node *buffer_node_new(struct buffer *buf)
   return node;
 }
 
+/* Free a buffer node (i.e. return it to the memory pool) */
 static void buffer_node_free(struct buffer *buf, struct buffer_node *node)
 {
   /* Store when the node was freed */
@@ -371,6 +374,7 @@ static void buffer_node_free(struct buffer *buf, struct buffer_node *node)
 		buf->pool_tail = node;
 }
 
+/* Prepend data to the front of the buffer */
 static void buffer_prepend(struct buffer *buf, char *str, unsigned len)
 {
   struct buffer_node *node, *tmp;
@@ -408,6 +412,7 @@ static void buffer_prepend(struct buffer *buf, char *str, unsigned len)
   }
 }
 
+/* Append data to the front of the buffer */
 static void buffer_append(struct buffer *buf, char *str, unsigned len)
 {
   unsigned nbytes;
@@ -442,6 +447,7 @@ static void buffer_append(struct buffer *buf, char *str, unsigned len)
   }
 }
 
+/* Read data from the buffer (and clear what we've read) */
 static void buffer_read(struct buffer *buf, char *str, unsigned len)
 {
   unsigned nbytes;
@@ -468,6 +474,7 @@ static void buffer_read(struct buffer *buf, char *str, unsigned len)
   }
 }
 
+/* Write data from the buffer to a file descriptor */
 static int buffer_write_to(struct buffer *buf, int fd)
 {
   int written, total_written = 0;
