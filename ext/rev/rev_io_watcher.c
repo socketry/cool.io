@@ -56,27 +56,27 @@ void Init_rev_io_watcher()
  */
 static VALUE Rev_IOWatcher_initialize(int argc, VALUE *argv, VALUE self)
 {
-	VALUE io, flags;
-	char *flags_str;
-	int events;
+  VALUE io, flags;
+  char *flags_str;
+  int events;
   rb_io_t *fptr;
   struct Rev_Watcher *watcher_data;
 
-	rb_scan_args(argc, argv, "11", &io, &flags);
-	
-	if(flags != Qnil)
-		flags_str = RSTRING_PTR(rb_String(flags));
-	else
-		flags_str = "r";
-		
-	if(!strcmp(flags_str, "r"))
-		events = EV_READ;
-	else if(!strcmp(flags_str, "w"))
-		events = EV_WRITE;
-	else if(!strcmp(flags_str, "rw"))
-		events = EV_READ | EV_WRITE;
-	else
-		rb_raise(rb_eArgError, "invalid event type: '%s' (must be 'r', 'w', or 'rw')", flags_str);
+  rb_scan_args(argc, argv, "11", &io, &flags);
+
+  if(flags != Qnil)
+    flags_str = RSTRING_PTR(rb_String(flags));
+  else
+    flags_str = "r";
+
+  if(!strcmp(flags_str, "r"))
+    events = EV_READ;
+  else if(!strcmp(flags_str, "w"))
+    events = EV_WRITE;
+  else if(!strcmp(flags_str, "rw"))
+    events = EV_READ | EV_WRITE;
+  else
+    rb_raise(rb_eArgError, "invalid event type: '%s' (must be 'r', 'w', or 'rw')", flags_str);
 
   GetOpenFile(rb_convert_type(io, T_FILE, "IO", "to_io"), fptr);
   Data_Get_Struct(self, struct Rev_Watcher, watcher_data);
@@ -85,7 +85,7 @@ static VALUE Rev_IOWatcher_initialize(int argc, VALUE *argv, VALUE self)
   ev_io_init(&watcher_data->event_types.ev_io, Rev_IOWatcher_libev_callback, fptr->fd, events);
   watcher_data->event_types.ev_io.data = (void *)self;
 
-	return Qnil;
+  return Qnil;
 }
 
 static VALUE Rev_IOWatcher_attach(VALUE self, VALUE loop)
