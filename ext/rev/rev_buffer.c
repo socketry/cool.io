@@ -123,10 +123,9 @@ static VALUE Rev_Buffer_initialize(int argc, VALUE *argv, VALUE self)
 	return Qnil;
 }
 
-
 /**
  *  call-seq:
- *    Rev::Buffer.clear -> nil
+ *    Rev::Buffer#clear -> nil
  * 
  * Clear all data from the Rev::Buffer
  */
@@ -140,6 +139,12 @@ static VALUE Rev_Buffer_clear(VALUE self)
 	return Qnil;
 }
 
+/**
+ *  call-seq:
+ *    Rev::Buffer#size -> Integer
+ * 
+ * Return the size of the buffer in bytes
+ */
 static VALUE Rev_Buffer_size(VALUE self) 
 {
 	struct buffer *buf;
@@ -148,6 +153,12 @@ static VALUE Rev_Buffer_size(VALUE self)
 	return INT2NUM(buf->size);
 }
 
+/**
+ *  call-seq:
+ *    Rev::Buffer#empty? -> Boolean
+ * 
+ * Is the buffer empty?
+ */
 static VALUE Rev_Buffer_empty(VALUE self) 
 {
 	struct buffer *buf;
@@ -156,6 +167,12 @@ static VALUE Rev_Buffer_empty(VALUE self)
 	return buf->size > 0 ? Qfalse : Qtrue;	
 }
 
+/**
+ *  call-seq:
+ *    Rev::Buffer#append(data) -> String
+ * 
+ * Append the given data to the end of the buffer
+ */
 static VALUE Rev_Buffer_append(VALUE self, VALUE data)
 {
 	struct buffer *buf;
@@ -168,6 +185,12 @@ static VALUE Rev_Buffer_append(VALUE self, VALUE data)
 	return data;
 }
 
+/**
+ *  call-seq:
+ *    Rev::Buffer#prepend(data) -> String
+ * 
+ * Prepend the given data to the beginning of the buffer
+ */
 static VALUE Rev_Buffer_prepend(VALUE self, VALUE data)
 {
 	struct buffer *buf;
@@ -179,6 +202,14 @@ static VALUE Rev_Buffer_prepend(VALUE self, VALUE data)
 	return data;
 }
 
+/**
+ *  call-seq:
+ *    Rev::Buffer#read(length = nil) -> String
+ * 
+ * Read the specified abount of data from the buffer.  If no value
+ * is given the entire contents of the buffer are returned.  Any data
+ * read from the buffer is cleared.
+ */
 static VALUE Rev_Buffer_read(int argc, VALUE *argv, VALUE self)
 {
 	VALUE length_obj, str;
@@ -212,6 +243,14 @@ static VALUE Rev_Buffer_read(int argc, VALUE *argv, VALUE self)
 	return str;
 }
 
+/**
+ *  call-seq:
+ *    Rev::Buffer#write_to(io) -> Integer
+ * 
+ * Perform a nonblocking write of the buffer to the given IO object.
+ * As much data as possible is written until the call would block.
+ * Any data which is written is removed from the buffer.
+ */
 static VALUE Rev_Buffer_write_to(VALUE self, VALUE io) {
 	struct buffer *buf;
 	rb_io_t *fptr;
@@ -227,6 +266,7 @@ static VALUE Rev_Buffer_write_to(VALUE self, VALUE io) {
  * the underlying data structures.
  */
 
+#if 0
 /* Yay fun debugging crap */
 void buffer_debug(struct buffer *buf)
 {
@@ -249,6 +289,7 @@ void buffer_debug(struct buffer *buf)
 		node = node->next;
 	}
 }
+#endif
 
 static struct buffer *buffer_new(void)
 {
