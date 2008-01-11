@@ -405,7 +405,7 @@ static void buffer_read(struct buffer *buf, char *str, unsigned len)
     nbytes = buf->head->end - buf->head->start;
     if(len < nbytes) nbytes = len;
 
-    memcpy(str, buf->head->data, nbytes);
+    memcpy(str, buf->head->data + buf->head->start, nbytes);
 		str += nbytes;
     len -= nbytes;
 

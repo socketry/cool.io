@@ -56,6 +56,17 @@ describe Rev::Buffer do
     end
   end
   
+  it "reads data in chunks properly" do
+    @buffer.append "foobarbazqux"
+    
+    @buffer.read(1).should == 'f'
+    @buffer.read(2).should == 'oo'
+    @buffer.read(3).should == 'bar'
+    @buffer.read(4).should == 'bazq'
+    @buffer.read(1).should == 'u'
+    @buffer.read(2).should == 'x'
+  end
+  
   #######
   private
   #######
