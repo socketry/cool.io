@@ -49,6 +49,7 @@ static VALUE Rev_Buffer_empty(VALUE self);
 static VALUE Rev_Buffer_append(VALUE self, VALUE data);
 static VALUE Rev_Buffer_prepend(VALUE self, VALUE data);
 static VALUE Rev_Buffer_read(int argc, VALUE *argv, VALUE self);
+static VALUE Rev_Buffer_to_str(VALUE self);
 static VALUE Rev_Buffer_write_to(VALUE self, VALUE io);
 
 /* Prototypes for internal functions */
@@ -59,6 +60,7 @@ static void buffer_gc(struct buffer *buf);
 static void buffer_prepend(struct buffer *buf, char *str, unsigned len);
 static void buffer_append(struct buffer *buf, char *str, unsigned len);
 static void buffer_read(struct buffer *buf, char *str, unsigned len);
+static void buffer_copy(struct buffer *buf, char *str, unsigned len);
 static int buffer_write_to(struct buffer *buf, int fd);
 
 void Init_rev_buffer()
@@ -75,6 +77,7 @@ void Init_rev_buffer()
   rb_define_method(cRev_Buffer, "append", Rev_Buffer_append, 1);
   rb_define_method(cRev_Buffer, "prepend", Rev_Buffer_prepend, 1);
   rb_define_method(cRev_Buffer, "read", Rev_Buffer_read, -1);
+	rb_define_method(cRev_Buffer, "to_str", Rev_Buffer_to_str, 0);
   rb_define_method(cRev_Buffer, "write_to", Rev_Buffer_write_to, 1);
 }
 
@@ -213,7 +216,7 @@ static VALUE Rev_Buffer_prepend(VALUE self, VALUE data)
 static VALUE Rev_Buffer_read(int argc, VALUE *argv, VALUE self)
 {
   VALUE length_obj, str;
-  long length;
+  int length;
   struct buffer *buf;
 
   Data_Get_Struct(self, struct buffer, buf);
@@ -239,6 +242,28 @@ static VALUE Rev_Buffer_read(int argc, VALUE *argv, VALUE self)
   buffer_read(buf, RSTRING_PTR(str), length);
   RSTRING(str)->as.heap.len = length; /* <-- something tells me this is bad */
   RSTRING_PTR(str)[length] = '\0'; /* sentinel */
+
+  return str;
+}
+
+/**
+ *  call-seq:
+ *    Rev::Buffer#to_str -> String
+ * 
+ * Convert the Buffer to a String.  The original buffer is unmodified.
+ */
+static VALUE Rev_Buffer_to_str(VALUE self) {
+	VALUE str;
+	struct buffer *buf;
+	
+	Data_Get_Struct(self, struct buffer, buf);
+	
+	str = rb_str_buf_new(buf->size);
+
+  /* FIXME There really has to be a better way to do this */
+  buffer_copy(buf, RSTRING_PTR(str), buf->size);
+  RSTRING(str)->as.heap.len = buf->size; /* <-- something tells me this is bad */
+  RSTRING_PTR(str)[buf->size] = '\0'; /* sentinel */
 
   return str;
 }
@@ -471,6 +496,26 @@ static void buffer_read(struct buffer *buf, char *str, unsigned len)
 
       if(!buf->head) buf->tail = 0;
     }
+  }
+}
+
+/* Copy data from the buffer without clearing it */
+static void buffer_copy(struct buffer *buf, char *str, unsigned len)
+{
+  unsigned nbytes;
+  struct buffer_node *node;
+
+	node = buf->head;
+  while(node && len > 0) {
+    nbytes = node->end - node->start;
+    if(len < nbytes) nbytes = len;
+
+    memcpy(str, node->data + node->start, nbytes);
+    str += nbytes;
+    len -= nbytes;
+
+    if(node->start + nbytes == node->end)
+			node = node->next;
   }
 }
 
