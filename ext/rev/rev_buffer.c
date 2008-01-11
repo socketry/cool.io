@@ -94,6 +94,12 @@ static void Rev_Buffer_free(struct buffer *buf)
   buffer_free(buf);
 }
 
+/**
+ *  call-seq:
+ *    Rev::Buffer.new(size = DEFAULT_NODE_SIZE) -> Rev::Buffer
+ * 
+ * Create a new Rev::Buffer with linked segments of the given size
+ */
 static VALUE Rev_Buffer_initialize(int argc, VALUE *argv, VALUE self)
 {
 	VALUE node_size_obj;
@@ -118,6 +124,13 @@ static VALUE Rev_Buffer_initialize(int argc, VALUE *argv, VALUE self)
 	return Qnil;
 }
 
+
+/**
+ *  call-seq:
+ *    Rev::Buffer.clear -> nil
+ * 
+ * Clear all data from the Rev::Buffer
+ */
 static VALUE Rev_Buffer_clear(VALUE self)
 {
 	struct buffer *buf;
@@ -259,16 +272,22 @@ static void buffer_clear(struct buffer *buf)
     free(tmp);
   }
 
+	buf->tail = 0;
+	buf->size = 0;
+}
+
+static void buffer_free(struct buffer *buf) 
+{
+	struct buffer_node *tmp;
+	
+  buffer_clear(buf);
+
   while(buf->pool_head) {
     tmp = buf->pool_head;
     buf->pool_head = tmp->next;
     free(tmp);
   }
-}
 
-static void buffer_free(struct buffer *buf) 
-{
-  buffer_clear(buf);
   free(buf);
 }
 

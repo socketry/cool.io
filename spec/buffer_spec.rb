@@ -67,6 +67,23 @@ describe Rev::Buffer do
     @buffer.read(2).should == 'x'
   end
   
+  it "clears when requested" do
+    @buffer.append "foo"
+    @buffer.prepend "bar"
+    
+    @buffer.clear
+    @buffer.size.should == 0
+    @buffer.read.should == ""
+    
+    @buffer.prepend "foo"
+    @buffer.prepend "bar"
+    @buffer.append "baz"
+    
+    @buffer.clear
+    @buffer.size.should == 0
+    @buffer.read.should == ""
+  end
+  
   #######
   private
   #######
