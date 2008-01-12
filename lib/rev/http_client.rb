@@ -146,7 +146,7 @@ module Rev
       @parser_nbytes = 0
 
       @state = :response_header
-      @data = ''
+      @data = Rev::Buffer.new
 
       @response_header = HttpResponseHeader.new
       @chunk_header = HttpChunkHeader.new
@@ -224,9 +224,8 @@ module Rev
     end
 
     def on_read(data)
-      until @state == :finished or @state == :invalid or data.empty?
-        @state, data = dispatch_data(@state, data)
-      end
+      @data << data
+      dispatch
     end
 
     #
@@ -273,151 +272,145 @@ module Rev
     # Response processing
     #
 
-    def dispatch_data(state, data)
-      case state
-      when :response_header
-        parse_response_header(data)
-      when :chunk_header
-        parse_chunk_header(data)
-      when :chunk_body
-        process_chunk_body(data)
-      when :chunk_footer
-        process_chunk_footer(data)
-      when :response_footer
-        process_response_footer(data)
-      when :body
-        process_body(data)
-      else raise RuntimeError, "invalid state: #{@state}"
+    def dispatch
+      while case @state
+        when :response_header
+          parse_response_header
+        when :chunk_header
+          parse_chunk_header
+        when :chunk_body
+          process_chunk_body
+        when :chunk_footer
+          process_chunk_footer
+        when :response_footer
+          process_response_footer
+        when :body
+          process_body
+        when :finished, :invalid
+          break
+        else raise RuntimeError, "invalid state: #{@state}"
+        end
       end
     end
 
-    def parse_header(header, data)
-      @data << data
-      @parser_nbytes = @parser.execute(header, @data, @parser_nbytes)
-      return unless @parser.finished?
+    def parse_header(header)
+      return false if @data.empty?
+      
+      @parser_nbytes = @parser.execute(header, @data.to_str, @parser_nbytes)
+      return false unless @parser.finished?
 
-      remainder = @data.slice(@parser_nbytes, @data.size)
-      @data = ''
+      # Clear parsed data from the buffer
+      @data.read(@parser_nbytes)
       @parser.reset
       @parser_nbytes = 0
-
-      remainder
+      
+      true
     end
 
-    def parse_response_header(data)
-      data = parse_header(@response_header, data)
-      return :response_header, '' if data.nil?
+    def parse_response_header
+      return false unless parse_header(@response_header)
 
       unless @response_header.http_status and @response_header.http_reason
         on_error "no HTTP response"
-        return :invalid
+        @state = :invalid
+        return false
       end
 
       on_response_header(@response_header)
 
       if @response_header.chunked_encoding?
-        return :chunk_header, data
+        @state = :chunk_header
       else
+        @state = :body
         @bytes_remaining = @response_header.content_length
-        return :body, data
       end
+      
+      true
     end
 
-    def parse_chunk_header(data)
-      data = parse_header(@chunk_header, data)
-      return :chunk_header, '' if data.nil?
+    def parse_chunk_header
+      return false unless parse_header(@chunk_header)
 
       @bytes_remaining = @chunk_header.chunk_size
       @chunk_header = HttpChunkHeader.new
 
-      if @bytes_remaining > 0
-        return :chunk_body, data
-      else
-        @bytes_remaining = 2
-        return :response_footer, data
-      end
+      @state = @bytes_remaining > 0 ? :chunk_body : :response_footer      
+      true
     end
 
-    def process_chunk_body(data)
-      if data.size < @bytes_remaining
-        @bytes_remaining -= data.size
-        on_body_data data
-        return :chunk_body, ''
+    def process_chunk_body
+      if @data.size < @bytes_remaining
+        @bytes_remaining -= @data.size
+        on_body_data @data.read
+        return false
       end
 
-      # Slow in Ruby 1.9 :(
-      # on_body_data data.slice!(0, @bytes_remaining)
-      on_body_data data[0..(@bytes_remaining - 1)]
-      data = data[@bytes_remaining..data.size]
+      on_body_data @data.read(@bytes_remaining)
+      @bytes_remaining = 0
       
-      @bytes_remaining = 2
-      return :chunk_footer, data
+      @state = :chunk_footer      
+      true
     end
 
-    def process_crlf(data)
-      @data << data.slice!(0, @bytes_remaining)
-      @bytes_remaining = 2 - @data.size
-      return unless @bytes_remaining == 0
+    def process_chunk_footer
+      return false if @data.size < 2
 
-      matches_crlf = (@data == CRLF)
-      @data = ''
-
-      return matches_crlf, data
-    end
-
-    def process_chunk_footer(data)
-      result, data = process_crlf(data)
-      return :chunk_footer, '' if result.nil?
-
-      if result
-        return :chunk_header, data
+      if @data.read(2) == CRLF
+        @state = :chunk_header
       else
         on_error "non-CRLF chunk footer"
-        return :invalid
+        @state = :invalid
       end
+      
+      true
     end
 
-    def process_response_footer(data)
-      result, data = process_crlf(data)
-      return :response_footer, '' if result.nil?
-      if result
-        unless data.empty?
+    def process_response_footer
+      return false if @data.size < 2
+      
+      if @data.read(2) == CRLF
+        if @data.empty?
+          on_request_complete
+          @state = :finished
+        else
           on_error "garbage at end of chunked response"
-          return :invalid
+          @state = :invalid
         end
-
-        on_request_complete
-        return :finished
       else
         on_error "non-CRLF response footer"
-        return :invalid
+        @state = :invalid
       end
+      
+      false
     end
 
-    def process_body(data)
+    def process_body
       # FIXME the proper thing to do here is probably to keep reading until
       # the socket closes, then assume that's the end of the body, provided
       # the server has specified Connection: close
       if @bytes_remaining.nil?
         on_error "no content length specified"
-        return :invalid
+        @state = :invalid
       end
 
-      if data.size < @bytes_remaining
-        @bytes_remaining -= data.size
-        on_body_data data
-        return :body, ''
+      if @data.size < @bytes_remaining
+        @bytes_remaining -= @data.size
+        on_body_data @data.read
+        return false
       end
 
-      on_body_data data.slice!(0, @bytes_remaining)
+      on_body_data @data.read(@bytes_remaining)
+      @bytes_remaining = 0
 
-      unless data.empty?
+      if @data.empty?
+        on_request_complete
+        @state = :finished
+      else
         on_error "garbage at end of body"
-        return :invalid
+        @state = :invalid
       end
 
-      on_request_complete
-      return :finished
+      false
     end
   end
 end
