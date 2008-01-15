@@ -78,23 +78,7 @@ module Rev
     #########
  
     # Buffered writer
-    def buffered_write(data)
-      # Attempt a zero copy write
-      if @write_buffer.empty?
-        written = write_nonblock data
-
-        # If we lucked out and wrote out the whole buffer, return
-        if written == data.size
-          on_write_complete
-          return data.size
-        end
-
-        # Otherwise extract what we wrote out and begin buffered writing
-        # Note: slice! is nice, but slow in Ruby 1.9
-        # data.slice!(0, written) if written
-        data = data[written..data.size] if written
-      end
-      
+    def buffered_write(data) 
       @write_buffer << data
       schedule_write
       data.size
