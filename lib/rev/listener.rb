@@ -8,12 +8,16 @@ require 'socket'
 require File.dirname(__FILE__) + '/../rev'
 
 module Rev
+  # Listeners wait for incoming connections.  When a listener receives a
+  # connection it fires the on_connection event with the newly accepted
+  # socket as a parameter.
   class Listener < IOWatcher
     def initialize(listen_socket)
       @listen_socket = listen_socket
       super(@listen_socket)
     end
     
+    # Close the listener
     def close
       detach if attached?
       @listen_socket.close

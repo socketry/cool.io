@@ -1,5 +1,11 @@
 0.1.2:
 
+* Commit initial specs
+
+* Improve RDoc for the library
+
+* Eliminate "zero copy" writes as they bypass the event loop
+
 * Added Rev::Buffer C extension to provide high speed buffered writes
 
 * Implement Rev::TCPSocket#peeraddr to improve compatibility with Ruby sockets

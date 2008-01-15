@@ -8,10 +8,13 @@ require File.dirname(__FILE__) + '/../rev'
 
 module Rev
   class Server < Listener
+    # Servers listen for incoming connections and create new connection objects
+    # whenever incoming connections are received.  The default class for new
+    # connections is a Socket, but any subclass of IOWatcher is acceptable.
     def initialize(listen_socket, klass = Socket, *args, &block)
       # Ensure the provided class responds to attach
-      unless (klass.instance_method(:attach) rescue nil)
-        raise ArgumentError, "provided class must respond to 'attach'"
+      unless klass.allocate.is_a? IOWatcher
+        raise ArgumentError, "provided class must descend from IOWatcher"
       end
 
       # Verify the arity of the provided arguments
@@ -37,6 +40,8 @@ module Rev
     end
   end
 
+  # TCP server class.  Listens on the specified host and port and creates
+  # new connection objects of the given class.
   class TCPServer < Server
     def initialize(host, port, klass = TCPSocket, *args, &block)
       listen_socket = ::TCPServer.new(host, port)
@@ -45,6 +50,8 @@ module Rev
     end
   end
 
+  # UNIX server class.  Listens on the specified UNIX domain socket and
+  # creates new connection objects of the given class.
   class UNIXServer < Server
     def initialize(path, klass = UNIXSocket, *args, &block)
       super(::UNIXServer.new(*args), klass, *args, &block)
