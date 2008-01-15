@@ -79,6 +79,13 @@ static VALUE Rev_TimerWatcher_initialize(int argc, VALUE *argv, VALUE self)
   return Qnil;
 }
 
+/**
+ *  call-seq:
+ *    Rev::TimerWatcher.attach(loop) -> Rev::TimerWatcher
+ * 
+ * Attach the timer watcher to the given Rev::Loop.  If the watcher is already
+ * attached to a loop, detach it from the old one and attach it to the new one.
+ */
 static VALUE Rev_TimerWatcher_attach(VALUE self, VALUE loop)
 {
   Watcher_Attach(timer, Rev_TimerWatcher_detach, self, loop);
@@ -86,6 +93,12 @@ static VALUE Rev_TimerWatcher_attach(VALUE self, VALUE loop)
   return self;  
 }
 
+/**
+ *  call-seq:
+ *    Rev::TimerWatcher.detach -> Rev::TimerWatcher
+ * 
+ * Detach the timer watcher from its current Rev::Loop.
+ */
 static VALUE Rev_TimerWatcher_detach(VALUE self)
 {
   Watcher_Detach(timer, self);
@@ -93,6 +106,13 @@ static VALUE Rev_TimerWatcher_detach(VALUE self)
   return self;
 }
 
+/**
+ *  call-seq:
+ *    Rev::TimerWatcher.enable -> Rev::TimerWatcher
+ * 
+ * Re-enable a timer watcher which has been temporarily disabled.  See the
+ * disable method for a more thorough explanation.
+ */
 static VALUE Rev_TimerWatcher_enable(VALUE self)
 {
   Watcher_Enable(timer, self);
@@ -100,6 +120,13 @@ static VALUE Rev_TimerWatcher_enable(VALUE self)
   return self;  
 }
 
+/**
+ *  call-seq:
+ *    Rev::TimerWatcher.disable -> Rev::TimerWatcher
+ * 
+ * Temporarily disable a timer watcher which is attached to a loop.  
+ * This is useful if you wish to toggle event monitoring on and off.  
+ */
 static VALUE Rev_TimerWatcher_disable(VALUE self)
 {
   Watcher_Disable(timer, self);
