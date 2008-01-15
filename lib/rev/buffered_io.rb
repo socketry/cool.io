@@ -7,6 +7,14 @@
 require File.dirname(__FILE__) + '/../rev'
 
 module Rev
+  # A buffered I/O class witch fits into the Rev Watcher framework.
+  # It provides both an observer which reads data as it's received
+  # from the wire and a buffered writer which stores data and writes
+  # it out each time the socket becomes writable.
+  #
+  # This class is primarily meant as a base class for other streams
+  # which need non-blocking writing, and is used to implement Rev's
+  # Socket class and its associated subclasses.
   class BufferedIO < IOWatcher
     # Maximum number of bytes to consume at once
     INPUT_SIZE = 16384
@@ -23,7 +31,7 @@ module Rev
     #
     # Callbacks for asynchronous events
     #
-
+      
     # Called whenever the IO object receives data
     def on_read(data); end
     event_callback :on_read

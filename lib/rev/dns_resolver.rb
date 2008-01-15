@@ -17,6 +17,17 @@ require File.dirname(__FILE__) + '/../rev'
 #++
 
 module Rev
+  # A non-blocking DNS resolver.  It provides interfaces for querying both
+  # /etc/hosts and nameserves listed in /etc/resolv.conf, or nameservers of
+  # your choosing.
+  #
+  # Presently the client only supports UDP requests against your nameservers
+  # and cannot resolve anything with records larger than 512-bytes.  Also,
+  # IPv6 is not presently supported.
+  #
+  # DNSResolver objects are one-shot.  Once they resolve a domain name they
+  # automatically detach themselves from the event loop and cannot be used
+  # again.
   class DNSResolver < IOWatcher
     RESOLV_CONF = '/etc/resolv.conf'
     HOSTS = '/etc/hosts'
@@ -25,9 +36,10 @@ module Rev
     TIMEOUT = 3 # Retry timeout for each datagram sent
     RETRIES = 4 # Number of retries to attempt
 
-    def self.hosts(host)
+    # Query /etc/hosts (or the specified hostfile) for the given host
+    def self.hosts(host, hostfile = HOSTS)
       hosts = {}
-      File.open(HOSTS).each_line do |host_entry|
+      File.open(hostfile).each_line do |host_entry|
         entries = host_entry.gsub(/#.*$/, '').gsub(/\s+/, ' ').split(' ')
         addr = entries.shift
         entries.each { |e| hosts[e] ||= addr }
@@ -36,6 +48,10 @@ module Rev
       hosts[host]
     end
 
+    # Create a new Rev::Watcher descended object to resolve the
+    # given hostname.  If you so desire you can also specify a
+    # list of nameservers to query.  By default the resolver will
+    # use nameservers listed in /etc/resolv.conf
     def initialize(hostname, *nameservers)
       if nameservers.empty?
         nameservers = File.read(RESOLV_CONF).scan(/^\s*nameserver\s+([0-9.:]+)/).flatten
@@ -51,12 +67,14 @@ module Rev
       super(@socket)
     end
 
+    # Attach the DNSResolver to the given event loop
     def attach(evloop)
       send_request
       @timer.attach(evloop)
       super
     end
 
+    # Detach the DNSResolver from the given event loop
     def detach
       @timer.detach if @timer.attached?
       super

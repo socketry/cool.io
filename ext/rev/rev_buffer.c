@@ -50,6 +50,7 @@ static VALUE Rev_Buffer_append(VALUE self, VALUE data);
 static VALUE Rev_Buffer_prepend(VALUE self, VALUE data);
 static VALUE Rev_Buffer_read(int argc, VALUE *argv, VALUE self);
 static VALUE Rev_Buffer_to_str(VALUE self);
+static VALUE Rev_Buffer_read_from(VALUE self, VALUE io);
 static VALUE Rev_Buffer_write_to(VALUE self, VALUE io);
 
 /* Prototypes for internal functions */
@@ -61,8 +62,18 @@ static void buffer_prepend(struct buffer *buf, char *str, unsigned len);
 static void buffer_append(struct buffer *buf, char *str, unsigned len);
 static void buffer_read(struct buffer *buf, char *str, unsigned len);
 static void buffer_copy(struct buffer *buf, char *str, unsigned len);
+static int buffer_read_from(struct buffer *buf, int fd);
 static int buffer_write_to(struct buffer *buf, int fd);
 
+/* 
+ * High speed buffering geared towards non-blocking I/O.  This was largely
+ * written in response to String#slice! being incredibly slow in Ruby 1.9.
+ *
+ * Data is stored in a byte queue implemented as a linked list of equal size
+ * chunks.  Since every node in the list is the same size they are easily
+ * memory pooled.  Routines are provided for high speed non-blocking reads
+ * and writes from Ruby IO objects.
+ */
 void Init_rev_buffer()
 {
   mRev = rb_define_module("Rev");
@@ -78,6 +89,7 @@ void Init_rev_buffer()
   rb_define_method(cRev_Buffer, "prepend", Rev_Buffer_prepend, 1);
   rb_define_method(cRev_Buffer, "read", Rev_Buffer_read, -1);
 	rb_define_method(cRev_Buffer, "to_str", Rev_Buffer_to_str, 0);
+	rb_define_method(cRev_Buffer, "read_from", Rev_Buffer_read_from, 1);
   rb_define_method(cRev_Buffer, "write_to", Rev_Buffer_write_to, 1);
 }
 
@@ -236,12 +248,8 @@ static VALUE Rev_Buffer_read(int argc, VALUE *argv, VALUE self)
   if(length < 1)
     rb_raise(rb_eArgError, "length must be greater than zero");
 
-  str = rb_str_buf_new(length);
-
-  /* FIXME There really has to be a better way to do this */
+  str = rb_str_new(0, length);
   buffer_read(buf, RSTRING_PTR(str), length);
-  RSTRING(str)->as.heap.len = length; /* <-- something tells me this is bad */
-  RSTRING_PTR(str)[length] = '\0'; /* sentinel */
 
   return str;
 }
@@ -258,14 +266,29 @@ static VALUE Rev_Buffer_to_str(VALUE self) {
 	
 	Data_Get_Struct(self, struct buffer, buf);
 	
-	str = rb_str_buf_new(buf->size);
-
-  /* FIXME There really has to be a better way to do this */
-  buffer_copy(buf, RSTRING_PTR(str), buf->size);
-  RSTRING(str)->as.heap.len = buf->size; /* <-- something tells me this is bad */
-  RSTRING_PTR(str)[buf->size] = '\0'; /* sentinel */
-
+	str = rb_str_new(0, buf->size);
+	buffer_copy(buf, RSTRING_PTR(str), buf->size);
+  
   return str;
+}
+
+/**
+ *  call-seq:
+ *    Rev::Buffer#read_from(io) -> Integer
+ * 
+ * Perform a nonblocking read of the the given IO object and fill
+ * the buffer with any data received.  The call will read as much
+ * data as it can until the read would block.
+ */
+static VALUE Rev_Buffer_read_from(VALUE self, VALUE io) {
+	struct buffer *buf;
+  rb_io_t *fptr;
+
+  Data_Get_Struct(self, struct buffer, buf);
+  GetOpenFile(rb_convert_type(io, T_FILE, "IO", "to_io"), fptr);
+  rb_io_set_nonblock(fptr);
+
+  return INT2NUM(buffer_read_from(buf, fptr->fd));
 }
 
 /**
@@ -309,13 +332,13 @@ static void buffer_clear(struct buffer *buf)
 {
   struct buffer_node *tmp;
 
-  while(buf->head) {
-    tmp = buf->head;
-    buf->head = tmp->next;
-    free(tmp);
-  }
+  /* Move everything into the buffer pool */
+  if(!buf->pool_tail)
+    buf->pool_head = buf->pool_tail = buf->head;
+  else
+    buf->pool_tail->next = buf->head;
 
-  buf->tail = 0;
+  buf->head = buf->tail = 0;
   buf->size = 0;
 }
 
@@ -349,18 +372,7 @@ static void buffer_gc(struct buffer *buf)
   }
 
   if(!buf->pool_head)
-    return;
-
-  cur = buf->pool_head;
-
-  while(cur->next) {
-    if(now - cur->next->last_used_at < MAX_AGE)
-      continue;
-
-    tmp = cur->next;
-    cur->next = tmp->next;
-    free(tmp);
-  }
+		buf->pool_tail = 0;
 }
 
 /* Create a new buffer_node (or pull one from the memory pool) */
@@ -522,27 +534,27 @@ static void buffer_copy(struct buffer *buf, char *str, unsigned len)
 /* Write data from the buffer to a file descriptor */
 static int buffer_write_to(struct buffer *buf, int fd)
 {
-  int written, total_written = 0;
+  int bytes_written, total_bytes_written = 0;
   struct buffer_node *tmp;
 
   while(buf->head) {
-    written = write(fd, buf->head->data + buf->head->start, buf->head->end - buf->head->start);
+    bytes_written = write(fd, buf->head->data + buf->head->start, buf->head->end - buf->head->start);
 
     /* If the write failed... */
-    if(written < -1) {
+    if(bytes_written < 1) {
       if(errno == EAGAIN)
         errno = 0;
 
-      return total_written;
+      return total_bytes_written;
     }
 
-    total_written += written;
-    buf->size -= written;
+    total_bytes_written += bytes_written;
+    buf->size -= bytes_written;
 
     /* If the write blocked... */
-    if(written < buf->head->end - buf->head->start) {
-      buf->head->start += written;
-      return total_written;
+    if(bytes_written < buf->head->end - buf->head->start) {
+      buf->head->start += bytes_written;
+      return total_bytes_written;
     }
 
     /* Otherwise we wrote the whole buffer */
@@ -553,5 +565,42 @@ static int buffer_write_to(struct buffer *buf, int fd)
     if(!buf->head) buf->tail = 0;
   }
 
-  return total_written;
+  return total_bytes_written;
+}
+
+/* Read data from a file descriptor to a buffer */
+/* Append data to the front of the buffer */
+static int buffer_read_from(struct buffer *buf, int fd)
+{
+	int bytes_read, total_bytes_read = 0;
+  unsigned nbytes;
+
+  /* Empty list needs initialized */
+  if(!buf->head) {
+    buf->head = buffer_node_new(buf);
+    buf->tail = buf->head;
+  }
+
+	do {
+	  nbytes = buf->node_size - buf->tail->end;
+		bytes_read = read(fd, buf->tail->data + buf->tail->end, nbytes);
+	
+		if(bytes_read < 1) {
+			if(errno == EAGAIN)
+				errno = 0;
+			
+			return total_bytes_read;
+		}
+		
+		total_bytes_read += bytes_read; 
+		buf->tail->end += nbytes;
+		buf->size += nbytes;
+		
+		if(buf->tail->end == buf->node_size) {
+      buf->tail->next = buffer_node_new(buf);
+      buf->tail = buf->tail->next;
+		}
+	} while(bytes_read == nbytes);
+	
+	return total_bytes_read;
 }
