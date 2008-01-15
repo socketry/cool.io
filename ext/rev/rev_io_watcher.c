@@ -32,6 +32,13 @@ static VALUE Rev_IOWatcher_on_writable(VALUE self);
 static void Rev_IOWatcher_libev_callback(struct ev_loop *ev_loop, struct ev_io *io, int revents);
 static void Rev_IOWatcher_dispatch_callback(VALUE self, int revents);
 
+/*
+ * Rev::IOWatcher monitors Ruby IO objects for readability or writability.
+ * This allows your application to block while the kernel is writing out
+ * data and fill the read or write buffer whenever there is space available.
+ * It's used by the Rev::BufferedIO class to provide high performace I/O
+ * which is bound by the kernel's ability to read and write data.
+ */
 void Init_rev_io_watcher()
 {
   mRev = rb_define_module("Rev");

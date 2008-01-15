@@ -31,6 +31,11 @@ static VALUE Rev_TimerWatcher_on_timer(VALUE self);
 static void Rev_TimerWatcher_libev_callback(struct ev_loop *ev_loop, struct ev_timer *timer, int revents);
 static void Rev_TimerWatcher_dispatch_callback(VALUE self, int revents);
 
+/*
+ * Rev::TimerWatcher lets you create either one-shot or periodic timers which
+ * run within Rev's event loop.  It's useful for creating timeouts or
+ * events which fire periodically.
+ */
 void Init_rev_timer_watcher()
 { 
   mRev = rb_define_module("Rev");

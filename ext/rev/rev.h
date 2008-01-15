@@ -19,7 +19,6 @@ struct Rev_Event
 struct Rev_Loop 
 {
   struct ev_loop *ev_loop;
-  int default_loop;
 
   int events_received;
   int eventbuf_size;

@@ -30,6 +30,18 @@ static VALUE Rev_Watcher_evloop(VALUE self);
 static VALUE Rev_Watcher_attached(VALUE self);
 static VALUE Rev_Watcher_enabled(VALUE self);
 
+/* 
+ * Watchers are Rev's event observers.  They contain a set of callback
+ * methods prefixed by on_* which fire whenever events occur.
+ *
+ * In order for a watcher to fire events it must be attached to a running
+ * loop.  Every watcher has an attach and detach method to control which
+ * loop it's associated with.
+ *
+ * Watchers also have an enable and disable method.  This allows a watcher
+ * to temporarily ignore certain events while remaining attached to a given
+ * loop.  This is good for watchers which need to be toggled on and off.
+ */
 void Init_rev_watcher()
 {
   mRev = rb_define_module("Rev");

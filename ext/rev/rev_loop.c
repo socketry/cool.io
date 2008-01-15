@@ -22,6 +22,7 @@ static void Rev_Loop_mark(struct Rev_Loop *loop);
 static void Rev_Loop_free(struct Rev_Loop *loop);
 
 /* Method implementations */
+static VALUE Rev_Loop_initialize(VALUE self);
 static VALUE Rev_Loop_ev_loop_new(VALUE self, VALUE flags);
 static VALUE Rev_Loop_run_once(VALUE self);
 static VALUE Rev_Loop_run_once_blocking(void *ptr);
@@ -31,17 +32,22 @@ static void Rev_Loop_dispatch_events(struct Rev_Loop *loop_data);
 
 #define DEFAULT_EVENTBUF_SIZE 32
 
+/* 
+ * Rev::Loop represents an event loop.  Event watchers can be attached and
+ * unattached.  When an event loop is run, all currently attached watchers
+ * are monitored for events, and their respective callbacks are signaled
+ * whenever events occur.
+ */
 void Init_rev_loop()
 {
   mRev = rb_define_module("Rev");
   cRev_Loop = rb_define_class_under(mRev, "Loop", rb_cObject);
   rb_define_alloc_func(cRev_Loop, Rev_Loop_allocate);
-  
+ 
+  rb_define_method(cRev_Loop, "initialize", Rev_Loop_initialize, 0);
   rb_define_private_method(cRev_Loop, "ev_loop_new", Rev_Loop_ev_loop_new, 1);
   rb_define_method(cRev_Loop, "run_once", Rev_Loop_run_once, 0);
   rb_define_method(cRev_Loop, "run_nonblock", Rev_Loop_run_nonblock, 0);
-
-  rb_cv_set(cRev_Loop, "@@default_loop", Qnil);
 }
 
 static VALUE Rev_Loop_allocate(VALUE klass)
@@ -49,7 +55,6 @@ static VALUE Rev_Loop_allocate(VALUE klass)
   struct Rev_Loop *loop = (struct Rev_Loop *)xmalloc(sizeof(struct Rev_Loop));
 
   loop->ev_loop = 0;
-  loop->default_loop = 0;
 
   loop->events_received = 0;
   loop->eventbuf_size = DEFAULT_EVENTBUF_SIZE;
@@ -67,13 +72,15 @@ static void Rev_Loop_free(struct Rev_Loop *loop)
   if(!loop->ev_loop)
     return;
 
-  if(loop->default_loop)
-    ev_default_destroy();
-  else
-    ev_loop_destroy(loop->ev_loop);
+  ev_loop_destroy(loop->ev_loop);
 
   xfree(loop->eventbuf);
   xfree(loop);
+}
+
+static VALUE Rev_Loop_initialize(VALUE self)
+{
+  Rev_Loop_ev_loop_new(self, INT2NUM(0));
 }
 
 /* Wrapper for populating a Rev_Loop struct with a new event loop */
@@ -86,7 +93,6 @@ static VALUE Rev_Loop_ev_loop_new(VALUE self, VALUE flags)
     rb_raise(rb_eRuntimeError, "loop already initialized");
 
   loop_data->ev_loop = ev_loop_new(NUM2INT(flags));
-  loop_data->default_loop = 0;
 
   return Qnil;
 }
