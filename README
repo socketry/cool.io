@@ -9,6 +9,10 @@ Rev also binds asynchronous wrappers to Ruby's core socket classes so you can
 use them in conjunction with Rev to build asynchronous event-driven 
 applications.
 
+You can include Rev in your programs with:
+
+  require 'rev'
+
 == Anatomy
 
 Rev builds on two core classes which bind to the libev API:
