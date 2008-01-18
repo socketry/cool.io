@@ -17,18 +17,23 @@
 #define DEFAULT_NODE_SIZE 65536
 
 /* Maximum age of a buffer node in a memory pool, in seconds */
-#define MAX_AGE 900
+#define MAX_AGE 60
+
+/* How often to scan the pool for for old nodes */
+#define PURGE_INTERVAL 10
 
 struct buffer {
+	time_t last_purged_at;
   unsigned size, node_size;
   struct buffer_node *head, *tail;
   struct buffer_node *pool_head, *pool_tail;
+	
 };
 
 struct buffer_node {
+	time_t last_used_at;
   unsigned start, end;
   struct buffer_node *next;
-  time_t last_used_at;
   unsigned char data[0];
 };
 
@@ -319,11 +324,13 @@ static VALUE Rev_Buffer_write_to(VALUE self, VALUE io) {
 static struct buffer *buffer_new(void)
 {
   struct buffer *buf;
+
   buf = (struct buffer *)xmalloc(sizeof(struct buffer));
   buf->head = buf->tail = buf->pool_head = buf->pool_tail = 0;
   buf->size = 0;
   buf->node_size = DEFAULT_NODE_SIZE;
-
+	time(&buf->last_purged_at);
+	
   return buf;
 }
 
@@ -364,6 +371,12 @@ static void buffer_gc(struct buffer *buf)
   struct buffer_node *cur, *tmp;
   time_t now;
   time(&now);
+
+	/* Only purge if we've passed the purge interval */
+	if(now - buf->last_purged_at < PURGE_INTERVAL)
+		return;
+		
+	buf->last_purged_at = now;
 
   while(buf->pool_head && now - buf->pool_head->last_used_at >= MAX_AGE) {
     tmp = buf->pool_head;

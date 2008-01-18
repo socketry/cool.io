@@ -113,7 +113,8 @@ module Rev
         close
       end
     end
-     
+    
+    # Schedule a write to be performed when the IO object becomes writable 
     def schedule_write
       return if @writer and @writer.enabled?
       if @writer 

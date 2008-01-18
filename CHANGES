@@ -1,3 +1,11 @@
+0.1.3:
+
+* Change Rev::Buffer memory pools to purge on a periodic interval, rather than
+  whenever the GC marks the object.
+
+* Fix bug in tracking the active watcher count.  Factor shared watcher behavior
+  from rev_watcher.h to rev_watcher.c.
+
 0.1.2:
 
 * Commit initial specs

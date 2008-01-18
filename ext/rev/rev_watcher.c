@@ -94,6 +94,10 @@ static VALUE Rev_Watcher_initialize(VALUE self)
 static VALUE Rev_Watcher_attach(VALUE self, VALUE loop)
 {
   VALUE loop_watchers, active_watchers;
+  struct Rev_Watcher *watcher_data;
+
+  Data_Get_Struct(self, struct Rev_Watcher, watcher_data);
+  watcher_data->enabled = 1;
     
   loop_watchers = rb_iv_get(loop, "@watchers");
 
@@ -130,7 +134,6 @@ static VALUE Rev_Watcher_detach(VALUE self)
   struct Rev_Watcher *watcher_data;
   struct Rev_Loop *loop_data;
   VALUE loop_watchers;
-
   int i;
 
   Data_Get_Struct(self, struct Rev_Watcher, watcher_data);
@@ -145,11 +148,15 @@ static VALUE Rev_Watcher_detach(VALUE self)
    * isn't an O(1) operation.  Hopefully there's a better way... */
   rb_ary_delete(loop_watchers, self);
 
-  rb_iv_set(
-      watcher_data->loop, 
-      "@active_watchers",
-      INT2NUM(NUM2INT(rb_iv_get(watcher_data->loop, "@active_watchers")) - 1)
-  );
+  if(watcher_data->enabled) {
+    rb_iv_set(
+        watcher_data->loop, 
+        "@active_watchers",
+        INT2NUM(NUM2INT(rb_iv_get(watcher_data->loop, "@active_watchers")) - 1)
+    );
+  }
+
+  watcher_data->enabled = 0;
 
   Data_Get_Struct(watcher_data->loop, struct Rev_Loop, loop_data);
 
@@ -180,6 +187,11 @@ static VALUE Rev_Watcher_enable(VALUE self)
   struct Rev_Watcher *watcher_data;
   Data_Get_Struct(self, struct Rev_Watcher, watcher_data);
 
+  if(watcher_data->enabled)
+    rb_raise(rb_eRuntimeError, "already enabled");
+
+  watcher_data->enabled = 1;
+
   rb_iv_set(
       watcher_data->loop, 
       "@active_watchers",
@@ -200,6 +212,11 @@ static VALUE Rev_Watcher_disable(VALUE self)
 {
   struct Rev_Watcher *watcher_data;
   Data_Get_Struct(self, struct Rev_Watcher, watcher_data);
+
+  if(!watcher_data->enabled)
+    rb_raise(rb_eRuntimeError, "already disabled");
+
+  watcher_data->enabled = 0;
 
   rb_iv_set(
       watcher_data->loop, 
