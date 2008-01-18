@@ -1,5 +1,8 @@
 0.1.3:
 
+* Fixed bug in Rev::Buffer read_from and write_to: now rb_sys_fail on failed
+  reads/writes.
+
 * Change Rev::Buffer memory pools to purge on a periodic interval, rather than
   whenever the GC marks the object.
 

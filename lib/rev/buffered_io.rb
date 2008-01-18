@@ -88,21 +88,16 @@ module Rev
     def write_output_buffer
       return if @write_buffer.empty?
 
-      @write_buffer.write_to(@io)
+      begin
+        @write_buffer.write_to(@io)
+      rescue Errno::EPIPE
+        return close
+      end
+      
       return unless @write_buffer.empty?
 
       @writer.disable if @writer and @writer.enabled?
       on_write_complete
-    end
- 
-    # Wrapper for handling reset connections and EAGAIN
-    def write_nonblock(data)
-      begin
-        @io.write_nonblock(data)
-      rescue Errno::ECONNRESET, Errno::EPIPE
-        close
-      rescue Errno::EAGAIN
-      end
     end
 
     # Inherited callback from IOWatcher

@@ -554,9 +554,9 @@ static int buffer_write_to(struct buffer *buf, int fd)
     bytes_written = write(fd, buf->head->data + buf->head->start, buf->head->end - buf->head->start);
 
     /* If the write failed... */
-    if(bytes_written < 1) {
-      if(errno == EAGAIN)
-        errno = 0;
+    if(bytes_written < 0) {
+      if(errno != EAGAIN)
+        rb_sys_fail("write");
 
       return total_bytes_written;
     }
@@ -599,8 +599,8 @@ static int buffer_read_from(struct buffer *buf, int fd)
 		bytes_read = read(fd, buf->tail->data + buf->tail->end, nbytes);
 	
 		if(bytes_read < 1) {
-			if(errno == EAGAIN)
-				errno = 0;
+			if(errno != EAGAIN)
+        rb_sys_fail("read");
 			
 			return total_bytes_read;
 		}
