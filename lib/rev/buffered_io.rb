@@ -86,8 +86,6 @@ module Rev
 
     # Attempt to write the contents of the output buffer
     def write_output_buffer
-      return if @write_buffer.empty?
-
       begin
         @write_buffer.write_to(@io)
       rescue Errno::EPIPE
