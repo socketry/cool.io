@@ -150,7 +150,7 @@ module Rev
       return unless rcode == 0
 
       # Extract the question and answer counts
-      qdcount, ancount = message[4..7].unpack('nn').map { |n| n.to_i }
+      qdcount, ancount = message[4..7].unpack('nn').map(&:to_i)
 
       # We only asked one question
       return unless qdcount == 1
