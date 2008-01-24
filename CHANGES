@@ -1,5 +1,7 @@
 0.1.4:
 
+* Rename BufferedIO to IO
+
 * Fixed bug in BufferedIO#write_output_buffer causing it to spin endlessly on
   an empty buffer.
 

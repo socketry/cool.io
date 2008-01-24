@@ -15,7 +15,7 @@ module Rev
   # This class is primarily meant as a base class for other streams
   # which need non-blocking writing, and is used to implement Rev's
   # Socket class and its associated subclasses.
-  class BufferedIO < IOWatcher
+  class IO < IOWatcher
     # Maximum number of bytes to consume at once
     INPUT_SIZE = 16384
 
@@ -24,7 +24,7 @@ module Rev
       @write_buffer = Rev::Buffer.new
 
       # Coerce the argument into an IO object if possible
-      @io = IO.try_convert(io)
+      @io = ::IO.try_convert(io)
       super(@io)
     end
 
@@ -58,7 +58,7 @@ module Rev
       @write_buffer.size
     end
 
-    # Close the BufferedIO stream
+    # Close the IO stream
     def close
       detach if attached?
       @writer.detach if @writer and @writer.attached?
@@ -92,10 +92,10 @@ module Rev
         return close
       end
       
-      return unless @write_buffer.empty?
-
-      @writer.disable if @writer and @writer.enabled?
-      on_write_complete
+      if @write_buffer.empty?
+        @writer.disable if @writer and @writer.enabled?
+        on_write_complete
+      end
     end
 
     # Inherited callback from IOWatcher

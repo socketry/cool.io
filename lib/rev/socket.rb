@@ -9,7 +9,7 @@ require 'resolv'
 require File.dirname(__FILE__) + '/../rev'
 
 module Rev
-  class Socket < BufferedIO    
+  class Socket < IO    
     def self.connect(socket, *args)
       new(socket, *args).instance_eval {
         @connector = Connector.new(self, socket)
