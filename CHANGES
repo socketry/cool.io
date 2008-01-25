@@ -5,6 +5,8 @@
 * Fixed bug in BufferedIO#write_output_buffer causing it to spin endlessly on
   an empty buffer.
 
+* Added has_active_watchers? to Rev::Loop to check for active watchers
+
 0.1.3:
 
 * Fixed bug in Rev::Buffer read_from and write_to: now rb_sys_fail on failed

@@ -98,6 +98,11 @@ module Rev
       @running = false
     end
     
+    # Does the loop have any active watchers?
+    def has_active_watchers?
+      @active_watchers > 0
+    end
+    
     #######
     private
     #######
