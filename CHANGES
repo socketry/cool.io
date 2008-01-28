@@ -1,5 +1,8 @@
 0.1.4:
 
+* Calibrate Rev::TimerWatchers against ev_time() and ev_now() when the watcher
+  is attached to the loop to ensure that the timeout interval is correct.
+
 * Add check to ensure that a Rev::Loop cannot be run from within a callback
 
 * Store Rev::Loop.default in a Thread-specific instance variable

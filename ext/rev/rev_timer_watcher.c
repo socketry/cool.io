@@ -70,6 +70,9 @@ static VALUE Rev_TimerWatcher_initialize(int argc, VALUE *argv, VALUE self)
 	rb_scan_args(argc, argv, "11", &interval, &repeating);
   interval = rb_convert_type(interval, T_FLOAT, "Float", "to_f");
 
+  rb_iv_set(self, "@interval", interval);
+  rb_iv_set(self, "@repeating", repeating);
+
   Data_Get_Struct(self, struct Rev_Watcher, watcher_data);
 
   watcher_data->dispatch_callback = Rev_TimerWatcher_dispatch_callback;
@@ -93,7 +96,33 @@ static VALUE Rev_TimerWatcher_initialize(int argc, VALUE *argv, VALUE self)
  */
 static VALUE Rev_TimerWatcher_attach(VALUE self, VALUE loop)
 {
-  Watcher_Attach(timer, Rev_TimerWatcher_detach, self, loop);
+  ev_tstamp interval, timeout;
+  struct Rev_Loop *loop_data;
+  struct Rev_Watcher *watcher_data;
+    
+	if(!rb_obj_is_kind_of(loop, cRev_Loop))
+		rb_raise(rb_eArgError, "expected loop to be an instance of Rev::Loop");
+
+  Data_Get_Struct(loop, struct Rev_Loop, loop_data);
+  Data_Get_Struct(self, struct Rev_Watcher, watcher_data);
+
+  if(watcher_data->loop != Qnil)
+    Rev_TimerWatcher_detach(self);
+
+  watcher_data->loop = loop;
+  
+  /* Calibrate timeout to account for potential drift */
+	interval = RFLOAT_VALUE(rb_iv_get(self, "@interval"));
+  timeout = interval + ev_time() - ev_now(loop_data->ev_loop);
+  
+  ev_timer_set(
+    &watcher_data->event_types.ev_timer, 
+    timeout, 
+    rb_iv_get(self, "@repeating") == Qtrue ? interval : 0
+  );
+
+  ev_timer_start(loop_data->ev_loop, &watcher_data->event_types.ev_timer);
+	rb_call_super(1, &loop);
 
   return self;  
 }
