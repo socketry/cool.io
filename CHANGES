@@ -1,5 +1,7 @@
 0.1.4:
 
+* Upgrade libev to 0.3.0
+
 * Rename BufferedIO to IO
 
 * Fixed bug in BufferedIO#write_output_buffer causing it to spin endlessly on
