@@ -5,22 +5,22 @@
 #++
 
 require File.dirname(__FILE__) + '/../rev'
+require 'thread'
+
+# Monkeypatch Thread to include a method for obtaining the default Rev::Loop
+class Thread
+  def _rev_loop
+    @_rev_loop ||= Rev::Loop.new
+  end
+end
 
 module Rev
   class Loop
-    @@default_loop = {}
     attr_reader :watchers
     
     # Retrieve the default event loop for the current thread
     def self.default
-      # Well awesome, variables stashed in Thread.current[]
-      # are only accessible in the context of the Fiber where
-      # they were stored.  Soo... we need to make our own
-      # thread-local store if we want Fiber compatibility
-      #
-      # I think this should be sufficient... but it may need
-      # a mutex or something, got me.
-      @@default_loop[Thread.current] ||= Loop.new
+      Thread.current._rev_loop
     end
 
     # Create a new Rev::Loop

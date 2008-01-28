@@ -1,5 +1,7 @@
 0.1.4:
 
+* Store Rev::Loop.default in a Thread-specific instance variable
+
 * Upgrade libev to 0.3.0
 
 * Rename BufferedIO to IO
