@@ -178,10 +178,10 @@ static VALUE Rev_Loop_run_once(VALUE self)
   struct Rev_Loop *loop_data;
   Data_Get_Struct(self, struct Rev_Loop, loop_data);
 
-  assert(loop_data->ev_loop && !loop_data->events_received);
-
   if(loop_data->running)
-    rb_raise(rb_eRuntimeError, "cannot run loop within a callback");
+    rb_raise(rb_eRuntimeError, "cannot run loop from within a callback");
+
+  assert(loop_data->ev_loop && !loop_data->events_received);
 
   loop_data->running = 1;
   rb_thread_blocking_region(Rev_Loop_run_once_blocking, loop_data->ev_loop, RB_UBF_DFL, 0);
@@ -212,10 +212,10 @@ static VALUE Rev_Loop_run_nonblock(VALUE self)
   struct Rev_Loop *loop_data;
   Data_Get_Struct(self, struct Rev_Loop, loop_data);
 
-  assert(loop_data->ev_loop && !loop_data->events_received);
-
   if(loop_data->running)
-    rb_raise(rb_eRuntimeError, "cannot run loop within a callback");
+    rb_raise(rb_eRuntimeError, "cannot run loop from within a callback");
+
+  assert(loop_data->ev_loop && !loop_data->events_received);
 
   loop_data->running = 1;
   ev_loop(loop_data->ev_loop, EVLOOP_NONBLOCK);
