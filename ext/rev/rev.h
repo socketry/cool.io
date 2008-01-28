@@ -20,6 +20,7 @@ struct Rev_Loop
 {
   struct ev_loop *ev_loop;
 
+  int running;
   int events_received;
   int eventbuf_size;
   struct Rev_Event *eventbuf;

@@ -56,6 +56,7 @@ static VALUE Rev_Loop_allocate(VALUE klass)
 
   loop->ev_loop = 0;
 
+  loop->running = 0;
   loop->events_received = 0;
   loop->eventbuf_size = DEFAULT_EVENTBUF_SIZE;
   loop->eventbuf = (struct Rev_Event *)xmalloc(sizeof(struct Rev_Event) * DEFAULT_EVENTBUF_SIZE);
@@ -178,9 +179,15 @@ static VALUE Rev_Loop_run_once(VALUE self)
   Data_Get_Struct(self, struct Rev_Loop, loop_data);
 
   assert(loop_data->ev_loop && !loop_data->events_received);
+
+  if(loop_data->running)
+    rb_raise(rb_eRuntimeError, "cannot run loop within a callback");
+
+  loop_data->running = 1;
   rb_thread_blocking_region(Rev_Loop_run_once_blocking, loop_data->ev_loop, RB_UBF_DFL, 0);
   Rev_Loop_dispatch_events(loop_data);
   loop_data->events_received = 0;
+  loop_data->running = 0;
 
   return Qnil;
 }
@@ -206,9 +213,15 @@ static VALUE Rev_Loop_run_nonblock(VALUE self)
   Data_Get_Struct(self, struct Rev_Loop, loop_data);
 
   assert(loop_data->ev_loop && !loop_data->events_received);
+
+  if(loop_data->running)
+    rb_raise(rb_eRuntimeError, "cannot run loop within a callback");
+
+  loop_data->running = 1;
   ev_loop(loop_data->ev_loop, EVLOOP_NONBLOCK);
   Rev_Loop_dispatch_events(loop_data);
   loop_data->events_received = 0;
+  loop_data->running = 0;
 
   return Qnil;
 }
