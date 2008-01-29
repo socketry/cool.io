@@ -1,7 +1,5 @@
 0.1.5:
 
-* Initial Rev/EventMachine compatibility layer
-
 * Allow Rev::TCPSocket#on_connect to be private when accepting connections
   from a Rev::TCPServer
 
