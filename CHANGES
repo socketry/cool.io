@@ -1,3 +1,10 @@
+0.1.5:
+
+* Initial Rev/EventMachine compatibility layer
+
+* Allow Rev::TCPSocket#on_connect to be private when accepting connections
+  from a Rev::TCPServer
+
 0.1.4:
 
 * Calibrate Rev::TimerWatchers against ev_time() and ev_now() when the watcher

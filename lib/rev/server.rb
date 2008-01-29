@@ -36,7 +36,7 @@ module Rev
     def on_connection(socket)
       connection = @klass.new(socket, *@args).attach(evloop)
       @block.(connection) if @block
-      connection.on_connect
+      connection.__send__(:on_connect)
     end
   end
 
