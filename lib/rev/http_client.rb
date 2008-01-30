@@ -207,6 +207,7 @@ module Rev
 
     # Called when an error occurs during the request
     def on_error(reason)
+      close
       raise RuntimeError, reason
     end
 

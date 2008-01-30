@@ -1,5 +1,7 @@
 0.1.5:
 
+* Have Rev::HttpClient close the connection on error
+
 * Allow Rev::TCPSocket#on_connect to be private when accepting connections
   from a Rev::TCPServer
 
