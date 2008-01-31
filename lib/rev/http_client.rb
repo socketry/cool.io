@@ -177,6 +177,12 @@ module Rev
       return unless @connected
       send_request
     end
+    
+    # Enable the HttpClient if it has been disabled
+    def enable
+      super
+      dispatch unless @data.empty?
+    end
 
     # Called when response header has been received
     def on_response_header(response_header)
@@ -262,7 +268,7 @@ module Rev
     #
 
     def dispatch
-      while case @state
+      while enabled? and case @state
         when :response_header
           parse_response_header
         when :chunk_header
@@ -312,7 +318,6 @@ module Rev
       else
         @state = :body
         @bytes_remaining = @response_header.content_length
-        puts "got content-length: #{@bytes_remaining}"
       end
       
       true
