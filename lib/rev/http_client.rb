@@ -312,6 +312,7 @@ module Rev
       else
         @state = :body
         @bytes_remaining = @response_header.content_length
+        puts "got content-length: #{@bytes_remaining}"
       end
       
       true
@@ -374,12 +375,14 @@ module Rev
     end
 
     def process_body
-      # FIXME the proper thing to do here is probably to keep reading until
-      # the socket closes, then assume that's the end of the body, provided
-      # the server has specified Connection: close
       if @bytes_remaining.nil?
-        on_error "no content length specified"
-        @state = :invalid
+        on_body_data @data.read
+        return false
+      end
+      
+      if @bytes_remaining.zero?
+        @state = :finished
+        return false
       end
 
       if @data.size < @bytes_remaining

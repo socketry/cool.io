@@ -1,5 +1,9 @@
 0.1.5:
 
+* Handle unspecified Content-Length when encoding is identity in HttpClient
+
+* Fix bug in HttpClient processing zero Content-Length
+
 * Get rid of method_missing stuff in Rev::HttpClient
 
 * Have Rev::HttpClient close the connection on error
