@@ -386,6 +386,7 @@ module Rev
       end
       
       if @bytes_remaining.zero?
+        on_request_complete
         @state = :finished
         return false
       end
