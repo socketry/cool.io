@@ -79,13 +79,13 @@ module Rev
       remote_host + (remote_port.to_i != 80 ? ":#{remote_port}" : "")
     end
 
-    def encode_request(method, uri, query)
-      HTTP_REQUEST_HEADER % [method.to_s.upcase, encode_query(uri, query)]
+    def encode_request(method, path, query)
+      HTTP_REQUEST_HEADER % [method.to_s.upcase, encode_query(path, query)]
     end
 
-    def encode_query(uri, query)
-      return uri unless query
-      uri + "?" + query.map { |k, v| encode_param(k, v) }.join('&')
+    def encode_query(path, query)
+      return path unless query
+      path + "?" + query.map { |k, v| encode_param(k, v) }.join('&')
     end
 
     # URL encodes a single k=v parameter.
@@ -167,27 +167,15 @@ module Rev
     #   body: String
     #     Specify the request body (you must encode it for now)
     #
-    def request(method, uri, options = {})
+    def request(method, path, options = {})
+      raise ArgumentError, "invalid request path" unless path[0] == '/'
       raise RuntimeError, "request already sent" if @requested
 
-      @method, @uri, @options = method, uri, options
+      @method, @path, @options = method, path, options
       @requested = true
 
       return unless @connected
       send_request
-    end
-
-    # Requests can be made through method missing by invoking the HTTP method to use, i.e.:
-    #
-    #   httpclient.get(path, options)
-    #
-    # Valid for: get, post, put, delete, head
-    #
-    # To use other HTTP methods, invoke the request method directly
-    #
-    def method_missing(method, *args)
-      raise NoMethodError, "method not supported" unless ALLOWED_METHODS.include? method.to_sym
-      request method, *args
     end
 
     # Called when response header has been received
@@ -205,7 +193,7 @@ module Rev
       close
     end
 
-    # Called when an error occurs during the request
+    # Called when an error occurs dpathng the request
     def on_error(reason)
       close
       raise RuntimeError, reason
@@ -221,7 +209,7 @@ module Rev
     
     def on_connect
       @connected = true
-      send_request if @method and @uri
+      send_request if @method and @path
     end
 
     def on_read(data)
@@ -257,7 +245,7 @@ module Rev
       head['connection'] ||= 'close'
 
       # Build the request
-      request_header = encode_request(@method, @uri, query)
+      request_header = encode_request(@method, @path, query)
       request_header << encode_headers(head)
       request_header << encode_cookies(cookies) if cookies
       request_header << CRLF
