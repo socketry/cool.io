@@ -1,7 +1,7 @@
 /*
  * loop member variable declarations
  *
- * Copyright (c) 2007 Marc Alexander Lehmann <libev@schmorp.de>
+ * Copyright (c) 2007,2008 Marc Alexander Lehmann <libev@schmorp.de>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modifica-
@@ -54,6 +54,9 @@ VARx(int, backend_fd)
 VARx(ev_tstamp, backend_fudge) /* assumed typical timer resolution */
 VAR (backend_modify, void (*backend_modify)(EV_P_ int fd, int oev, int nev))
 VAR (backend_poll  , void (*backend_poll)(EV_P_ ev_tstamp timeout))
+
+VAR (evpipe, int evpipe [2])
+VARx(ev_io, pipeev)
 
 #if !defined(_WIN32) || EV_GENWRAP
 VARx(pid_t, curpid)
@@ -135,6 +138,13 @@ VARx(int, checkcnt)
 VARx(struct ev_fork **, forks)
 VARx(int, forkmax)
 VARx(int, forkcnt)
+#endif
+
+#if EV_ASYNC_ENABLE || EV_GENWRAP
+VARx(EV_ATOMIC_T, gotasync)
+VARx(struct ev_async **, asyncs)
+VARx(int, asyncmax)
+VARx(int, asynccnt)
 #endif
 
 #if EV_USE_INOTIFY || EV_GENWRAP

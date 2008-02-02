@@ -291,7 +291,13 @@ module Rev
     def parse_header(header)
       return false if @data.empty?
       
-      @parser_nbytes = @parser.execute(header, @data.to_str, @parser_nbytes)
+      begin
+        @parser_nbytes = @parser.execute(header, @data.to_str, @parser_nbytes)
+      rescue Rev::HttpClientParserError
+        on_error "invalid HTTP format, parsing fails"
+        @state = :invalid
+      end
+      
       return false unless @parser.finished?
 
       # Clear parsed data from the buffer

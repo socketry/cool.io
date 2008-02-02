@@ -1,7 +1,7 @@
 /*
  * libev native API header
  *
- * Copyright (c) 2007 Marc Alexander Lehmann <libev@schmorp.de>
+ * Copyright (c) 2007,2008 Marc Alexander Lehmann <libev@schmorp.de>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modifica-
@@ -78,6 +78,15 @@ typedef double ev_tstamp;
 # define EV_EMBED_ENABLE 1
 #endif
 
+#ifndef EV_ASYNC_ENABLE
+# define EV_ASYNC_ENABLE 1
+#endif
+
+#ifndef EV_ATOMIC_T
+# include <signal.h>
+# define EV_ATOMIC_T sig_atomic_t volatile
+#endif
+
 /*****************************************************************************/
 
 #if EV_STAT_ENABLE
@@ -120,6 +129,7 @@ struct ev_loop;
 #define EV_CHECK    0x00008000L /* event loop finished poll */
 #define EV_EMBED    0x00010000L /* embedded event loop needs sweep */
 #define EV_FORK     0x00020000L /* event loop resumed in child */
+#define EV_ASYNC    0x00040000L /* async intra-loop signal */
 #define EV_ERROR    0x80000000L /* sent when an error occurs */
 
 /* can be used to add custom fields to all watchers, while losing binary compatibility */
@@ -307,6 +317,17 @@ typedef struct ev_embed
 } ev_embed;
 #endif
 
+#if EV_ASYNC_ENABLE
+/* invoked when somebody calls ev_async_send on the watcher */
+/* revent EV_ASYNC */
+typedef struct ev_async
+{
+  EV_WATCHER (ev_async)
+
+  EV_ATOMIC_T sent; /* private */
+} ev_async;
+#endif
+
 /* the presence of this union forces similar struct layout */
 union ev_any_watcher
 {
@@ -331,6 +352,9 @@ union ev_any_watcher
 #endif
 #if EV_EMBED_ENABLE
   struct ev_embed embed;
+#endif
+#if EV_ASYND_ENABLE
+  struct ev_async async;
 #endif
 };
 
@@ -465,6 +489,7 @@ void ev_once (EV_P_ int fd, int events, ev_tstamp timeout, void (*cb)(int revent
 #define ev_check_set(ev)                    /* nop, yes, this is a serious in-joke */
 #define ev_embed_set(ev,other_)             do { (ev)->other = (other_); } while (0)
 #define ev_fork_set(ev)                     /* nop, yes, this is a serious in-joke */
+#define ev_async_set(ev)                    do { (ev)->sent = 0; } while (0)
 
 #define ev_io_init(ev,cb,fd,events)         do { ev_init ((ev), (cb)); ev_io_set ((ev),(fd),(events)); } while (0)
 #define ev_timer_init(ev,cb,after,repeat)   do { ev_init ((ev), (cb)); ev_timer_set ((ev),(after),(repeat)); } while (0)
@@ -477,6 +502,7 @@ void ev_once (EV_P_ int fd, int events, ev_tstamp timeout, void (*cb)(int revent
 #define ev_check_init(ev,cb)                do { ev_init ((ev), (cb)); ev_check_set ((ev)); } while (0)
 #define ev_embed_init(ev,cb,other)          do { ev_init ((ev), (cb)); ev_embed_set ((ev),(other)); } while (0)
 #define ev_fork_init(ev,cb)                 do { ev_init ((ev), (cb)); ev_fork_set ((ev)); } while (0)
+#define ev_async_init(ev,cb)                do { ev_init ((ev), (cb)); ev_async_set ((ev)); } while (0)
 
 #define ev_is_pending(ev)                   (0 + ((ev_watcher *)(void *)(ev))->pending) /* ro, true when watcher is waiting for callback invocation */
 #define ev_is_active(ev)                    (0 + ((ev_watcher *)(void *)(ev))->active) /* ro, true when the watcher has been started */
@@ -550,6 +576,12 @@ void ev_fork_stop      (EV_P_ ev_fork *w);
 void ev_embed_start    (EV_P_ ev_embed *w);
 void ev_embed_stop     (EV_P_ ev_embed *w);
 void ev_embed_sweep    (EV_P_ ev_embed *w);
+# endif
+
+# if EV_ASYNC_ENABLE
+void ev_async_start    (EV_P_ ev_async *w);
+void ev_async_stop     (EV_P_ ev_async *w);
+void ev_async_send     (EV_P_ ev_async *w);
 # endif
 
 #endif

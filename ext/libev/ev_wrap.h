@@ -13,6 +13,8 @@
 #define backend_fudge ((loop)->backend_fudge)
 #define backend_modify ((loop)->backend_modify)
 #define backend_poll ((loop)->backend_poll)
+#define evpipe ((loop)->evpipe)
+#define pipeev ((loop)->pipeev)
 #define curpid ((loop)->curpid)
 #define postfork ((loop)->postfork)
 #define vec_ri ((loop)->vec_ri)
@@ -61,6 +63,10 @@
 #define forks ((loop)->forks)
 #define forkmax ((loop)->forkmax)
 #define forkcnt ((loop)->forkcnt)
+#define gotasync ((loop)->gotasync)
+#define asyncs ((loop)->asyncs)
+#define asyncmax ((loop)->asyncmax)
+#define asynccnt ((loop)->asynccnt)
 #define fs_fd ((loop)->fs_fd)
 #define fs_w ((loop)->fs_w)
 #define fs_hash ((loop)->fs_hash)
@@ -78,6 +84,8 @@
 #undef backend_fudge
 #undef backend_modify
 #undef backend_poll
+#undef evpipe
+#undef pipeev
 #undef curpid
 #undef postfork
 #undef vec_ri
@@ -126,6 +134,10 @@
 #undef forks
 #undef forkmax
 #undef forkcnt
+#undef gotasync
+#undef asyncs
+#undef asyncmax
+#undef asynccnt
 #undef fs_fd
 #undef fs_w
 #undef fs_hash

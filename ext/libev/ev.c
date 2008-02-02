@@ -1,7 +1,7 @@
 /*
  * libev event processing core, watcher management
  *
- * Copyright (c) 2007 Marc Alexander Lehmann <libev@schmorp.de>
+ * Copyright (c) 2007,2008 Marc Alexander Lehmann <libev@schmorp.de>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modifica-
@@ -293,7 +293,7 @@ typedef ev_watcher_time *WT;
 #if EV_USE_MONOTONIC
 /* sig_atomic_t is used to avoid per-thread variables or locking but still */
 /* giving it a reasonably high chance of working on typical architetcures */
-static sig_atomic_t have_monotonic; /* did clock_gettime (CLOCK_MONOTONIC) work? */
+static EV_ATOMIC_T have_monotonic; /* did clock_gettime (CLOCK_MONOTONIC) work? */
 #endif
 
 #ifdef _WIN32
@@ -765,15 +765,13 @@ adjustheap (WT *heap, int N, int k)
 typedef struct
 {
   WL head;
-  sig_atomic_t volatile gotsig;
+  EV_ATOMIC_T gotsig;
 } ANSIG;
 
 static ANSIG *signals;
 static int signalmax;
 
-static int sigpipe [2];
-static sig_atomic_t volatile gotsig;
-static ev_io sigev;
+static EV_ATOMIC_T gotsig;
 
 void inline_size
 signals_init (ANSIG *base, int count)
@@ -787,22 +785,99 @@ signals_init (ANSIG *base, int count)
     }
 }
 
+/*****************************************************************************/
+
+void inline_speed
+fd_intern (int fd)
+{
+#ifdef _WIN32
+  int arg = 1;
+  ioctlsocket (_get_osfhandle (fd), FIONBIO, &arg);
+#else
+  fcntl (fd, F_SETFD, FD_CLOEXEC);
+  fcntl (fd, F_SETFL, O_NONBLOCK);
+#endif
+}
+
+static void noinline
+evpipe_init (EV_P)
+{
+  if (!ev_is_active (&pipeev))
+    {
+      while (pipe (evpipe))
+        syserr ("(libev) error creating signal/async pipe");
+
+      fd_intern (evpipe [0]);
+      fd_intern (evpipe [1]);
+
+      ev_io_set (&pipeev, evpipe [0], EV_READ);
+      ev_io_start (EV_A_ &pipeev);
+      ev_unref (EV_A); /* child watcher should not keep loop alive */
+    }
+}
+
+void inline_size
+evpipe_write (EV_P_ int sig, int async)
+{
+  if (!(gotasync || gotsig))
+    {
+      int old_errno = errno;
+
+      if (sig)   gotsig   = 1;
+      if (async) gotasync = 1;
+
+      write (evpipe [1], &old_errno, 1);
+      errno = old_errno;
+    }
+}
+
+static void
+pipecb (EV_P_ ev_io *iow, int revents)
+{
+  {
+    int dummy;
+    read (evpipe [0], &dummy, 1);
+  }
+
+  if (gotsig)
+    {    
+      int signum;
+      gotsig = 0;
+
+      for (signum = signalmax; signum--; )
+        if (signals [signum].gotsig)
+          ev_feed_signal_event (EV_A_ signum + 1);
+    }
+
+  if (gotasync)
+    {
+      int i;
+      gotasync = 0;
+
+      for (i = asynccnt; i--; )
+        if (asyncs [i]->sent)
+          {
+            asyncs [i]->sent = 0;
+            ev_feed_event (EV_A_ asyncs [i], EV_ASYNC);
+          }
+    }
+}
+
+/*****************************************************************************/
+
 static void
 sighandler (int signum)
 {
+#if EV_MULTIPLICITY
+  struct ev_loop *loop = &default_loop_struct;
+#endif
+
 #if _WIN32
   signal (signum, sighandler);
 #endif
 
   signals [signum - 1].gotsig = 1;
-
-  if (!gotsig)
-    {
-      int old_errno = errno;
-      gotsig = 1;
-      write (sigpipe [1], &signum, 1);
-      errno = old_errno;
-    }
+  evpipe_write (EV_A_ 1, 0);
 }
 
 void noinline
@@ -823,42 +898,6 @@ ev_feed_signal_event (EV_P_ int signum)
 
   for (w = signals [signum].head; w; w = w->next)
     ev_feed_event (EV_A_ (W)w, EV_SIGNAL);
-}
-
-static void
-sigcb (EV_P_ ev_io *iow, int revents)
-{
-  int signum;
-
-  read (sigpipe [0], &revents, 1);
-  gotsig = 0;
-
-  for (signum = signalmax; signum--; )
-    if (signals [signum].gotsig)
-      ev_feed_signal_event (EV_A_ signum + 1);
-}
-
-void inline_speed
-fd_intern (int fd)
-{
-#ifdef _WIN32
-  int arg = 1;
-  ioctlsocket (_get_osfhandle (fd), FIONBIO, &arg);
-#else
-  fcntl (fd, F_SETFD, FD_CLOEXEC);
-  fcntl (fd, F_SETFL, O_NONBLOCK);
-#endif
-}
-
-static void noinline
-siginit (EV_P)
-{
-  fd_intern (sigpipe [0]);
-  fd_intern (sigpipe [1]);
-
-  ev_io_set (&sigev, sigpipe [0], EV_READ);
-  ev_io_start (EV_A_ &sigev);
-  ev_unref (EV_A); /* child watcher should not keep loop alive */
 }
 
 /*****************************************************************************/
@@ -1086,8 +1125,8 @@ loop_init (EV_P_ unsigned int flags)
       if (!backend && (flags & EVBACKEND_SELECT)) backend = select_init (EV_A_ flags);
 #endif
 
-      ev_init (&sigev, sigcb);
-      ev_set_priority (&sigev, EV_MAXPRI);
+      ev_init (&pipeev, pipecb);
+      ev_set_priority (&pipeev, EV_MAXPRI);
     }
 }
 
@@ -1095,6 +1134,15 @@ static void noinline
 loop_destroy (EV_P)
 {
   int i;
+
+  if (ev_is_active (&pipeev))
+    {
+      ev_ref (EV_A); /* signal watcher */
+      ev_io_stop (EV_A_ &pipeev);
+
+      close (evpipe [0]); evpipe [0] = 0;
+      close (evpipe [1]); evpipe [1] = 0;
+    }
 
 #if EV_USE_INOTIFY
   if (fs_fd >= 0)
@@ -1163,20 +1211,19 @@ loop_fork (EV_P)
   infy_fork (EV_A);
 #endif
 
-  if (ev_is_active (&sigev))
+  if (ev_is_active (&pipeev))
     {
-      /* default loop */
+      /* this "locks" the handlers against writing to the pipe */
+      gotsig = gotasync = 1;
 
       ev_ref (EV_A);
-      ev_io_stop (EV_A_ &sigev);
-      close (sigpipe [0]);
-      close (sigpipe [1]);
+      ev_io_stop (EV_A_ &pipeev);
+      close (evpipe [0]);
+      close (evpipe [1]);
 
-      while (pipe (sigpipe))
-        syserr ("(libev) error creating pipe");
-
-      siginit (EV_A);
-      sigcb (EV_A_ &sigev, EV_READ);
+      evpipe_init (EV_A);
+      /* now iterate over everything, in case we missed something */
+      pipecb (EV_A_ &pipeev, EV_READ);
     }
 
   postfork = 0;
@@ -1221,10 +1268,6 @@ int
 ev_default_loop (unsigned int flags)
 #endif
 {
-  if (sigpipe [0] == sigpipe [1])
-    if (pipe (sigpipe))
-      return 0;
-
   if (!ev_default_loop_ptr)
     {
 #if EV_MULTIPLICITY
@@ -1237,8 +1280,6 @@ ev_default_loop (unsigned int flags)
 
       if (ev_backend (EV_A))
         {
-          siginit (EV_A);
-
 #ifndef _WIN32
           ev_signal_init (&childev, childcb, SIGCHLD);
           ev_set_priority (&childev, EV_MAXPRI);
@@ -1264,12 +1305,6 @@ ev_default_destroy (void)
   ev_ref (EV_A); /* child watcher */
   ev_signal_stop (EV_A_ &childev);
 #endif
-
-  ev_ref (EV_A); /* signal watcher */
-  ev_io_stop (EV_A_ &sigev);
-
-  close (sigpipe [0]); sigpipe [0] = 0;
-  close (sigpipe [1]); sigpipe [1] = 0;
 
   loop_destroy (EV_A);
 }
@@ -1867,6 +1902,8 @@ ev_signal_start (EV_P_ ev_signal *w)
 
   assert (("ev_signal_start called with illegal signal number", w->signum > 0));
 
+  evpipe_init (EV_A);
+
   {
 #ifndef _WIN32
     sigset_t full, prev;
@@ -2386,6 +2423,44 @@ ev_fork_stop (EV_P_ ev_fork *w)
   }
 
   ev_stop (EV_A_ (W)w);
+}
+#endif
+
+#if EV_ASYNC_ENABLE
+void
+ev_async_start (EV_P_ ev_async *w)
+{
+  if (expect_false (ev_is_active (w)))
+    return;
+
+  evpipe_init (EV_A);
+
+  ev_start (EV_A_ (W)w, ++asynccnt);
+  array_needsize (ev_async *, asyncs, asyncmax, asynccnt, EMPTY2);
+  asyncs [asynccnt - 1] = w;
+}
+
+void
+ev_async_stop (EV_P_ ev_async *w)
+{
+  clear_pending (EV_A_ (W)w);
+  if (expect_false (!ev_is_active (w)))
+    return;
+
+  {
+    int active = ((W)w)->active;
+    asyncs [active - 1] = asyncs [--asynccnt];
+    ((W)asyncs [active - 1])->active = active;
+  }
+
+  ev_stop (EV_A_ (W)w);
+}
+
+void
+ev_async_send (EV_P_ ev_async *w)
+{
+  w->sent = 1;
+  evpipe_write (EV_A_ 0, 1);
 }
 #endif
 
