@@ -26,16 +26,14 @@ if have_header('port.h')
   flags << '-DEV_USE_PORT'
 end
 
-if have_header('linux/proc_fs.h')
-  flags << '-DHAVE_LINUX_PROCFS_H'
-end
-
-if have_header('sys/param.h')
-  flags << '-DHAVE_SYS_PARAM_H'
-end
-
-if have_header('sys/sysctl.h')
-  flags << '-DHAVE_SYS_SYSCTL_H'
+# ncpu detection specifics
+case RUBY_PLATFORM
+when /linux/
+  flags << '-DHAVE_LINUX_PROCFS'
+else
+  if have_header('sys/sysctl.h')
+    flags << '-DHAVE_SYS_SYSCTL_H'
+  end
 end
 
 $CFLAGS << ' ' << flags.join(' ')

@@ -8,7 +8,7 @@
 
 #include <sys/resource.h>
 
-#ifdef HAVE_SYS_PARAM_H && HAVE_SYS_SYSCTL_H
+#ifdef HAVE_SYS_SYSCTL_H
 #include <sys/param.h>
 #include <sys/sysctl.h>
 #endif
@@ -45,15 +45,7 @@ static VALUE Rev_Utils_ncpus(VALUE self)
 {
   int ncpus = 0;
 
-#ifdef HAVE_SYS_PARAM_H && HAVE_SYS_SYSCTL_H
-#define HAVE_REV_UTILS_NCPUS
-  size_t size = sizeof(int);
-
-  if(sysctlbyname("hw.ncpu", &ncpus, &size, NULL, 0)) 
-    return INT2NUM(1);
-#endif
-
-#ifdef HAVE_LINUX_PROCFS_H
+#ifdef HAVE_LINUX_PROCFS
 #define HAVE_REV_UTILS_NCPUS
   char buf[512];
   FILE *cpuinfo;
@@ -65,6 +57,14 @@ static VALUE Rev_Utils_ncpus(VALUE self)
     if(!strncmp(buf, "processor", 9))
       ncpus++;
   }
+#endif
+
+#ifdef HAVE_SYS_SYSCTL_H
+#define HAVE_REV_UTILS_NCPUS
+  size_t size = sizeof(int);
+
+  if(sysctlbyname("hw.ncpu", &ncpus, &size, NULL, 0)) 
+    return INT2NUM(1);
 #endif
 
 #ifndef HAVE_REV_UTILS_NCPUS
