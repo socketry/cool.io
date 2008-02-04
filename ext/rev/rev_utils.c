@@ -101,7 +101,7 @@ static VALUE Rev_Utils_setmaxfds(VALUE self, VALUE max)
 {
   struct rlimit rlim;
 
-  rlim.rlim_cur = rlim.rlim_max = NUM2INT(max);
+  rlim.rlim_cur = NUM2INT(max);
 
   if(setrlimit(RLIMIT_NOFILE, &rlim) < 0)
     rb_sys_fail("setrlimit");
