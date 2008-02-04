@@ -1,5 +1,10 @@
 0.1.5:
 
+* Initial Rev::Utils implementation with #ncpus and methods to query and
+  change the maximum number of file descriptors for the current process.
+
+* Initial Rev::AsyncWatcher implementation for cross-thread signaling
+
 * Handle unspecified Content-Length when encoding is identity in HttpClient
 
 * Fix bug in HttpClient processing zero Content-Length

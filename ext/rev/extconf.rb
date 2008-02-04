@@ -30,6 +30,18 @@ if have_header('sys/inotify.h')
   flags << '-DEV_USE_INOTIFY'
 end
 
+if have_header('linux/proc_fs.h')
+  flags << '-DHAVE_LINUX_PROCFS_H'
+end
+
+if have_header('sys/param.h')
+  flags << '-DHAVE_SYS_PARAM_H'
+end
+
+if have_header('sys/sysctl.h')
+  flags << '-DHAVE_SYS_SYSCTL_H'
+end
+
 $CFLAGS << ' ' << flags.join(' ')
 
 dir_config('rev_ext')
