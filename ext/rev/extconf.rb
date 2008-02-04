@@ -26,10 +26,6 @@ if have_header('port.h')
   flags << '-DEV_USE_PORT'
 end
 
-if have_header('sys/inotify.h')
-  flags << '-DEV_USE_INOTIFY'
-end
-
 if have_header('linux/proc_fs.h')
   flags << '-DHAVE_LINUX_PROCFS_H'
 end
