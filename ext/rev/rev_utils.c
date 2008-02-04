@@ -59,7 +59,7 @@ static VALUE Rev_Utils_ncpus(VALUE self)
   }
 #endif
 
-#ifdef HAVE_SYS_SYSCTL_H
+#ifdef HAVE_SYSCTLBYNAME
 #define HAVE_REV_UTILS_NCPUS
   size_t size = sizeof(int);
 

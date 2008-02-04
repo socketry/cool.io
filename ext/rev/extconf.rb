@@ -31,8 +31,8 @@ case RUBY_PLATFORM
 when /linux/
   flags << '-DHAVE_LINUX_PROCFS'
 else
-  if have_header('sys/sysctl.h')
-    flags << '-DHAVE_SYS_SYSCTL_H'
+  if have_func('sysctlbyname', ['sys/param.h', 'sys/sysctl.h'])
+    flags << '-DHAVE_SYSCTLBYNAME'
   end
 end
 
