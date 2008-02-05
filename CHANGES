@@ -1,5 +1,7 @@
 0.1.5:
 
+* SSL support via Rev::SSL
+
 * Initial Rev::Utils implementation with #ncpus and methods to query and
   change the maximum number of file descriptors for the current process.
 

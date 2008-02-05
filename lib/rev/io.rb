@@ -50,7 +50,9 @@ module Rev
 
     # Write data in a buffered, non-blocking manner
     def write(data)
-      buffered_write data
+      @write_buffer << data
+      schedule_write
+      data.size
     end
 
     # Number of bytes are currently in the output buffer
@@ -76,13 +78,6 @@ module Rev
     #########
     protected
     #########
- 
-    # Buffered writer
-    def buffered_write(data) 
-      @write_buffer << data
-      schedule_write
-      data.size
-    end
 
     # Attempt to write the contents of the output buffer
     def write_output_buffer
