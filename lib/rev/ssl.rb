@@ -64,6 +64,8 @@ module Rev
     def write_output_buffer
       begin
         nbytes = ssl_socket.syswrite @write_buffer.to_str
+      rescue Errno::EAGAIN
+        return
       rescue Errno::EPIPE
         close
       end
