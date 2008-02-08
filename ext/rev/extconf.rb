@@ -37,6 +37,7 @@ else
 end
 
 $CFLAGS << ' ' << flags.join(' ')
+$LDFLAGS << '-lssl -lcrypto'
 
 dir_config('rev_ext')
 create_makefile('rev_ext')

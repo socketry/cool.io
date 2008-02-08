@@ -9,7 +9,7 @@ require File.dirname(__FILE__) + '/../rev'
 module Rev
   # A buffered I/O class witch fits into the Rev Watcher framework.
   # It provides both an observer which reads data as it's received
-  # from the wire and a buffered writer which stores data and writes
+  # from the wire and a buffered write_watcher which stores data and writes
   # it out each time the socket becomes writable.
   #
   # This class is primarily meant as a base class for other streams
@@ -63,7 +63,7 @@ module Rev
     # Close the IO stream
     def close
       detach if attached?
-      @writer.detach if @writer and @writer.attached?
+      detach_write_watcher
       @io.close unless @io.closed?
 
       on_close
@@ -79,21 +79,7 @@ module Rev
     protected
     #########
 
-    # Attempt to write the contents of the output buffer
-    def write_output_buffer
-      begin
-        @write_buffer.write_to(@io)
-      rescue Errno::EPIPE
-        return close
-      end
-      
-      if @write_buffer.empty?
-        @writer.disable if @writer and @writer.enabled?
-        on_write_complete
-      end
-    end
-
-    # Inherited callback from IOWatcher
+    # Read from the input buffer and dispatch to on_read
     def on_readable
       begin
         on_read @io.read_nonblock(INPUT_SIZE)
@@ -102,30 +88,58 @@ module Rev
       end
     end
     
-    # Schedule a write to be performed when the IO object becomes writable 
-    def schedule_write
-      return if @writer and @writer.enabled?
-      if @writer 
-        @writer.enable
-      else
-        begin
-          @writer = Writer.new(@io, self)
-        rescue IOError
-          return
-        end
-
-        @writer.attach(evloop)
+    # Write the contents of the output buffer
+    def on_writable
+      begin
+        @write_buffer.write_to(@io)
+      rescue Errno::EPIPE
+        return close
+      end
+      
+      if @write_buffer.empty?
+        disable_write_watcher
+        on_write_complete
       end
     end
 
-    class Writer < IOWatcher
-      def initialize(io, buffered_io)
-        @buffered_io = buffered_io
-        super(io, :w)
+    # Schedule a write to be performed when the IO object becomes writable 
+    def schedule_write
+      begin
+        enable_write_watcher      
+      rescue IOError
+      end
+    end
+    
+    # Return a handle to the writing IOWatcher
+    def write_watcher
+      @write_watcher ||= WriteWatcher.new(@io, self)
+    end
+    
+    def enable_write_watcher
+      if write_watcher.attached?
+        write_watcher.enable unless write_watcher.enabled?
+      else
+        write_watcher.attach(evloop)
+      end
+    end
+    
+    def disable_write_watcher
+      @write_watcher.disable if @write_watcher and @write_watcher.enabled?
+    end
+    
+    def detach_write_watcher
+      @write_watcher.detach if @write_watcher and @write_watcher.attached?
+    end
+
+    class WriteWatcher < IOWatcher
+      def initialize(ruby_io, rev_io)
+        @rev_io = rev_io
+        super(ruby_io, :w)
       end
 
+      # Delegate on_writable to the Rev::IO object
       def on_writable
-        @buffered_io.__send__(:write_output_buffer)
+        @rev_io.__send__(:on_writable)
       end
     end
   end

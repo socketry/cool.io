@@ -1,10 +1,5 @@
 Revision history for libev, a high-performance and full-featured event loop
 
-3.1
-	- implement ev_asnc watchers.
-        - only initialise signal pipe on demand.
-	- make use of sig_atomic_t configurable.
-
 3.0  Mon Jan 28 13:14:47 CET 2008
 	- API/ABI bump to version 3.0.
 	- ev++.h includes "ev.h" by default now, not <ev.h>.
