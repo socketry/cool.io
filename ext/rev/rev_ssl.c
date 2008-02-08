@@ -129,11 +129,11 @@ Rev_SSL_IO_start_ssl(VALUE self, int (*func)(), const char *funcname)
       rb_raise(eRev_SSL_IO_ReadAgain, "read again");
     case SSL_ERROR_SYSCALL:
       if (errno) rb_sys_fail(funcname);
-      Rev_SSL_IO_raise(eSSLError, "%s SYSCALL returned=%d errno=%d state=%s", 
+      rb_raise(eSSLError, "%s SYSCALL returned=%d errno=%d state=%s", 
         funcname, ret2, errno, SSL_state_string_long(ssl)
       );
     default:
-      Rev_SSL_IO_raise(eSSLError, "%s returned=%d errno=%d state=%s", 
+      rb_raise(eSSLError, "%s returned=%d errno=%d state=%s", 
         funcname, ret2, errno, SSL_state_string_long(ssl)
       );
     }
