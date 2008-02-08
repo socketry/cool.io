@@ -1,6 +1,7 @@
 0.1.5:
 
-* SSL support via Rev::SSL
+* SSL support via Rev::SSL, with a small C extension subclassing Ruby's
+  OpenSSL::SSL::SSLSocket allowing for non-blocking SSL handshakes
 
 * Initial Rev::Utils implementation with #ncpus and methods to query and
   change the maximum number of file descriptors for the current process.
