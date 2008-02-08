@@ -103,11 +103,11 @@ module Rev
       
       begin
         nbytes = @ssl_socket.syswrite @write_buffer.to_str
-        return close if nbytes.nil?
       rescue Errno::EAGAIN
         return
       rescue OpenSSL::SSL::SSLError, Errno::EPIPE
         close
+        return
       end
       
       @write_buffer.read(nbytes)

@@ -167,6 +167,9 @@ module Rev
     #   body: String
     #     Specify the request body (you must encode it for now)
     #
+    #   ssl: Boolean
+    #     If true, initiates an HTTPS (SSL) request
+    #
     def request(method, path, options = {})
       raise ArgumentError, "invalid request path" unless path[0] == '/'
       raise RuntimeError, "request already sent" if @requested
@@ -175,7 +178,7 @@ module Rev
       @requested = true
 
       return unless @connected
-      send_request
+      @options[:ssl] ? start_ssl : send_request
     end
     
     # Enable the HttpClient if it has been disabled
@@ -213,8 +216,23 @@ module Rev
     # Rev callbacks
     #
     
+    def start_ssl
+      require 'rev/ssl'
+      extend Rev::SSL
+      ssl_start_client
+    end
+    
     def on_connect
       @connected = true
+      
+      if @options and @options[:ssl]
+        start_ssl
+      else
+        send_request if @method and @path
+      end
+    end
+    
+    def on_ssl_connect
       send_request if @method and @path
     end
 
