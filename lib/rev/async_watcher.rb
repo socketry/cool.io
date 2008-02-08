@@ -11,7 +11,7 @@ module Rev
   # intended use is notifying another thread of events.
   class AsyncWatcher < IOWatcher
     def initialize
-      @reader, @writer = IO.pipe
+      @reader, @writer = ::IO.pipe
       super(@reader)
     end
 
