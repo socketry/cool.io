@@ -88,7 +88,7 @@ module Rev
       end
       
       begin
-        on_read @ssl_socket.sysread(IO::INPUT_SIZE)
+        on_read @ssl_socket.sysread(Rev::IO::INPUT_SIZE)
       rescue OpenSSL::SSL::SSLError, Errno::ECONNRESET, EOFError
         close
       end
@@ -113,7 +113,7 @@ module Rev
       @write_buffer.read(nbytes)
       
       if @write_buffer.empty?
-        @writer.disable if @writer and @writer.enabled?
+        disable_write_watcher
         on_write_complete
       end
     end
