@@ -51,25 +51,6 @@ module Rev
       ssl_init
     end
     
-    # Called when the peer's SSL certificate has been read
-    # Equivalent to OpenSSL::SSL::SSLSocket#peer_cert
-    def on_peer_cert(cert); end
-    
-    # Called after verification of the peer's SSL certificate
-    # against the context provided by the ssl_context method.
-    # All SSL certificate validity-checking logic should be
-    # placed inside this method.  Equivalent to 
-    # OpenSSL::SSL::SSLSocket#verify_result
-    def on_ssl_result(result); end
-    
-    # Called after the initial SSL handshake has completed
-    def on_ssl_connect; end
-    
-    # Called if an error occurs doing SSL handshaking or renegotiation 
-    def on_ssl_error(error)
-      close
-    end
-    
     #########
     protected
     #########
@@ -82,6 +63,11 @@ module Rev
         enable unless enabled?
       rescue SSL::IO::WriteAgain
         enable_write_watcher
+      rescue => ex
+        if respond_to? :on_ssl_error
+          on_ssl_error(ex)
+        else raise ex
+        end
       end
     end
     
@@ -89,9 +75,9 @@ module Rev
       @ssl_init = nil
       enable unless enabled?
       
-      on_peer_cert(@ssl_socket.peer_cert)
-      on_ssl_result(@ssl_socket.verify_result)
-      on_ssl_connect
+      on_peer_cert(@ssl_socket.peer_cert) if respond_to? :on_peer_cert
+      on_ssl_result(@ssl_socket.verify_result) if respond_to? :on_ssl_result
+      on_ssl_connect if respond_to? :on_ssl_connect
     end
     
     def on_readable

@@ -110,6 +110,8 @@ module Rev
     end
 
     def request_question(hostname)
+      raise ArgumentError, "hostname cannot be nil" if hostname.nil?
+      
       # Query name
       message = hostname.split('.').map { |s| [s.size].pack('C') << s }.join + "\0"
 
