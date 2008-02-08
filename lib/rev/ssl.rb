@@ -15,7 +15,7 @@ module Rev
   #   class MySocket < Rev::TCPSocket
   #     def on_connect
   #       extend Rev::SSL
-  #       ssl_start_client
+  #       ssl_client_start
   #     end
   #   end
   #
@@ -30,7 +30,7 @@ module Rev
     # Start SSL explicitly in client mode.  After calling this, callbacks
     # will fire for checking the peer certificate (ssl_peer_cert) and
     # its validity (ssl_verify_result)
-    def ssl_start_client
+    def ssl_client_start
       raise "ssl already started" if @ssl_socket
       
       @ssl_socket = SSL::IO.new(@io, ssl_context)
@@ -42,7 +42,7 @@ module Rev
     # Start SSL explicitly in server mode. After calling this, callbacks
     # will fire for checking the peer certificate (ssl_peer_cert) and
     # its validity (ssl_verify_result)
-    def ssl_start_server
+    def ssl_server_start
       raise "ssl already started" if @ssl_socket
       
       @ssl_socket = SSL::IO.new(@io, ssl_context)
