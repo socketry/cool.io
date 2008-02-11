@@ -8,6 +8,8 @@
  * See LICENSE for details
  */
 
+#ifdef HAVE_OPENSSL_SSL_H
+
 #include "ruby.h"
 #include "rubyio.h"
 
@@ -242,3 +244,5 @@ Rev_SSL_IO_write_nonblock(VALUE self, VALUE str)
 end:
   return INT2NUM(nwrite);
 }
+
+#endif
