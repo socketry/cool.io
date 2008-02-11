@@ -181,9 +181,6 @@ Rev_SSL_IO_read_nonblock(int argc, VALUE *argv, VALUE self)
   Data_Get_Struct(self, SSL, ssl);
   GetOpenFile(rb_iv_get(self, "@io"), fptr);
   if (ssl) {
-    if(SSL_pending(ssl) <= 0)
-      rb_raise(eRev_SSL_IO_ReadAgain, "read again");
-    
     nread = SSL_read(ssl, RSTRING_PTR(str), RSTRING_LEN(str));
     switch(SSL_get_error(ssl, nread)){
     case SSL_ERROR_NONE:
