@@ -1,7 +1,7 @@
 require 'mkmf'
 
 cflags = []
-ldflags = []
+libs = []
 
 unless have_func('rb_thread_blocking_region') and have_macro('RB_UBF_DFL', 'ruby.h')
   abort "Rev requires Ruby 1.9.0 or greater"
@@ -29,7 +29,7 @@ end
 
 if have_header('openssl/ssl.h')
   cflags << '-DHAVE_OPENSSL_SSL_H'
-  ldflags << '-lssl -lcrypto'
+  libs << '-lssl -lcrypto'
 end
 
 # ncpu detection specifics
@@ -43,7 +43,7 @@ else
 end
 
 $CFLAGS << ' ' << cflags.join(' ')
-$LDFLAGS << ' ' << ldflags.join(' ')
+$LIBS << ' ' << libs.join(' ')
 
 dir_config('rev_ext')
 create_makefile('rev_ext')
