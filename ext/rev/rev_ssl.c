@@ -34,13 +34,16 @@ static VALUE Rev_SSL_IO_accept_nonblock(VALUE self);
 static VALUE Rev_SSL_IO_ssl_setup(VALUE self);
 static VALUE Rev_SSL_IO_start_ssl(VALUE self, int (*func)(), const char *funcname);
 
+static VALUE Rev_SSL_IO_read_nonblock(int argc, VALUE *argv, VALUE self);
+static VALUE Rev_SSL_IO_write_nonblock(VALUE self, VALUE str);
+
 void Init_rev_ssl()
 {
   rb_require("openssl");
-  
+
   mOSSL = rb_define_module("OpenSSL");
   eOSSLError = rb_define_class_under(mOSSL, "OpenSSLError", rb_eStandardError);
-  
+
   mSSL = rb_define_module_under(mOSSL, "SSL");
   cSSLSocket = rb_define_class_under(mSSL, "SSLSocket", rb_cObject);
   eSSLError = rb_define_class_under(mSSL, "SSLError", eOSSLError);
@@ -48,12 +51,15 @@ void Init_rev_ssl()
   mRev = rb_define_module("Rev");
   mRev_SSL = rb_define_module_under(mRev, "SSL");
   cRev_SSL_IO = rb_define_class_under(mRev_SSL, "IO", cSSLSocket);
-  
+
   eRev_SSL_IO_ReadAgain = rb_define_class_under(cRev_SSL_IO, "ReadAgain", rb_eStandardError);
   eRev_SSL_IO_WriteAgain = rb_define_class_under(cRev_SSL_IO, "WriteAgain", rb_eStandardError);
-  
+
   rb_define_method(cRev_SSL_IO, "connect_nonblock", Rev_SSL_IO_connect_nonblock, 0);
   rb_define_method(cRev_SSL_IO, "accept_nonblock", Rev_SSL_IO_accept_nonblock, 0);
+  
+  rb_define_method(cRev_SSL_IO, "read_nonblock", Rev_SSL_IO_read_nonblock, -1);
+  rb_define_method(cRev_SSL_IO, "write_nonblock", Rev_SSL_IO_write_nonblock, 1);
 }
 
 static VALUE
@@ -86,7 +92,7 @@ Rev_SSL_IO_ssl_setup(VALUE self)
    * never initialized, probably because it's buggy.  Nevertheless, the 
    * #session= method is still available to use for this hack.  Awesome!
    */
-  rb_funcall(self, rb_intern("session="), 1, Qnil);
+   rb_funcall(self, rb_intern("session="), 1, Qnil);
 }
 
 /*
@@ -140,4 +146,102 @@ Rev_SSL_IO_start_ssl(VALUE self, int (*func)(), const char *funcname)
   }
 
   return self;
+}
+
+/*
+ * call-seq:
+ *    ssl.read_nonblock(length) => string
+ *    ssl.read_nonblock(length, buffer) => buffer
+ *
+ * === Parameters
+ * * +length+ is a positive integer.
+ * * +buffer+ is a string used to store the result.
+ */
+static VALUE
+Rev_SSL_IO_read_nonblock(int argc, VALUE *argv, VALUE self)
+{
+  SSL *ssl;
+  int ilen, nread = 0;
+  VALUE len, str;
+  rb_io_t *fptr;
+
+  rb_scan_args(argc, argv, "11", &len, &str);
+  ilen = NUM2INT(len);
+  
+  if(NIL_P(str)) 
+    str = rb_str_new(0, ilen);
+  else {
+    StringValue(str);
+    rb_str_modify(str);
+    rb_str_resize(str, ilen);
+  }
+  
+  if(ilen == 0) return str;
+
+  Data_Get_Struct(self, SSL, ssl);
+  GetOpenFile(rb_iv_get(self, "@io"), fptr);
+  if (ssl) {
+    if(SSL_pending(ssl) <= 0)
+      rb_raise(eRev_SSL_IO_ReadAgain, "read again");
+    
+    nread = SSL_read(ssl, RSTRING_PTR(str), RSTRING_LEN(str));
+    switch(SSL_get_error(ssl, nread)){
+    case SSL_ERROR_NONE:
+      goto end;
+    case SSL_ERROR_ZERO_RETURN:
+      rb_eof_error();
+    case SSL_ERROR_WANT_WRITE:
+      rb_raise(eRev_SSL_IO_WriteAgain, "write again");
+    case SSL_ERROR_WANT_READ:
+      rb_raise(eRev_SSL_IO_ReadAgain, "read again");
+    case SSL_ERROR_SYSCALL:
+      if(ERR_peek_error() == 0 && nread == 0) rb_eof_error();
+      rb_sys_fail(0);
+    default:
+      rb_raise(eSSLError, "SSL_read:");
+    }
+  } else
+    rb_raise(rb_eRuntimeError, "SSL session is not started yet.");
+
+end:
+  rb_str_set_len(str, nread);
+  OBJ_TAINT(str);
+
+  return str;
+}
+
+/*
+ * call-seq:
+ *    ssl.write_nonblock(string) => integer
+ */
+static VALUE
+Rev_SSL_IO_write_nonblock(VALUE self, VALUE str)
+{
+  SSL *ssl;
+  int nwrite = 0;
+  rb_io_t *fptr;
+
+  StringValue(str);
+  Data_Get_Struct(self, SSL, ssl);
+  GetOpenFile(rb_iv_get(self, "@io"), fptr);
+
+  if (ssl) {
+    nwrite = SSL_write(ssl, RSTRING_PTR(str), RSTRING_LEN(str));
+    switch(SSL_get_error(ssl, nwrite)){
+    case SSL_ERROR_NONE:
+      goto end;
+    case SSL_ERROR_WANT_WRITE:
+      rb_raise(eRev_SSL_IO_WriteAgain, "write again");
+    case SSL_ERROR_WANT_READ:
+      rb_raise(eRev_SSL_IO_ReadAgain, "read again");
+    case SSL_ERROR_SYSCALL:
+      if (errno) rb_sys_fail(0);
+    default:
+      rb_raise(eSSLError, "SSL_write:");
+    }
+  } else
+    rb_raise(rb_eRuntimeError, "SSL session is not started yet.");
+
+end:
+  return INT2NUM(nwrite);
 }

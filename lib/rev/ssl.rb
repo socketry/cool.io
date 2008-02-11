@@ -63,6 +63,8 @@ module Rev
         enable unless enabled?
       rescue SSL::IO::WriteAgain
         enable_write_watcher
+      rescue OpenSSL::SSL::SSLError, Errno::ECONNRESET
+        close
       rescue => ex
         if respond_to? :on_ssl_error
           on_ssl_error(ex)
@@ -88,7 +90,9 @@ module Rev
       end
       
       begin
-        on_read @ssl_socket.sysread(Rev::IO::INPUT_SIZE)
+        on_read @ssl_socket.read_nonblock(Rev::IO::INPUT_SIZE)
+      rescue Errno::AGAIN, SSL::IO::ReadAgain
+        return
       rescue OpenSSL::SSL::SSLError, Errno::ECONNRESET, EOFError
         close
       end
@@ -102,8 +106,8 @@ module Rev
       end
       
       begin
-        nbytes = @ssl_socket.syswrite @write_buffer.to_str
-      rescue Errno::EAGAIN
+        nbytes = @ssl_socket.write_nonblock @write_buffer.to_str
+      rescue Errno::EAGAIN, SSL::IO::WriteAgain
         return
       rescue OpenSSL::SSL::SSLError, Errno::EPIPE
         close
