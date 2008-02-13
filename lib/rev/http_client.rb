@@ -199,7 +199,7 @@ module Rev
       close
     end
 
-    # Called when an error occurs dpathng the request
+    # Called when an error occurs dispatching the request
     def on_error(reason)
       close
       raise RuntimeError, reason

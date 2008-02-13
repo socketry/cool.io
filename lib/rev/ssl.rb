@@ -20,19 +20,13 @@ module Rev
   #   end
   #
   module SSL
-    # Obtain an OpenSSL::SSL::SSLContext to initialize the socket with
-    # Load the SSLContext with your desired certificates if you wish to
-    # verify the certificate of the remote server.
-    def ssl_context
-      OpenSSL::SSL::SSLContext.new
-    end
-    
     # Start SSL explicitly in client mode.  After calling this, callbacks
     # will fire for checking the peer certificate (ssl_peer_cert) and
     # its validity (ssl_verify_result)
     def ssl_client_start
       raise "ssl already started" if @ssl_socket
       
+      ssl_context = respond_to?(:ssl_context) ? ssl_context : OpenSSL::SSL::SSLContext.new
       @ssl_socket = SSL::IO.new(@io, ssl_context)
       @ssl_init = proc { @ssl_socket.connect_nonblock }
       
