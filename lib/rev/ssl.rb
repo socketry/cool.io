@@ -103,7 +103,7 @@ module Rev
         nbytes = @ssl_socket.write_nonblock @write_buffer.to_str
       rescue Errno::EAGAIN, SSL::IO::WriteAgain
         return
-      rescue OpenSSL::SSL::SSLError, Errno::EPIPE
+      rescue OpenSSL::SSL::SSLError, Errno::EPIPE, Errno::ECONNRESET
         close
         return
       end

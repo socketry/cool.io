@@ -1,5 +1,7 @@
 0.1.5:
 
+* Catch Errno::ECONNRESET when writing to sockets
+
 * SSL support via Rev::SSL, with a small C extension subclassing Ruby's
   OpenSSL::SSL::SSLSocket allowing for non-blocking SSL handshakes
 

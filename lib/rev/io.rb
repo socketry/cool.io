@@ -92,7 +92,7 @@ module Rev
     def on_writable
       begin
         @write_buffer.write_to(@io)
-      rescue Errno::EPIPE
+      rescue Errno::EPIPE, Errno::ECONNRESET
         return close
       end
       
