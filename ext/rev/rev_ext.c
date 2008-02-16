@@ -16,10 +16,6 @@ static VALUE mRev = Qnil;
 void Init_rev_ext() 
 {
   ev_set_allocator((void *(*)(void *, long))xrealloc);
-  mRev = rb_define_module("Rev");
-
-  /* Make libev version available in Ruby */
-  rb_define_const(mRev, "LIBEV_VERSION", rb_sprintf("%d.%d", ev_version_major(), ev_version_minor()));
 
   /* Initializers for other modules */
   Init_rev_loop();

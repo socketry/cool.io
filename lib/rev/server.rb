@@ -4,8 +4,6 @@
 # See file LICENSE for details
 #++
 
-require File.dirname(__FILE__) + '/../rev'
-
 module Rev
   class Server < Listener
     # Servers listen for incoming connections and create new connection objects
@@ -36,7 +34,7 @@ module Rev
     def on_connection(socket)
       connection = @klass.new(socket, *@args).attach(evloop)
       connection.__send__(:on_connect)
-      @block.(connection) if @block
+      @block.call(connection) if @block
     end
   end
 

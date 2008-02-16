@@ -79,7 +79,7 @@ def setup_gem(pkg_name, pkg_version, author, summary, executables, test_file)
         s.has_rdoc = true
         s.extra_rdoc_files = ["README", "LICENSE"] + FileList["ext/**/*.c"]
         s.rdoc_options = %w(--title Rev --main README --line-numbers)
-        s.required_ruby_version = '>= 1.9.0'
+        s.required_ruby_version = '>= 1.8.6'
 
         s.files = %w(LICENSE README) +
         Dir.glob("{lib,doc,test}/**/*") + 

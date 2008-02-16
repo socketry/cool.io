@@ -6,6 +6,12 @@
 
 #include "ruby.h"
 #include "rubyio.h"
+
+#define EV_STANDALONE 1
+#include "../libev/ev.h"
+
+#include "rev.h"
+
 #include <assert.h>
 
 #include <string.h>
@@ -287,13 +293,17 @@ static VALUE Rev_Buffer_to_str(VALUE self) {
  */
 static VALUE Rev_Buffer_read_from(VALUE self, VALUE io) {
 	struct buffer *buf;
+#if HAVE_RB_IO_T
   rb_io_t *fptr;
+#else
+  OpenFile *fptr;
+#endif
 
   Data_Get_Struct(self, struct buffer, buf);
   GetOpenFile(rb_convert_type(io, T_FILE, "IO", "to_io"), fptr);
   rb_io_set_nonblock(fptr);
 
-  return INT2NUM(buffer_read_from(buf, fptr->fd));
+  return INT2NUM(buffer_read_from(buf, FPTR_TO_FD(fptr)));
 }
 
 /**
@@ -306,13 +316,17 @@ static VALUE Rev_Buffer_read_from(VALUE self, VALUE io) {
  */
 static VALUE Rev_Buffer_write_to(VALUE self, VALUE io) {
   struct buffer *buf;
+#if HAVE_RB_IO_T 
   rb_io_t *fptr;
+#else
+  OpenFile *fptr;
+#endif
 
   Data_Get_Struct(self, struct buffer, buf);
   GetOpenFile(rb_convert_type(io, T_FILE, "IO", "to_io"), fptr);
   rb_io_set_nonblock(fptr);
 
-  return INT2NUM(buffer_write_to(buf, fptr->fd));
+  return INT2NUM(buffer_write_to(buf, FPTR_TO_FD(fptr)));
 }
 
 /*

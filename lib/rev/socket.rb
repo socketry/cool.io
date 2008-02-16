@@ -6,7 +6,6 @@
 
 require 'socket'
 require 'resolv'
-require File.dirname(__FILE__) + '/../rev'
 
 module Rev
   class Socket < IO    

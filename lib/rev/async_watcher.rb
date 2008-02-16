@@ -4,8 +4,6 @@
 # See file LICENSE for details
 #++
 
-require File.dirname(__FILE__) + '/../rev'
-
 module Rev
   # The AsyncWatcher lets you signal another thread to wake up.  Its
   # intended use is notifying another thread of events.

@@ -2,11 +2,7 @@
 # Copyright (C)2007 Tony Arcieri
 # You can redistribute this under the terms of the Ruby license
 # See file LICENSE for details
-#++
-
-require File.dirname(__FILE__) + '/../rev'
-
-#--
+#
 # Gimpy hacka asynchronous DNS resolver
 #
 # Word to the wise: I don't know what I'm doing here.  This was cobbled together as

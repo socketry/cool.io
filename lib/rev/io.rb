@@ -4,8 +4,6 @@
 # See file LICENSE for details
 #++
 
-require File.dirname(__FILE__) + '/../rev'
-
 module Rev
   # A buffered I/O class witch fits into the Rev Watcher framework.
   # It provides both an observer which reads data as it's received
@@ -20,11 +18,8 @@ module Rev
     INPUT_SIZE = 16384
 
     def initialize(io)
-      # Output buffer
+      @io = io
       @write_buffer = Rev::Buffer.new
-
-      # Coerce the argument into an IO object if possible
-      @io = ::IO.try_convert(io)
       super(@io)
     end
 

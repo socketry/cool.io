@@ -5,7 +5,6 @@
 #++
 
 require 'openssl'
-require File.dirname(__FILE__) + '/../rev'
 
 module Rev
   # Monkeypatch Rev::IO to include SSL support.  This can be accomplished

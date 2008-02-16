@@ -4,8 +4,6 @@
 # See file LICENSE for details
 #++
 
-require File.dirname(__FILE__) + '/../rev'
-
 module Rev
   class Watcher
     # Use an alternate watcher with the attach/detach/enable/disable methods

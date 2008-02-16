@@ -5,7 +5,6 @@
 #++
 
 require 'socket'
-require File.dirname(__FILE__) + '/../rev'
 
 module Rev
   # Listeners wait for incoming connections.  When a listener receives a

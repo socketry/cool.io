@@ -25,9 +25,9 @@ static void Rev_Loop_free(struct Rev_Loop *loop);
 static VALUE Rev_Loop_initialize(VALUE self);
 static VALUE Rev_Loop_ev_loop_new(VALUE self, VALUE flags);
 static VALUE Rev_Loop_run_once(VALUE self);
-static VALUE Rev_Loop_run_once_blocking(void *ptr);
 static VALUE Rev_Loop_run_nonblock(VALUE self);
 
+static void Rev_Loop_ev_loop_oneshot(struct Rev_Loop *loop_data);
 static void Rev_Loop_dispatch_events(struct Rev_Loop *loop_data);
 
 #define DEFAULT_EVENTBUF_SIZE 32
@@ -184,15 +184,20 @@ static VALUE Rev_Loop_run_once(VALUE self)
   assert(loop_data->ev_loop && !loop_data->events_received);
 
   loop_data->running = 1;
-  rb_thread_blocking_region(Rev_Loop_run_once_blocking, loop_data->ev_loop, RB_UBF_DFL, 0);
+
+  Rev_Loop_ev_loop_oneshot(loop_data);
   Rev_Loop_dispatch_events(loop_data);
   loop_data->events_received = 0;
+
   loop_data->running = 0;
 
   return Qnil;
 }
 
-static VALUE Rev_Loop_run_once_blocking(void *ptr) 
+/* Ruby 1.9 supports blocking system calls through rb_thread_blocking_region() */
+#ifdef HAVE_RB_THREAD_BLOCKING_REGION
+#define HAVE_EV_LOOP_ONESHOT
+static VALUE Rev_Loop_ev_loop_oneshot_blocking(void *ptr) 
 {
   /* The libev loop has now escaped through the Global VM Lock unscathed! */
   struct ev_loop *loop = (struct ev_loop *)ptr;
@@ -200,6 +205,46 @@ static VALUE Rev_Loop_run_once_blocking(void *ptr)
   ev_loop(loop, EVLOOP_ONESHOT);
   return Qnil;
 }
+
+static void Rev_Loop_ev_loop_oneshot(struct Rev_Loop *loop_data)
+{
+  /* Use Ruby 1.9's rb_thread_blocking_region call to make a blocking system call */
+  rb_thread_blocking_region(Rev_Loop_ev_loop_oneshot_blocking, loop_data->ev_loop, RB_UBF_DFL, 0);
+}
+#endif
+
+/* Ruby 1.8 requires us to periodically run the event loop then defer back to
+ * the green threads scheduler */
+#ifndef HAVE_EV_LOOP_ONESHOT
+#define BLOCKING_INTERVAL 0.01 /* Block for 10ms at a time */
+
+/* Stub callback */
+static void timer_callback(struct ev_loop *ev_loop, struct ev_timer *timer, int revents)
+{
+}
+
+static void Rev_Loop_ev_loop_oneshot(struct Rev_Loop *loop_data)
+{
+  struct ev_timer timer;
+  struct timeval tv;
+
+  /* Set up an ev_timer to unblock the loop every 10ms */
+  ev_timer_init(&timer, timer_callback, BLOCKING_INTERVAL, BLOCKING_INTERVAL);
+  ev_timer_start(loop_data->ev_loop, &timer);
+
+  do {
+    /* Since blocking calls would hang the Ruby 1.8 thread scheduler, don't block */
+    ev_loop(loop_data->ev_loop, EVLOOP_ONESHOT);
+
+    /* Call rb_thread_select to resume the Ruby scheduler */
+    tv.tv_sec = 0;
+    tv.tv_usec = 0;
+    rb_thread_select(0, NULL, NULL, NULL, &tv);
+  } while(!loop_data->events_received);
+
+  ev_timer_stop(loop_data->ev_loop, &timer);
+}
+#endif
 
 /**
  *  call-seq:

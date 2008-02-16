@@ -66,8 +66,12 @@ static VALUE Rev_IOWatcher_initialize(int argc, VALUE *argv, VALUE self)
   VALUE io, flags;
   char *flags_str;
   int events;
-  rb_io_t *fptr;
   struct Rev_Watcher *watcher_data;
+#if HAVE_RB_IO_T
+  rb_io_t *fptr;
+#else
+  OpenFile *fptr;
+#endif
 
   rb_scan_args(argc, argv, "11", &io, &flags);
 
@@ -85,11 +89,11 @@ static VALUE Rev_IOWatcher_initialize(int argc, VALUE *argv, VALUE self)
   else
     rb_raise(rb_eArgError, "invalid event type: '%s' (must be 'r', 'w', or 'rw')", flags_str);
 
-  GetOpenFile(rb_convert_type(io, T_FILE, "IO", "to_io"), fptr);
   Data_Get_Struct(self, struct Rev_Watcher, watcher_data);
+  GetOpenFile(rb_convert_type(io, T_FILE, "IO", "to_io"), fptr);
 
   watcher_data->dispatch_callback = Rev_IOWatcher_dispatch_callback;
-  ev_io_init(&watcher_data->event_types.ev_io, Rev_IOWatcher_libev_callback, fptr->fd, events);
+  ev_io_init(&watcher_data->event_types.ev_io, Rev_IOWatcher_libev_callback, FPTR_TO_FD(fptr), events);
   watcher_data->event_types.ev_io.data = (void *)self;
 
   return Qnil;

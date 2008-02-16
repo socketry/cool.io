@@ -165,7 +165,6 @@ Rev_SSL_IO_read_nonblock(int argc, VALUE *argv, VALUE self)
   SSL *ssl;
   int ilen, nread = 0;
   VALUE len, str;
-  rb_io_t *fptr;
 
   rb_scan_args(argc, argv, "11", &len, &str);
   ilen = NUM2INT(len);
@@ -181,7 +180,7 @@ Rev_SSL_IO_read_nonblock(int argc, VALUE *argv, VALUE self)
   if(ilen == 0) return str;
 
   Data_Get_Struct(self, SSL, ssl);
-  GetOpenFile(rb_iv_get(self, "@io"), fptr);
+
   if (ssl) {
     nread = SSL_read(ssl, RSTRING_PTR(str), RSTRING_LEN(str));
     switch(SSL_get_error(ssl, nread)){
@@ -218,11 +217,9 @@ Rev_SSL_IO_write_nonblock(VALUE self, VALUE str)
 {
   SSL *ssl;
   int nwrite = 0;
-  rb_io_t *fptr;
 
   StringValue(str);
   Data_Get_Struct(self, SSL, ssl);
-  GetOpenFile(rb_iv_get(self, "@io"), fptr);
 
   if (ssl) {
     nwrite = SSL_write(ssl, RSTRING_PTR(str), RSTRING_LEN(str));

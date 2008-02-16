@@ -4,7 +4,6 @@
 # See file LICENSE for details
 #++
 
-require File.dirname(__FILE__) + '/../rev'
 require 'thread'
 
 # Monkeypatch Thread to include a method for obtaining the default Rev::Loop

@@ -5,7 +5,6 @@
 # See file LICENSE for details
 #++
 
-require File.dirname(__FILE__) + '/../rev'
 require File.dirname(__FILE__) + '/../http11_client'
 
 module Rev

@@ -4,8 +4,6 @@
 # See file LICENSE for details
 #++
 
-require File.dirname(__FILE__) + '/../rev'
-
 module Rev
   class IOWatcher
     # The actual implementation of this class resides in the C extension

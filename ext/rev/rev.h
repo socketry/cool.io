@@ -8,6 +8,13 @@
 #define REV_H
 
 #include "ruby.h"
+#include "rubyio.h"
+
+#if HAVE_RB_IO_T
+#define FPTR_TO_FD(fptr) fptr->fd
+#else
+#define FPTR_TO_FD(fptr) fileno(fptr->f)
+#endif
 
 struct Rev_Event
 {
