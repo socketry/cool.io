@@ -1,4 +1,8 @@
-0.1.5:
+0.2.0:
+
+* Initial Ruby 1.8.6 support
+
+* Omit Rev::LIBEV_VERSION constant
 
 * Catch Errno::ECONNRESET when writing to sockets
 

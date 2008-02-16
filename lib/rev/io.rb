@@ -7,7 +7,7 @@
 module Rev
   # A buffered I/O class witch fits into the Rev Watcher framework.
   # It provides both an observer which reads data as it's received
-  # from the wire and a buffered write_watcher which stores data and writes
+  # from the wire and a buffered write watcher which stores data and writes
   # it out each time the socket becomes writable.
   #
   # This class is primarily meant as a base class for other streams

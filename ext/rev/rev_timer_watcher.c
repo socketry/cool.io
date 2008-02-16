@@ -79,8 +79,8 @@ static VALUE Rev_TimerWatcher_initialize(int argc, VALUE *argv, VALUE self)
   ev_timer_init(
       &watcher_data->event_types.ev_timer, 
       Rev_TimerWatcher_libev_callback, 
-      RFLOAT_VALUE(interval), 
-      repeating == Qtrue ? RFLOAT_VALUE(interval) : 0
+      NUM2DBL(interval), 
+      repeating == Qtrue ? NUM2DBL(interval) : 0
   );  
   watcher_data->event_types.ev_timer.data = (void *)self;
 
@@ -112,7 +112,7 @@ static VALUE Rev_TimerWatcher_attach(VALUE self, VALUE loop)
   watcher_data->loop = loop;
   
   /* Calibrate timeout to account for potential drift */
-	interval = RFLOAT_VALUE(rb_iv_get(self, "@interval"));
+	interval = NUM2DBL(rb_iv_get(self, "@interval"));
   timeout = interval + ev_time() - ev_now(loop_data->ev_loop);
   
   ev_timer_set(

@@ -50,7 +50,7 @@ module Rev
     
     def ssl_init
       begin
-        @ssl_init.()
+        @ssl_init.call
         ssl_init_complete
       rescue SSL::IO::ReadAgain
         enable unless enabled?
