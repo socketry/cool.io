@@ -17,9 +17,17 @@ module Rev
   class Loop
     attr_reader :watchers
     
-    # Retrieve the default event loop for the current thread
-    def self.default
-      Thread.current._rev_loop
+    # In Ruby 1.9 we want a Rev::Loop per thread, but Ruby 1.8 is unithreaded
+    if RUBY_VERSION.gsub('.', '').to_i >= 190
+      # Retrieve the default event loop for the current thread
+      def self.default
+        Thread.current._rev_loop
+      end
+    else
+      # Retrieve the default event loop
+      def self.default
+        @@_rev_loop ||= Rev::Loop.new
+      end
     end
 
     # Create a new Rev::Loop
