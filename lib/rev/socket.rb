@@ -172,7 +172,7 @@ module Rev
           # DNSResolver only supports IPv4 so we can safely assume an IPv4 address
           socket = TCPConnectSocket.new(::Socket::AF_INET, addr, port, host)
           initialize(socket, *args)
-          @connector = Connector.new(self, socket)
+          @connector = Socket::Connector.new(self, socket)
           @resolver = nil
         }
         @sock.attach(evloop)

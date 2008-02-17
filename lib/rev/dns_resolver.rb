@@ -140,15 +140,15 @@ module Rev
       return unless id == 2
 
       # Check the QR value and confirm this message is a response
-      qr = message[2].unpack('B1').first.to_i
+      qr = message[2..2].unpack('B1').first.to_i
       return unless qr == 1
 
       # Check the RCODE (lower nibble) and ensure there wasn't an error
-      rcode = message[3].unpack('B8').first[4..7].to_i(2)
+      rcode = message[3..3].unpack('B8').first[4..7].to_i(2)
       return unless rcode == 0
 
       # Extract the question and answer counts
-      qdcount, ancount = message[4..7].unpack('nn').map(&:to_i)
+      qdcount, ancount = message[4..7].unpack('nn').map { |n| n.to_i }
 
       # We only asked one question
       return unless qdcount == 1
