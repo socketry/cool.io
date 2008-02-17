@@ -6,6 +6,18 @@
 
 require 'openssl'
 
+# --
+# Rev implements SSL by subclassing OpenSSL::SSL::SSLSocket in C
+# and adding implementations for non-blocking versions of the
+# methods it provides.  Unfortunately, this relies on hacks specific
+# to Ruby 1.9.  If you'd like to find a workaround which is compatible
+# with Ruby 1.8, have a look at rev_ssl.c and find out if you can
+# properly initialize an OpenSSL::SSL::SSLSocket.
+# ++
+if RUBY_VERSION.gsub('.', '').to_i < 190
+  raise "Rev::SSL not supported in this Ruby version, sorry"
+end
+
 module Rev
   # Monkeypatch Rev::IO to include SSL support.  This can be accomplished
   # by extending any Rev:IO (or subclass) object with Rev::SSL after the
