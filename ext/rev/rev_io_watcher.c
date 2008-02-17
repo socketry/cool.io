@@ -13,13 +13,11 @@
 #include "rev.h"
 #include "rev_watcher.h"
 
-/* Module and object handles */
 static VALUE mRev = Qnil;
 static VALUE cRev_Watcher = Qnil;
 static VALUE cRev_Loop = Qnil;
 static VALUE cRev_IOWatcher = Qnil;
 
-/* Method implementations */
 static VALUE Rev_IOWatcher_initialize(int argc, VALUE *argv, VALUE self);
 static VALUE Rev_IOWatcher_attach(VALUE self, VALUE loop);
 static VALUE Rev_IOWatcher_detach(VALUE self);
@@ -28,7 +26,6 @@ static VALUE Rev_IOWatcher_disable(VALUE self);
 static VALUE Rev_IOWatcher_on_readable(VALUE self);
 static VALUE Rev_IOWatcher_on_writable(VALUE self);
 
-/* Callbacks */
 static void Rev_IOWatcher_libev_callback(struct ev_loop *ev_loop, struct ev_io *io, int revents);
 static void Rev_IOWatcher_dispatch_callback(VALUE self, int revents);
 

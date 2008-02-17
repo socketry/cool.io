@@ -12,16 +12,13 @@
 
 #include "rev.h"
 
-/* Module and object handles */
 static VALUE mRev = Qnil;
 static VALUE cRev_Loop = Qnil;
 
-/* Data allocators and deallocators */
 static VALUE Rev_Loop_allocate(VALUE klass);
 static void Rev_Loop_mark(struct Rev_Loop *loop);
 static void Rev_Loop_free(struct Rev_Loop *loop);
 
-/* Method implementations */
 static VALUE Rev_Loop_initialize(VALUE self);
 static VALUE Rev_Loop_ev_loop_new(VALUE self, VALUE flags);
 static VALUE Rev_Loop_run_once(VALUE self);

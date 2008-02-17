@@ -13,11 +13,9 @@
 #include <sys/sysctl.h>
 #endif
 
-/* Module and object handles */
 static VALUE mRev = Qnil;
 static VALUE cRev_Utils = Qnil;
 
-/* Method implementations */
 static VALUE Rev_Utils_ncpus(VALUE self);
 static VALUE Rev_Utils_maxfds(VALUE self);
 static VALUE Rev_Utils_setmaxfds(VALUE self, VALUE max);

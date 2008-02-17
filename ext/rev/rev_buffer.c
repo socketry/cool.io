@@ -43,16 +43,13 @@ struct buffer_node {
   unsigned char data[0];
 };
 
-/* Module and object handles */
 static VALUE mRev = Qnil;
 static VALUE cRev_Buffer = Qnil;
 
-/* Data allocators and deallocators */
 static VALUE Rev_Buffer_allocate(VALUE klass);
 static void Rev_Buffer_mark(struct buffer *);
 static void Rev_Buffer_free(struct buffer *);
 
-/* Method implementations */
 static VALUE Rev_Buffer_initialize(int argc, VALUE *argv, VALUE self);
 static VALUE Rev_Buffer_clear(VALUE self);
 static VALUE Rev_Buffer_size(VALUE self);
@@ -64,7 +61,6 @@ static VALUE Rev_Buffer_to_str(VALUE self);
 static VALUE Rev_Buffer_read_from(VALUE self, VALUE io);
 static VALUE Rev_Buffer_write_to(VALUE self, VALUE io);
 
-/* Prototypes for internal functions */
 static struct buffer *buffer_new(void);
 static void buffer_clear(struct buffer *buf);
 static void buffer_free(struct buffer *buf);

@@ -11,16 +11,13 @@
 
 #include "rev.h"
 
-/* Module and object handles */
 static VALUE mRev = Qnil;
 static VALUE cRev_Watcher = Qnil;
 
-/* Data allocators and deallocators */
 static VALUE Rev_Watcher_allocate(VALUE klass);
 static void Rev_Watcher_mark(struct Rev_Watcher *watcher);
 static void Rev_Watcher_free(struct Rev_Watcher *watcher);
 
-/* Method implementations */
 static VALUE Rev_Watcher_initialize(VALUE self);
 static VALUE Rev_Watcher_attach(VALUE self, VALUE loop);
 static VALUE Rev_Watcher_detach(VALUE self);

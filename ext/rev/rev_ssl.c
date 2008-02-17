@@ -15,7 +15,6 @@
 
 #include <openssl/ssl.h>
 
-/* Module and object handles */
 static VALUE mOSSL = Qnil;
 static VALUE eOSSLError = Qnil;
 
@@ -30,10 +29,10 @@ static VALUE cRev_SSL_IO = Qnil;
 static VALUE eRev_SSL_IO_ReadAgain = Qnil;
 static VALUE eRev_SSL_IO_WriteAgain = Qnil;
 
-/* Method implementations */
 static VALUE Rev_SSL_IO_connect_nonblock(VALUE self);
 static VALUE Rev_SSL_IO_accept_nonblock(VALUE self);
 static VALUE Rev_SSL_IO_ssl_setup(VALUE self);
+static VALUE Rev_SSL_IO_ssl_setup_check(VALUE dummy, VALUE error_info);
 static VALUE Rev_SSL_IO_start_ssl(VALUE self, int (*func)(), const char *funcname);
 
 static VALUE Rev_SSL_IO_read_nonblock(int argc, VALUE *argv, VALUE self);
@@ -97,6 +96,17 @@ Rev_SSL_IO_ssl_setup(VALUE self)
    rb_funcall(self, rb_intern("session="), 1, Qnil);
 }
 
+/* Ensure the error raised by calling #session= with a dummy argument is 
+ * the one we were expecting */
+static VALUE 
+Rev_SSL_IO_ssl_setup_check(VALUE dummy, VALUE err)
+{
+  if(!rb_obj_is_kind_of(err, rb_eTypeError))
+    rb_raise(rb_eRuntimeError, "Rev::SSL not supported in this Ruby version, sorry");
+
+  return Qnil;
+}
+
 /*
  * call-seq:
  *    ssl.connect => self
@@ -104,7 +114,7 @@ Rev_SSL_IO_ssl_setup(VALUE self)
 static VALUE
 Rev_SSL_IO_connect_nonblock(VALUE self)
 {
-  rb_rescue(Rev_SSL_IO_ssl_setup, self, 0, 0);
+  rb_rescue(Rev_SSL_IO_ssl_setup, self, Rev_SSL_IO_ssl_setup_check, Qnil);
   return Rev_SSL_IO_start_ssl(self, SSL_connect, "SSL_connect");
 }
 

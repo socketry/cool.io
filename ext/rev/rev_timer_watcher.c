@@ -12,13 +12,11 @@
 #include "rev.h"
 #include "rev_watcher.h"
 
-/* Module and object handles */
 static VALUE mRev = Qnil;
 static VALUE cRev_Watcher = Qnil;
 static VALUE cRev_TimerWatcher = Qnil;
 static VALUE cRev_Loop = Qnil;
 
-/* Method implementations */
 static VALUE Rev_TimerWatcher_initialize(int argc, VALUE *argv, VALUE self);
 static VALUE Rev_TimerWatcher_attach(VALUE self, VALUE loop);
 static VALUE Rev_TimerWatcher_detach(VALUE self);
@@ -27,7 +25,6 @@ static VALUE Rev_TimerWatcher_disable(VALUE self);
 static VALUE Rev_TimerWatcher_reset(VALUE self);
 static VALUE Rev_TimerWatcher_on_timer(VALUE self);
 
-/* Callbacks */
 static void Rev_TimerWatcher_libev_callback(struct ev_loop *ev_loop, struct ev_timer *timer, int revents);
 static void Rev_TimerWatcher_dispatch_callback(VALUE self, int revents);
 
