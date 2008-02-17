@@ -120,7 +120,7 @@ haven't overridden them in a subclass).  This is especially useful for small
 one off programs or just experimenting with the API.
 
 Any callback (methods prefixed with on_*) can be set on the fly by passing it
-a block.
+a block. (NOTE: Ruby 1.9 only)
 
 Below is an example of using this syntax.  It implements an echo server
 identical to the one above:

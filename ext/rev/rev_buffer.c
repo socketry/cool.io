@@ -73,8 +73,7 @@ static int buffer_read_from(struct buffer *buf, int fd);
 static int buffer_write_to(struct buffer *buf, int fd);
 
 /* 
- * High speed buffering geared towards non-blocking I/O.  This was largely
- * written in response to String#slice! being incredibly slow in Ruby 1.9.
+ * High speed buffering geared towards non-blocking I/O.
  *
  * Data is stored in a byte queue implemented as a linked list of equal size
  * chunks.  Since every node in the list is the same size they are easily

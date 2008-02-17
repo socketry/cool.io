@@ -1,26 +1,70 @@
 require 'rake'
-require 'rake/testtask'
 require 'rake/clean'
-require 'rake/gempackagetask'
 require 'rake/rdoctask'
-require 'tools/rakehelp'
+require 'rake/gempackagetask'
 require 'fileutils'
 include FileUtils
 
-setup_tests
-setup_clean ['ext/rev/Makefile', 'pkg']
-setup_rdoc ['README', 'LICENSE', 'lib/**/*.rb', 'doc/**/*.rdoc', 'ext/rev/*.c']
+# Load Rev Gemspec
+load 'rev.gemspec'
 
-desc "Does a full compile, test run"
-task :default => [:compile] #, :test]
+# Default Rake task is compile
+task :default => :compile
 
-desc "Compiles all extensions"
-task :compile => [:rev_ext, :http11_client]
-task :package => [:clean]
+# RDoc
+Rake::RDocTask.new(:rdoc) do |task|
+  task.rdoc_dir = 'doc'
+  task.title    = 'Rev'
+  task.options = %w(--title Revactor --main README --line-numbers)
+  task.rdoc_files.include(['lib/**/*.rb', 'doc/**/*.rdoc', 'ext/rev/*.c'])
+  task.rdoc_files.include(['README', 'LICENSE'])
+end
+
+# Gem
+Rake::GemPackageTask.new(GEMSPEC) do |pkg|
+  pkg.need_tar = true
+end
+
+def make(makedir)
+  Dir.chdir(makedir) { sh 'make' }
+end
+
+def extconf(dir)
+  Dir.chdir(dir) { ruby "extconf.rb" }
+end
+
+def setup_extension(dir, extension)
+  ext = "ext/#{dir}"
+  ext_so = "#{ext}/#{extension}.#{Config::CONFIG['DLEXT']}"
+  ext_files = FileList[
+    "#{ext}/*.c",
+    "#{ext}/*.h",
+    "#{ext}/extconf.rb",
+    "#{ext}/Makefile",
+    "lib"
+  ] 
+  
+  task "lib" do
+    directory "lib"
+  end
+
+  desc "Builds just the #{extension} extension"
+  task extension.to_sym => ["#{ext}/Makefile", ext_so ]
+
+  file "#{ext}/Makefile" => ["#{ext}/extconf.rb"] do
+    extconf "#{ext}"
+  end
+
+  file ext_so => ext_files do
+    make "#{ext}"
+    cp ext_so, "lib"
+  end
+end
 
 setup_extension("rev", "rev_ext")
 setup_extension("http11_client", "http11_client")
 
-summary = "Ruby binding to the libev high performance event library"
-test_file = "spec/rev_spec.rb"
-setup_gem("rev", "0.2.0",  "Tony Arcieri", summary, [], test_file)
+task :compile => [:rev_ext, :http11_client]
+
+CLEAN.include ['build/*', '**/*.o', '**/*.so', '**/*.a', 'lib/*-*', '**/*.log']
+CLEAN.include ['ext/rev/Makefile', 'lib/rev_ext.*', 'lib/http11_client.*']
