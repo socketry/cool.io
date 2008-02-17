@@ -18,6 +18,8 @@ module Rev
   #     end
   #   end
   #
+  # Please be aware that SSL is only supported on Ruby 1.9 at the present time.
+  # 
   module SSL
     # Start SSL explicitly in client mode.  After calling this, callbacks
     # will fire for checking the peer certificate (ssl_peer_cert) and
@@ -25,8 +27,8 @@ module Rev
     def ssl_client_start
       raise "ssl already started" if @ssl_socket
       
-      ssl_context = respond_to?(:ssl_context) ? ssl_context : OpenSSL::SSL::SSLContext.new
-      @ssl_socket = SSL::IO.new(@io, ssl_context)
+      context = respond_to?(:ssl_context) ? ssl_context : OpenSSL::SSL::SSLContext.new
+      @ssl_socket = SSL::IO.new(@io, context)
       @ssl_init = proc { @ssl_socket.connect_nonblock }
       
       ssl_init
@@ -113,6 +115,58 @@ module Rev
         disable_write_watcher
         on_write_complete
       end
+    end
+  end
+  
+  # A socket class for outgoing and incoming SSL connections.  Please be aware
+  # that SSL is only supported on Ruby 1.9 at the present time.
+  class SSLSocket < TCPSocket
+    # Perform a non-blocking connect to the given host and port
+    def self.connect(addr, port, *args)
+      super.instance_eval { @connecting = true; self }
+    end
+    
+    # Returns the OpenSSL::SSL::SSLContext for to use for the session.
+    # By default no certificates will be checked.  If you would like 
+    # any certificate checking to be performed, please override this 
+    # class and return a context loaded with the appropriate certificates.
+    def ssl_context
+      @ssl_context ||= OpenSSL::SSL::SSLContext.new
+    end
+    
+    # Called when SSL handshaking has successfully completed
+    def on_ssl_connect; end
+    event_callback :on_ssl_connect
+    
+    # Called when peer certificate has successfully been received.
+    # Equivalent to OpenSSL::SSL::SSLSocket#peer_cert
+    def on_peer_cert(peer_cert); end
+    event_callback :on_peer_cert
+    
+    # Called when SSL handshaking has been completed successfully.
+    # Equivalent to OpenSSL::SSL::SSLSocket#verify_result
+    def on_ssl_result(result);  end
+    event_callback :on_ssl_result
+    
+    # Called if an error occurs during SSL session initialization
+    def on_ssl_error(exception); end
+    event_callback :on_ssl_error
+    
+    #########
+    protected
+    #########
+    
+    def on_connect
+      extend SSL
+      @connecting ? ssl_client_start : ssl_server_start
+    end
+  end
+  
+  # A class for implementing SSL servers.  Please be aware that SSL is only
+  # supported on Ruby 1.9 at the present time.
+  class SSLServer < TCPServer
+    def initialize(host, port, klass = SSLSocket, *args, &block)
+      super
     end
   end
 end

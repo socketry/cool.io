@@ -1,9 +1,9 @@
 = Rev
 
-Rev is an event library for Ruby, built on the libev event library which provides 
-a cross-platform interface to high performance system calls .  This includes the
-epoll system call for Linux, the kqueue system call for BSDs and OS X, and the
-completion ports interface for Solaris.
+Rev is an event library for Ruby, built on the libev event library which 
+provides a cross-platform interface to high performance system calls .  This 
+includes the epoll system call for Linux, the kqueue system call for BSDs and 
+OS X, and the completion ports interface for Solaris.
 
 Rev also binds asynchronous wrappers to Ruby's core socket classes so you can
 use them in conjunction with Rev to build asynchronous event-driven 
