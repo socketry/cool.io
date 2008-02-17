@@ -15,7 +15,7 @@ require 'openssl'
 # properly initialize an OpenSSL::SSL::SSLSocket.
 # ++
 if RUBY_VERSION.gsub('.', '').to_i < 190
-  raise "Rev::SSL not supported in this Ruby version, sorry"
+  raise LoadError, "Rev::SSL not supported in this Ruby version, sorry"
 end
 
 module Rev
