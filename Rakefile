@@ -16,7 +16,7 @@ Rake::RDocTask.new(:rdoc) do |task|
   task.rdoc_dir = 'doc'
   task.title    = 'Rev'
   task.options = %w(--title Revactor --main README --line-numbers)
-  task.rdoc_files.include(['lib/**/*.rb', 'doc/**/*.rdoc', 'ext/rev/*.c'])
+  task.rdoc_files.include(['ext/rev/*.c', 'lib/**/*.rb'])
   task.rdoc_files.include(['README', 'LICENSE'])
 end
 
