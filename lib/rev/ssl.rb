@@ -19,9 +19,14 @@ if RUBY_VERSION.gsub('.', '').to_i < 190
 end
 
 module Rev
-  # Monkeypatch Rev::IO to include SSL support.  This can be accomplished
-  # by extending any Rev:IO (or subclass) object with Rev::SSL after the
-  # connection has completed, e.g.
+  # The easiest way to add SSL support to your Rev applications is to use
+  # the SSLSocket class.  However, the SSL module is provided for cases where
+  # you've already subclassed TCPSocket and want to optionally provide
+  # SSL support in that class.
+  #
+  # This module monkeypatches Rev::IO to include SSL support.  This can be 
+  # accomplished by extending any Rev:IO (or subclass) object with Rev::SSL 
+  # after the connection has completed, e.g.
   #
   #   class MySocket < Rev::TCPSocket
   #     def on_connect
@@ -132,6 +137,11 @@ module Rev
   
   # A socket class for outgoing and incoming SSL connections.  Please be aware
   # that SSL is only supported on Ruby 1.9 at the present time.
+  #
+  # To create a simple SSL server, subclass SSLSocket and pass the new class
+  # name as the klass argument of Rev::TCPServer.
+  #
+  # To make outgoing connections, just use the SSLSocket.connect method.
   class SSLSocket < TCPSocket
     # Perform a non-blocking connect to the given host and port
     def self.connect(addr, port, *args)
@@ -141,7 +151,7 @@ module Rev
     # Returns the OpenSSL::SSL::SSLContext for to use for the session.
     # By default no certificates will be checked.  If you would like 
     # any certificate checking to be performed, please override this 
-    # class and return a context loaded with the appropriate certificates.
+    # method and return a context loaded with the appropriate certificates.
     def ssl_context
       @ssl_context ||= OpenSSL::SSL::SSLContext.new
     end
@@ -171,14 +181,6 @@ module Rev
     def on_connect
       extend SSL
       @connecting ? ssl_client_start : ssl_server_start
-    end
-  end
-  
-  # A class for implementing SSL servers.  Please be aware that SSL is only
-  # supported on Ruby 1.9 at the present time.
-  class SSLServer < TCPServer
-    def initialize(host, port, klass = SSLSocket, *args, &block)
-      super
     end
   end
 end
