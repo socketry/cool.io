@@ -114,6 +114,7 @@ module Rev
       if write_watcher.attached?
         write_watcher.enable unless write_watcher.enabled?
       else
+        return detach_write_watcher unless evloop # socket closed
         write_watcher.attach(evloop)
       end
     end
