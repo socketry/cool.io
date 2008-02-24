@@ -6,10 +6,12 @@
 
 require 'thread'
 
-# Monkeypatch Thread to include a method for obtaining the default Rev::Loop
-class Thread
-  def _rev_loop
-    @_rev_loop ||= Rev::Loop.new
+if RUBY_VERSION >= "1.9.0"
+  # Monkeypatch Thread to include a method for obtaining the default Rev::Loop
+  class Thread
+    def _rev_loop
+      @_rev_loop ||= Rev::Loop.new
+    end
   end
 end
 
@@ -18,7 +20,7 @@ module Rev
     attr_reader :watchers
     
     # In Ruby 1.9 we want a Rev::Loop per thread, but Ruby 1.8 is unithreaded
-    if RUBY_VERSION.gsub('.', '').to_i >= 190
+    if RUBY_VERSION >= "1.9.0"
       # Retrieve the default event loop for the current thread
       def self.default
         Thread.current._rev_loop
