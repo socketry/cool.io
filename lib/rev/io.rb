@@ -18,9 +18,9 @@ module Rev
     INPUT_SIZE = 16384
 
     def initialize(io)
-      @io = io
-      @write_buffer = Rev::Buffer.new
-      super(@io)
+      @_io = io
+      @_write_buffer = Rev::Buffer.new
+      super(@_io)
     end
 
     #
@@ -45,21 +45,21 @@ module Rev
 
     # Write data in a buffered, non-blocking manner
     def write(data)
-      @write_buffer << data
+      @_write_buffer << data
       schedule_write
       data.size
     end
 
     # Number of bytes are currently in the output buffer
     def output_buffer_size
-      @write_buffer.size
+      @_write_buffer.size
     end
 
     # Close the IO stream
     def close
       detach if attached?
       detach_write_watcher
-      @io.close unless @io.closed?
+      @_io.close unless @_io.closed?
 
       on_close
       nil
@@ -67,7 +67,7 @@ module Rev
 
     # Is the IO object closed?
     def closed?
-      @io.closed?
+      @_io.closed?
     end
 
     #########
@@ -77,7 +77,7 @@ module Rev
     # Read from the input buffer and dispatch to on_read
     def on_readable
       begin
-        on_read @io.read_nonblock(INPUT_SIZE)
+        on_read @_io.read_nonblock(INPUT_SIZE)
       rescue Errno::ECONNRESET, EOFError
         close
       end
@@ -86,12 +86,12 @@ module Rev
     # Write the contents of the output buffer
     def on_writable
       begin
-        @write_buffer.write_to(@io)
+        @_write_buffer.write_to(@_io)
       rescue Errno::EPIPE, Errno::ECONNRESET
         return close
       end
       
-      if @write_buffer.empty?
+      if @_write_buffer.empty?
         disable_write_watcher
         on_write_complete
       end
@@ -107,7 +107,7 @@ module Rev
     
     # Return a handle to the writing IOWatcher
     def write_watcher
-      @write_watcher ||= WriteWatcher.new(@io, self)
+      @_write_watcher ||= WriteWatcher.new(@_io, self)
     end
     
     def enable_write_watcher
@@ -120,11 +120,11 @@ module Rev
     end
     
     def disable_write_watcher
-      @write_watcher.disable if @write_watcher and @write_watcher.enabled?
+      @_write_watcher.disable if @_write_watcher and @_write_watcher.enabled?
     end
     
     def detach_write_watcher
-      @write_watcher.detach if @write_watcher and @write_watcher.attached?
+      @_write_watcher.detach if @_write_watcher and @_write_watcher.attached?
     end
 
     class WriteWatcher < IOWatcher

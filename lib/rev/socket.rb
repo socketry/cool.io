@@ -11,18 +11,18 @@ module Rev
   class Socket < IO    
     def self.connect(socket, *args)
       new(socket, *args).instance_eval {
-        @connector = Connector.new(self, socket)
+        @_connector = Connector.new(self, socket)
         self
       }
     end
     
-    watcher_delegate :@connector
+    watcher_delegate :@_connector
 
     def attach(evloop)
-      raise RuntimeError, "connection failed" if @failed
+      raise RuntimeError, "connection failed" if @_failed
       
-      if @connector
-        @connector.attach(evloop)
+      if @_connector
+        @_connector.attach(evloop)
         return self
       end
       
@@ -56,11 +56,11 @@ module Rev
         detach
 
         if connect_successful?
-          @rev_socket.instance_eval { @connector = nil }
+          @rev_socket.instance_eval { @_connector = nil }
           @rev_socket.attach(evl)
           @rev_socket.__send__(:on_connect)
         else
-          @rev_socket.instance_eval { @failed = true }
+          @rev_socket.instance_eval { @_failed = true }
           @rev_socket.__send__(:on_connect_failed)
         end
       end      
@@ -77,7 +77,7 @@ module Rev
   
   class TCPSocket < Socket
     attr_reader :remote_host, :remote_addr, :remote_port, :address_family
-    watcher_delegate :@resolver
+    watcher_delegate :@_resolver
     
     # Similar to .new, but used in cases where the resulting object is in a
     # "half-open" state.  This is primarily used for when asynchronous
@@ -114,7 +114,7 @@ module Rev
     # Called by precreate during asyncronous DNS resolution
     def preinitialize(addr, port, *args)
       @remote_host, @remote_addr, @remote_port = addr, addr, port
-      @resolver = TCPConnectResolver.new(self, addr, port, *args)
+      @_resolver = TCPConnectResolver.new(self, addr, port, *args)
     end
     
     private :preinitialize
@@ -172,8 +172,8 @@ module Rev
           # DNSResolver only supports IPv4 so we can safely assume an IPv4 address
           socket = TCPConnectSocket.new(::Socket::AF_INET, addr, port, host)
           initialize(socket, *args)
-          @connector = Socket::Connector.new(self, socket)
-          @resolver = nil
+          @_connector = Socket::Connector.new(self, socket)
+          @_resolver = nil
         }
         @sock.attach(evloop)
       end
@@ -181,8 +181,8 @@ module Rev
       def on_failure
         @sock.__send__(:on_resolve_failed)
         @sock.instance_eval { 
-          @resolver = nil 
-          @failed = true
+          @_resolver = nil 
+          @_failed = true
         }
         return
       end
