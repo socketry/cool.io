@@ -23,6 +23,7 @@ static VALUE Rev_Loop_initialize(VALUE self);
 static VALUE Rev_Loop_ev_loop_new(VALUE self, VALUE flags);
 static VALUE Rev_Loop_run_once(VALUE self);
 static VALUE Rev_Loop_run_nonblock(VALUE self);
+static VALUE Rev_Loop_has_active_watchers(VALUE self);
 static VALUE Rev_Loop_watchers(VALUE self);
 
 static void Rev_Loop_ev_loop_oneshot(struct Rev_Loop *loop_data);
@@ -50,6 +51,7 @@ void Init_rev_loop()
   rb_define_private_method(cRev_Loop, "ev_loop_new", Rev_Loop_ev_loop_new, 1);
   rb_define_method(cRev_Loop, "run_once", Rev_Loop_run_once, 0);
   rb_define_method(cRev_Loop, "run_nonblock", Rev_Loop_run_nonblock, 0);
+  rb_define_method(cRev_Loop, "has_active_watchers?", Rev_Loop_has_active_watchers, 0);
   rb_define_method(cRev_Loop, "watchers", Rev_Loop_watchers, 0);
 }
 
@@ -59,6 +61,7 @@ static VALUE Rev_Loop_allocate(VALUE klass)
 
   loop->ev_loop = 0;
   loop->running = 0;
+  loop->active_watchers = 0;
   
   loop->watchers_count = 0;
   loop->watchers_size = DEFAULT_WATCHERS_SIZE;
@@ -303,6 +306,26 @@ static void Rev_Loop_dispatch_events(struct Rev_Loop *loop_data)
   }
 }
 
+/**
+ *  call-seq:
+ *    Rev::Loop.has_active_watchers? -> Boolean
+ * 
+ * Does the loop have any active watchers?
+ */
+static VALUE Rev_Loop_has_active_watchers(VALUE self)
+{
+  struct Rev_Loop *loop_data;
+  Data_Get_Struct(self, struct Rev_Loop, loop_data);
+  
+  return loop_data->active_watchers > 0 ? Qtrue : Qfalse;
+}
+
+/**
+ *  call-seq:
+ *    Rev::Loop.watchers -> Array
+ * 
+ * Return the set of Rev::Watchers attached to the loop
+ */
 static VALUE Rev_Loop_watchers(VALUE self) 
 {
   struct Rev_Loop *loop_data;

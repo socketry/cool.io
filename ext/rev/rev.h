@@ -26,7 +26,7 @@ struct Rev_Event
 struct Rev_Loop 
 {
   struct ev_loop *ev_loop;
-  int running;
+  int running, active_watchers;
   
   VALUE *watchers;
   int watchers_count;

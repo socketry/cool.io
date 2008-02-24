@@ -93,7 +93,7 @@ module Rev
       raise RuntimeError, "no watchers for this loop" if watchers.empty?
 
       @running = true
-      while @running and not @active_watchers.zero?
+      while @running and has_active_watchers?
         run_once
       end
     end
@@ -102,11 +102,6 @@ module Rev
     def stop
       raise RuntimeError, "loop not running" unless @running
       @running = false
-    end
-    
-    # Does the loop have any active watchers?
-    def has_active_watchers?
-      @active_watchers > 0
     end
     
     #######
