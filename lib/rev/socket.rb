@@ -10,10 +10,10 @@ require 'resolv'
 module Rev
   class Socket < IO    
     def self.connect(socket, *args)
-      new(socket, *args).instance_eval {
+      new(socket, *args).instance_eval do
         @_connector = Connector.new(self, socket)
         self
-      }
+      end
     end
     
     watcher_delegate :@_connector
@@ -168,22 +168,22 @@ module Rev
       def on_success(addr)
         host, port, args = @host, @port, @args
 
-        @sock.instance_eval {
+        @sock.instance_eval do
           # DNSResolver only supports IPv4 so we can safely assume an IPv4 address
           socket = TCPConnectSocket.new(::Socket::AF_INET, addr, port, host)
           initialize(socket, *args)
           @_connector = Socket::Connector.new(self, socket)
           @_resolver = nil
-        }
+        end
         @sock.attach(evloop)
       end
 
       def on_failure
         @sock.__send__(:on_resolve_failed)
-        @sock.instance_eval { 
+        @sock.instance_eval do 
           @_resolver = nil 
           @_failed = true
-        }
+        end
         return
       end
     end
