@@ -17,8 +17,6 @@ end
 
 module Rev
   class Loop
-    attr_reader :watchers
-    
     # In Ruby 1.9 we want a Rev::Loop per thread, but Ruby 1.8 is unithreaded
     if RUBY_VERSION >= "1.9.0"
       # Retrieve the default event loop for the current thread
@@ -51,7 +49,6 @@ module Rev
     #     :port   (Solaris 10)
     #
     def initialize(options = {})
-      @watchers = []
       @active_watchers = 0
       
       flags = 0
@@ -93,7 +90,7 @@ module Rev
     # the loop have been disabled or detached.  The loop may be 
     # explicitly stopped by calling the stop method on the loop object.
     def run
-      raise RuntimeError, "no watchers for this loop" if @watchers.empty?
+      raise RuntimeError, "no watchers for this loop" if watchers.empty?
 
       @running = true
       while @running and not @active_watchers.zero?
