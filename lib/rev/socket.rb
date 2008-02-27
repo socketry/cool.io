@@ -169,8 +169,14 @@ module Rev
         host, port, args = @host, @port, @args
 
         @sock.instance_eval do
-          # DNSResolver only supports IPv4 so we can safely assume an IPv4 address
-          socket = TCPConnectSocket.new(::Socket::AF_INET, addr, port, host)
+          # DNSResolver only supports IPv4 so we can safely assume IPv4 address
+          begin
+            socket = TCPConnectSocket.new(::Socket::AF_INET, addr, port, host)
+          rescue Errno::ENETUNREACH
+            on_connect_failed
+            return
+          end
+
           initialize(socket, *args)
           @_connector = Socket::Connector.new(self, socket)
           @_resolver = nil

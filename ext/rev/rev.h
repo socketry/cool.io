@@ -52,5 +52,9 @@ struct Rev_Watcher
 };
 
 void Rev_Loop_process_event(VALUE watcher, int revents);
+void Rev_Loop_attach_watcher(VALUE self, VALUE watcher);
+void Rev_Loop_detach_watcher(VALUE self, VALUE watcher);
+
+void Rev_Watcher_clear_pending_events(struct Rev_Loop *loop_data, VALUE watcher);
 
 #endif

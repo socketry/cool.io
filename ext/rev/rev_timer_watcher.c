@@ -107,6 +107,8 @@ static VALUE Rev_TimerWatcher_attach(VALUE self, VALUE loop)
     Rev_TimerWatcher_detach(self);
 
   watcher_data->loop = loop;
+  watcher_data->enabled = 1;
+  loop_data->active_watchers++;
   
   /* Calibrate timeout to account for potential drift */
 	interval = NUM2DBL(rb_iv_get(self, "@interval"));
@@ -119,7 +121,7 @@ static VALUE Rev_TimerWatcher_attach(VALUE self, VALUE loop)
   );
 
   ev_timer_start(loop_data->ev_loop, &watcher_data->event_types.ev_timer);
-	rb_call_super(1, &loop);
+  Rev_Loop_attach_watcher(loop, self);
 
   return self;  
 }

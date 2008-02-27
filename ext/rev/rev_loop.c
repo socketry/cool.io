@@ -29,9 +29,6 @@ static VALUE Rev_Loop_watchers(VALUE self);
 static void Rev_Loop_ev_loop_oneshot(struct Rev_Loop *loop_data);
 static void Rev_Loop_dispatch_events(struct Rev_Loop *loop_data);
 
-void Rev_Loop_attach_watcher(VALUE self, VALUE watcher);
-void Rev_Loop_detach_watcher(VALUE self, VALUE watcher);
-
 #define DEFAULT_EVENTBUF_SIZE 32
 #define DEFAULT_WATCHERS_SIZE 32
 
