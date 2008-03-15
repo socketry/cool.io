@@ -1,7 +1,5 @@
 0.2.1:
 
-* Track attached watchers in C
-
 * Add underscore prefix to instance variables to avoid conflicts in subclasses
 
 * Remove Rev::SSLServer until it can be made more useful
