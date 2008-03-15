@@ -75,7 +75,7 @@ module Rev
         enable unless enabled?
       rescue SSL::IO::WriteAgain
         enable_write_watcher
-      rescue OpenSSL::SSL::SSLError, Errno::ECONNRESET
+      rescue OpenSSL::SSL::SSLError, Errno::ECONNRESET, Errno::EPIPE
         close
       rescue => ex
         if respond_to? :on_ssl_error
