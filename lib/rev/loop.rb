@@ -6,19 +6,19 @@
 
 require 'thread'
 
-if RUBY_VERSION >= "1.9.0"
-  # Monkeypatch Thread to include a method for obtaining the default Rev::Loop
-  class Thread
-    def _rev_loop
-      @_rev_loop ||= Rev::Loop.new
-    end
+# Monkeypatch Thread to include a method for obtaining the default Rev::Loop
+class Thread
+  def _rev_loop
+    @_rev_loop ||= Rev::Loop.new
   end
 end
 
 module Rev
   class Loop
+    attr_reader :watchers
+    
     # In Ruby 1.9 we want a Rev::Loop per thread, but Ruby 1.8 is unithreaded
-    if RUBY_VERSION >= "1.9.0"
+    if RUBY_VERSION.gsub('.', '').to_i >= 190
       # Retrieve the default event loop for the current thread
       def self.default
         Thread.current._rev_loop
@@ -49,6 +49,7 @@ module Rev
     #     :port   (Solaris 10)
     #
     def initialize(options = {})
+      @watchers = []
       @active_watchers = 0
       
       flags = 0
@@ -90,10 +91,10 @@ module Rev
     # the loop have been disabled or detached.  The loop may be 
     # explicitly stopped by calling the stop method on the loop object.
     def run
-      raise RuntimeError, "no watchers for this loop" if watchers.empty?
+      raise RuntimeError, "no watchers for this loop" if @watchers.empty?
 
       @running = true
-      while @running and has_active_watchers?
+      while @running and not @active_watchers.zero?
         run_once
       end
     end
@@ -102,6 +103,11 @@ module Rev
     def stop
       raise RuntimeError, "loop not running" unless @running
       @running = false
+    end
+    
+    # Does the loop have any active watchers?
+    def has_active_watchers?
+      @active_watchers > 0
     end
     
     #######
