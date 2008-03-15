@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include "ruby.h"
+#include "rubysig.h"
 
 #define EV_STANDALONE 1
 #include "../libev/ev.h"
@@ -215,11 +216,13 @@ static void Rev_Loop_ev_loop_oneshot(struct Rev_Loop *loop_data)
 #ifndef HAVE_EV_LOOP_ONESHOT
 #define BLOCKING_INTERVAL 0.01 /* Block for 10ms at a time */
 
-/* Stub callback */
+/* Allow a Ruby thread to run on the given scheduling interval */
 static void timer_callback(struct ev_loop *ev_loop, struct ev_timer *timer, int revents)
 {
+  rb_thread_schedule();
 }
 
+/* Run the event loop, calling rb_thread_schedule every 10ms */
 static void Rev_Loop_ev_loop_oneshot(struct Rev_Loop *loop_data)
 {
   struct ev_timer timer;
@@ -229,15 +232,12 @@ static void Rev_Loop_ev_loop_oneshot(struct Rev_Loop *loop_data)
   ev_timer_init(&timer, timer_callback, BLOCKING_INTERVAL, BLOCKING_INTERVAL);
   ev_timer_start(loop_data->ev_loop, &timer);
 
-  do {
-    /* Since blocking calls would hang the Ruby 1.8 thread scheduler, don't block */
+  /* Loop until we receive events */
+  while(!loop_data->events_received) {
+    TRAP_BEG;
     ev_loop(loop_data->ev_loop, EVLOOP_ONESHOT);
-
-    /* Call rb_thread_select to resume the Ruby scheduler */
-    tv.tv_sec = 0;
-    tv.tv_usec = 0;
-    rb_thread_select(0, NULL, NULL, NULL, &tv);
-  } while(!loop_data->events_received);
+    TRAP_END;
+  }
 
   ev_timer_stop(loop_data->ev_loop, &timer);
 }
