@@ -90,6 +90,33 @@ static VALUE Rev_Watcher_initialize(VALUE self)
  */
 static VALUE Rev_Watcher_attach(VALUE self, VALUE loop)
 {
+  VALUE loop_watchers, active_watchers;
+  struct Rev_Watcher *watcher_data;
+
+  Data_Get_Struct(self, struct Rev_Watcher, watcher_data);
+  watcher_data->enabled = 1;
+    
+  loop_watchers = rb_iv_get(loop, "@watchers");
+
+  if(loop_watchers == Qnil) {
+    loop_watchers = rb_ary_new();
+    rb_iv_set(loop, "@watchers", loop_watchers);
+  }
+
+  /* Add us to the loop's array of active watchers.  This is mainly done
+   * to keep the VM from garbage collecting watchers that are associated
+   * with a loop (and also lets you see within Ruby which watchers are
+   * associated with a given loop), but isn't really necessary for any 
+   * other reason */
+  rb_ary_push(loop_watchers, self);
+
+  active_watchers = rb_iv_get(loop, "@active_watchers");
+  if(active_watchers == Qnil)
+    active_watchers = INT2NUM(1);
+  else
+    active_watchers = INT2NUM(NUM2INT(active_watchers) + 1);
+  rb_iv_set(loop, "@active_watchers", active_watchers);
+
   return self;
 }
 
@@ -101,6 +128,47 @@ static VALUE Rev_Watcher_attach(VALUE self, VALUE loop)
  */
 static VALUE Rev_Watcher_detach(VALUE self)
 {
+  struct Rev_Watcher *watcher_data;
+  struct Rev_Loop *loop_data;
+  VALUE loop_watchers;
+  int i;
+
+  Data_Get_Struct(self, struct Rev_Watcher, watcher_data);
+
+  if(watcher_data->loop == Qnil)
+    rb_raise(rb_eRuntimeError, "not attached to a loop");
+
+  loop_watchers = rb_iv_get(watcher_data->loop, "@watchers");
+
+  /* Remove us from the loop's array of active watchers.  This likely
+   * has negative performance and scalability characteristics as this
+   * isn't an O(1) operation.  Hopefully there's a better way... */
+  rb_ary_delete(loop_watchers, self);
+
+  if(watcher_data->enabled) {
+    rb_iv_set(
+        watcher_data->loop, 
+        "@active_watchers",
+        INT2NUM(NUM2INT(rb_iv_get(watcher_data->loop, "@active_watchers")) - 1)
+    );
+  }
+
+  watcher_data->enabled = 0;
+
+  Data_Get_Struct(watcher_data->loop, struct Rev_Loop, loop_data);
+
+  /* Iterate through the events in the loop's event buffer.  If there
+   * are any pending events from this watcher, mark them NULL.  The
+   * dispatch loop will skip them.  This prevents watchers earlier
+   * in the event buffer from detaching others which may have pending
+   * events in the buffer but get garbage collected in the meantime */
+  for(i = 0; i < loop_data->events_received; i++) {
+    if(loop_data->eventbuf[i].watcher == self)
+      loop_data->eventbuf[i].watcher = Qnil;
+  }
+
+  watcher_data->loop = Qnil;
+
   return self;
 }
 
@@ -113,6 +181,20 @@ static VALUE Rev_Watcher_detach(VALUE self)
  */
 static VALUE Rev_Watcher_enable(VALUE self)
 {
+  struct Rev_Watcher *watcher_data;
+  Data_Get_Struct(self, struct Rev_Watcher, watcher_data);
+
+  if(watcher_data->enabled)
+    rb_raise(rb_eRuntimeError, "already enabled");
+
+  watcher_data->enabled = 1;
+
+  rb_iv_set(
+      watcher_data->loop, 
+      "@active_watchers",
+      INT2NUM(NUM2INT(rb_iv_get(watcher_data->loop, "@active_watchers")) + 1)
+  );
+
   return self;
 }
 
@@ -126,17 +208,18 @@ static VALUE Rev_Watcher_enable(VALUE self)
 static VALUE Rev_Watcher_disable(VALUE self)
 {
   struct Rev_Watcher *watcher_data;
-  struct Rev_Loop *loop_data;
-  
   Data_Get_Struct(self, struct Rev_Watcher, watcher_data);
 
   if(!watcher_data->enabled)
     rb_raise(rb_eRuntimeError, "already disabled");
 
   watcher_data->enabled = 0;
-  
-  Data_Get_Struct(watcher_data->loop, struct Rev_Loop, loop_data);
-  loop_data->active_watchers--;
+
+  rb_iv_set(
+      watcher_data->loop, 
+      "@active_watchers",
+      INT2NUM(NUM2INT(rb_iv_get(watcher_data->loop, "@active_watchers")) - 1)
+  );
 
   return self;
 }
@@ -178,19 +261,4 @@ static VALUE Rev_Watcher_enabled(VALUE self)
   Data_Get_Struct(self, struct Rev_Watcher, watcher_data);
   
 	return watcher_data->enabled ? Qtrue : Qfalse;
-}
-
-/* Iterate through the events in the loop's event buffer.  If there
- * are any pending events from this watcher, mark them nil.  The
- * dispatch loop will skip them.  This prevents watchers earlier
- * in the event buffer from detaching others which may have pending
- * events in the buffer but get garbage collected in the meantime */
-void Rev_Watcher_clear_pending_events(struct Rev_Loop *loop_data, VALUE watcher)
-{
-  int i;
-  
-  for(i = 0; i < loop_data->events_received; i++) {
-    if(loop_data->eventbuf[i].watcher == watcher)
-      loop_data->eventbuf[i].watcher = Qnil;
-  }
 }

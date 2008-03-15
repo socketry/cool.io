@@ -23,14 +23,11 @@ static VALUE Rev_Loop_initialize(VALUE self);
 static VALUE Rev_Loop_ev_loop_new(VALUE self, VALUE flags);
 static VALUE Rev_Loop_run_once(VALUE self);
 static VALUE Rev_Loop_run_nonblock(VALUE self);
-static VALUE Rev_Loop_has_active_watchers(VALUE self);
-static VALUE Rev_Loop_watchers(VALUE self);
 
 static void Rev_Loop_ev_loop_oneshot(struct Rev_Loop *loop_data);
 static void Rev_Loop_dispatch_events(struct Rev_Loop *loop_data);
 
 #define DEFAULT_EVENTBUF_SIZE 32
-#define DEFAULT_WATCHERS_SIZE 32
 
 /* 
  * Rev::Loop represents an event loop.  Event watchers can be attached and
@@ -48,8 +45,6 @@ void Init_rev_loop()
   rb_define_private_method(cRev_Loop, "ev_loop_new", Rev_Loop_ev_loop_new, 1);
   rb_define_method(cRev_Loop, "run_once", Rev_Loop_run_once, 0);
   rb_define_method(cRev_Loop, "run_nonblock", Rev_Loop_run_nonblock, 0);
-  rb_define_method(cRev_Loop, "has_active_watchers?", Rev_Loop_has_active_watchers, 0);
-  rb_define_method(cRev_Loop, "watchers", Rev_Loop_watchers, 0);
 }
 
 static VALUE Rev_Loop_allocate(VALUE klass)
@@ -57,13 +52,8 @@ static VALUE Rev_Loop_allocate(VALUE klass)
   struct Rev_Loop *loop = (struct Rev_Loop *)xmalloc(sizeof(struct Rev_Loop));
 
   loop->ev_loop = 0;
+
   loop->running = 0;
-  loop->active_watchers = 0;
-  
-  loop->watchers_count = 0;
-  loop->watchers_size = DEFAULT_WATCHERS_SIZE;
-  loop->watchers = (VALUE *)xmalloc(sizeof(VALUE) * DEFAULT_WATCHERS_SIZE);
-  
   loop->events_received = 0;
   loop->eventbuf_size = DEFAULT_EVENTBUF_SIZE;
   loop->eventbuf = (struct Rev_Event *)xmalloc(sizeof(struct Rev_Event) * DEFAULT_EVENTBUF_SIZE);
@@ -73,11 +63,6 @@ static VALUE Rev_Loop_allocate(VALUE klass)
 
 static void Rev_Loop_mark(struct Rev_Loop *loop)
 {
-  int i;
-  
-  /* Mark all associated watchers so they don't get garbage collected */
-  for(i = 0; i < loop->watchers_count; i++)
-    rb_gc_mark(loop->watchers[i]);
 }
 
 static void Rev_Loop_free(struct Rev_Loop *loop)
@@ -87,7 +72,6 @@ static void Rev_Loop_free(struct Rev_Loop *loop)
 
   ev_loop_destroy(loop->ev_loop);
 
-  xfree(loop->watchers);
   xfree(loop->eventbuf);
   xfree(loop);
 }
@@ -171,7 +155,7 @@ void Rev_Loop_process_event(VALUE watcher, int revents)
     loop_data->eventbuf = (struct Rev_Event *)xrealloc(
         loop_data->eventbuf, 
         sizeof(struct Rev_Event) * loop_data->eventbuf_size
-    );
+        );
   }
 
   loop_data->eventbuf[loop_data->events_received].watcher = watcher;
@@ -246,10 +230,8 @@ static void Rev_Loop_ev_loop_oneshot(struct Rev_Loop *loop_data)
   ev_timer_start(loop_data->ev_loop, &timer);
 
   do {
-    /* Since blocking calls would hang the Ruby 1.8 thread scheduler, 
-     * don't block indefinitely */
+    /* Since blocking calls would hang the Ruby 1.8 thread scheduler, don't block */
     ev_loop(loop_data->ev_loop, EVLOOP_ONESHOT);
-    ev_timer_again(loop_data->ev_loop, &timer);
 
     /* Call rb_thread_select to resume the Ruby scheduler */
     tv.tv_sec = 0;
@@ -300,86 +282,5 @@ static void Rev_Loop_dispatch_events(struct Rev_Loop *loop_data)
 
     Data_Get_Struct(loop_data->eventbuf[i].watcher, struct Rev_Watcher, watcher_data);
     watcher_data->dispatch_callback(loop_data->eventbuf[i].watcher, loop_data->eventbuf[i].revents);
-  }
-}
-
-/**
- *  call-seq:
- *    Rev::Loop.has_active_watchers? -> Boolean
- * 
- * Does the loop have any active watchers?
- */
-static VALUE Rev_Loop_has_active_watchers(VALUE self)
-{
-  struct Rev_Loop *loop_data;
-  Data_Get_Struct(self, struct Rev_Loop, loop_data);
-  
-  return loop_data->active_watchers > 0 ? Qtrue : Qfalse;
-}
-
-/**
- *  call-seq:
- *    Rev::Loop.watchers -> Array
- * 
- * Return the set of Rev::Watchers attached to the loop
- */
-static VALUE Rev_Loop_watchers(VALUE self) 
-{
-  struct Rev_Loop *loop_data;
-  Data_Get_Struct(self, struct Rev_Loop, loop_data);
-  
-  return rb_ary_new4(loop_data->watchers_count, loop_data->watchers);
-}
-
-/* The guts of attaching and detaching watchers from loops aren't here, sorry
- * If you want to know about that, have a look in Rev_Watcher.c and .h
- * We have to track associated watchers so they don't get garbage collected.
- * It's also nice to be able to get access to them if necessary.
- * While an rb_array suffices for this, it makes detach (i.e. delete) slow
- */
-void Rev_Loop_attach_watcher(VALUE self, VALUE watcher)
-{
-  struct Rev_Loop *loop_data;
-  struct Rev_Watcher *watcher_data;
-  
-  Data_Get_Struct(self, struct Rev_Loop, loop_data);
-  
-  /* Grow the watcher array if it's too small */
-  if(loop_data->watchers_count >= loop_data->watchers_size) {
-    loop_data->watchers_size *= 2;
-    loop_data->watchers = (VALUE *)xrealloc(
-        loop_data->watchers, 
-        sizeof(VALUE) * loop_data->watchers_size
-    );
-  }
-  
-  loop_data->watchers[loop_data->watchers_count] = watcher;
-  
-  Data_Get_Struct(watcher, struct Rev_Watcher, watcher_data);
-  watcher_data->loop_index = loop_data->watchers_count;
-  
-  loop_data->watchers_count++;
-}
-
-void Rev_Loop_detach_watcher(VALUE self, VALUE watcher)
-{
-  int i;
-  struct Rev_Loop *loop_data;
-  struct Rev_Watcher *watcher_data;
-
-  Data_Get_Struct(self, struct Rev_Loop, loop_data);
-  Data_Get_Struct(watcher, struct Rev_Watcher, watcher_data);
-  
-  loop_data->watchers_count--;
-    
-  /* If the watcher wasn't at the end of the array, stick the watcher on
-     the end of the array in its place */
-  if(watcher_data->loop_index != loop_data->watchers_count) {
-    i = watcher_data->loop_index;
-    loop_data->watchers[i] = loop_data->watchers[loop_data->watchers_count];
-    
-    /* Update the loop_index variable in the watcher */
-    Data_Get_Struct(loop_data->watchers[i], struct Rev_Watcher, watcher_data);
-    watcher_data->loop_index = i;
   }
 }

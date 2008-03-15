@@ -21,16 +21,12 @@
     detach_func(watcher); \
   \
   watcher_data->loop = loop; \
-  watcher_data->enabled = 1; \
-  loop_data->active_watchers++; \
-  \
   ev_##watcher_type##_start(loop_data->ev_loop, &watcher_data->event_types.ev_##watcher_type); \
-  Rev_Loop_attach_watcher(loop, watcher)
+  rb_call_super(1, &loop)
 
 #define Watcher_Detach(watcher_type, watcher) \
   struct Rev_Watcher *watcher_data; \
   struct Rev_Loop *loop_data; \
-  int i; \
   \
   Data_Get_Struct(watcher, struct Rev_Watcher, watcher_data); \
   \
@@ -40,14 +36,8 @@
   Data_Get_Struct(watcher_data->loop, struct Rev_Loop, loop_data); \
   \
   ev_##watcher_type##_stop(loop_data->ev_loop, &watcher_data->event_types.ev_##watcher_type); \
-  Rev_Loop_detach_watcher(watcher_data->loop, watcher); \
-  \
-  if(watcher_data->enabled) loop_data->active_watchers--;\
-  watcher_data->enabled = 0;\
-  \
-  Rev_Watcher_clear_pending_events(loop_data, watcher); \
-  watcher_data->loop = Qnil
-  
+  rb_call_super(0, 0)
+
 #define Watcher_Enable(watcher_type, watcher) \
   struct Rev_Watcher *watcher_data; \
   struct Rev_Loop *loop_data; \
@@ -57,13 +47,9 @@
   if(watcher_data->loop == Qnil) \
     rb_raise(rb_eRuntimeError, "not attached to a loop"); \
   \
-  if(watcher_data->enabled) \
-    rb_raise(rb_eRuntimeError, "already enabled"); \
+  rb_call_super(0, 0); \
   \
   Data_Get_Struct(watcher_data->loop, struct Rev_Loop, loop_data); \
-  \
-  watcher_data->enabled = 1; \
-  loop_data->active_watchers++;  \
   \
   ev_##watcher_type##_start(loop_data->ev_loop, &watcher_data->event_types.ev_##watcher_type)
 
@@ -76,14 +62,10 @@
   if(watcher_data->loop == Qnil) \
     rb_raise(rb_eRuntimeError, "not attached to a loop"); \
   \
-  if(!watcher_data->enabled) \
-    rb_raise(rb_eRuntimeError, "already disabled"); \
+  rb_call_super(0, 0); \
   \
   Data_Get_Struct(watcher_data->loop, struct Rev_Loop, loop_data); \
   \
-  watcher_data->enabled = 0; \
-  loop_data->active_watchers--; \
-  \
   ev_##watcher_type##_stop(loop_data->ev_loop, &watcher_data->event_types.ev_##watcher_type)
-  
+
 #endif

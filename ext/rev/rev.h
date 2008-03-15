@@ -26,12 +26,8 @@ struct Rev_Event
 struct Rev_Loop 
 {
   struct ev_loop *ev_loop;
-  int running, active_watchers;
-  
-  VALUE *watchers;
-  int watchers_count;
-  int watchers_size;
-  
+
+  int running;
   int events_received;
   int eventbuf_size;
   struct Rev_Event *eventbuf;
@@ -45,16 +41,11 @@ struct Rev_Watcher
   } event_types;
 
   int enabled;
-  int loop_index;
   VALUE loop;
 
   void (*dispatch_callback)(VALUE self, int revents);
 };
 
 void Rev_Loop_process_event(VALUE watcher, int revents);
-void Rev_Loop_attach_watcher(VALUE self, VALUE watcher);
-void Rev_Loop_detach_watcher(VALUE self, VALUE watcher);
-
-void Rev_Watcher_clear_pending_events(struct Rev_Loop *loop_data, VALUE watcher);
 
 #endif
