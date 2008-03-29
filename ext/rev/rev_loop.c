@@ -216,10 +216,9 @@ static void Rev_Loop_ev_loop_oneshot(struct Rev_Loop *loop_data)
 #ifndef HAVE_EV_LOOP_ONESHOT
 #define BLOCKING_INTERVAL 0.01 /* Block for 10ms at a time */
 
-/* Allow a Ruby thread to run on the given scheduling interval */
+/* Stub for scheduler's ev_timer callback */
 static void timer_callback(struct ev_loop *ev_loop, struct ev_timer *timer, int revents)
 {
-  rb_thread_schedule();
 }
 
 /* Run the event loop, calling rb_thread_schedule every 10ms */
@@ -237,6 +236,8 @@ static void Rev_Loop_ev_loop_oneshot(struct Rev_Loop *loop_data)
     TRAP_BEG;
     ev_loop(loop_data->ev_loop, EVLOOP_ONESHOT);
     TRAP_END;
+
+    rb_thread_schedule();
   }
 
   ev_timer_stop(loop_data->ev_loop, &timer);
