@@ -1,5 +1,8 @@
 0.2.1:
 
+* Loosen HTTP/1.1 response parser to accept a common malformation in HTTP/1.1
+  chunk headers
+
 * Add underscore prefix to instance variables to avoid conflicts in subclasses
 
 * Remove Rev::SSLServer until it can be made more useful
