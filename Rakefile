@@ -20,6 +20,16 @@ Rake::RDocTask.new(:rdoc) do |task|
   task.rdoc_files.include(['README', 'LICENSE'])
 end
 
+# Rebuild parser Ragel
+task :ragel do
+  Dir.chdir "ext/http11_client" do
+    target = "http11_parser.c"
+    File.unlink target if File.exist? target
+    sh "ragel http11_parser.rl | rlgen-cd -G2 -o #{target}"
+    raise "Failed to build C source" unless File.exist? target
+  end
+end
+
 # Gem
 Rake::GemPackageTask.new(GEMSPEC) do |pkg|
   pkg.need_tar = true
