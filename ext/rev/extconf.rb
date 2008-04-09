@@ -27,9 +27,12 @@ if have_header('port.h')
   cflags << '-DEV_USE_PORT'
 end
 
-if have_header('openssl/ssl.h')
-  cflags << '-DHAVE_OPENSSL_SSL_H'
-  libs << '-lssl -lcrypto'
+# Only check for openssl on Ruby >= 1.9
+if RUBY_VERSION >= "1.9.0"
+  if have_header('openssl/ssl.h')
+    cflags << '-DHAVE_OPENSSL_SSL_H'
+    libs << '-lssl -lcrypto'
+  end
 end
 
 # ncpu detection specifics

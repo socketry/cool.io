@@ -246,7 +246,7 @@ static void Rev_Loop_ev_loop_oneshot(struct Rev_Loop *loop_data)
 
 /**
  *  call-seq:
- *    Rev::Loop.run_once -> nil
+ *    Rev::Loop.run_nonblock -> nil
  * 
  * Run the Rev::Loop once, but return immediately if there are no pending events.
  */
