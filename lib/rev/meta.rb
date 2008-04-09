@@ -5,12 +5,12 @@
 #++
 
 module Rev
-  class Watcher
+  module Meta
     # Use an alternate watcher with the attach/detach/enable/disable methods
     # if it is presently assigned.  This is useful if you are waiting for
     # an event to occur before the current watcher can be used in earnest,
     # such as making an outgoing TCP connection.
-    def self.watcher_delegate(proxy_var)
+    def watcher_delegate(proxy_var)
       %w{attach detach enable disable}.each do |method|
         module_eval <<-EOD
           def #{method}(*args)
@@ -29,7 +29,7 @@ module Rev
     # This is done by giving a block to the callback method, which is captured
     # as a proc and stored for later.  If the method is called without a block,
     # the stored block is executed if present, otherwise it's a noop.
-    def self.event_callback(*methods)
+    def event_callback(*methods)
       methods.each do |method|
         module_eval <<-EOD
           def #{method}(*args, &block)

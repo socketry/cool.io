@@ -6,7 +6,7 @@
 
 require File.dirname(__FILE__) + '/rev_ext'
 require File.dirname(__FILE__) + '/rev/loop'
-require File.dirname(__FILE__) + '/rev/watcher'
+require File.dirname(__FILE__) + '/rev/meta'
 require File.dirname(__FILE__) + '/rev/io_watcher'
 require File.dirname(__FILE__) + '/rev/timer_watcher'
 require File.dirname(__FILE__) + '/rev/async_watcher'

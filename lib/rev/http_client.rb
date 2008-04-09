@@ -167,7 +167,7 @@ module Rev
     #     Specify the request body (you must encode it for now)
     #
     def request(method, path, options = {})
-      raise ArgumentError, "invalid request path" unless path[0] == '/'
+      raise ArgumentError, "invalid request path" unless /^\// === path
       raise RuntimeError, "request already sent" if @requested
 
       @method, @path, @options = method, path, options

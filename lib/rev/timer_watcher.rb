@@ -11,6 +11,7 @@ module Rev
     # These can take a block and store it to be called when the event
     # is actually fired.
     
+    extend Meta
     event_callback :timer_watcher
   end
 end

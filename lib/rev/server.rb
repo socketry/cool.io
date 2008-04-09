@@ -11,8 +11,8 @@ module Rev
     # connections is a Socket, but any subclass of IOWatcher is acceptable.
     def initialize(listen_socket, klass = Socket, *args, &block)
       # Ensure the provided class responds to attach
-      unless klass.allocate.is_a? IOWatcher
-        raise ArgumentError, "provided class must descend from IOWatcher"
+      unless klass.allocate.is_a? IO
+        raise ArgumentError, "can't convert #{klass} to Rev::IO"
       end
 
       # Verify the arity of the provided arguments

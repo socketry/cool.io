@@ -13,16 +13,44 @@ module Rev
   # This class is primarily meant as a base class for other streams
   # which need non-blocking writing, and is used to implement Rev's
   # Socket class and its associated subclasses.
-  class IO < IOWatcher
+  class IO
+    extend Meta
+    
     # Maximum number of bytes to consume at once
     INPUT_SIZE = 16384
 
     def initialize(io)
       @_io = io
       @_write_buffer = Rev::Buffer.new
-      super(@_io)
+      @_read_watcher  = Watcher.new(io, self, :r, &method(:on_readable))
+      @_write_watcher = Watcher.new(io, self, :w, &method(:on_writable))
     end
 
+    #
+    # Watcher methods, delegated to @_read_watcher
+    #
+    
+    # Attach to the event loop
+    def attach(loop); @_read_watcher.attach loop; self; end
+    
+    # Detach from the event loop
+    def detach; @_read_watcher.detach; self; end
+    
+    # Enable the watcher
+    def enable; @_read_watcher.enable; self; end
+    
+    # Disable the watcher
+    def disable; @_read_watcher.disable; self; end
+    
+    # Is the watcher attached?
+    def attached?; @_read_watcher.attached?; end
+    
+    # Is the watcher enabled?
+    def enabled?; @_read_watcher.enabled?; end
+    
+    # Obtain the event loop associated with this object
+    def evloop; @_read_watcher.evloop; end
+    
     #
     # Callbacks for asynchronous events
     #
@@ -78,6 +106,7 @@ module Rev
     def on_readable
       begin
         on_read @_io.read_nonblock(INPUT_SIZE)
+      rescue Errno::EAGAIN
       rescue Errno::ECONNRESET, EOFError
         close
       end
@@ -114,7 +143,6 @@ module Rev
       if write_watcher.attached?
         write_watcher.enable unless write_watcher.enabled?
       else
-        return detach_write_watcher unless evloop # socket closed
         write_watcher.attach(evloop)
       end
     end
@@ -126,17 +154,17 @@ module Rev
     def detach_write_watcher
       @_write_watcher.detach if @_write_watcher and @_write_watcher.attached?
     end
-
-    class WriteWatcher < IOWatcher
-      def initialize(ruby_io, rev_io)
-        @rev_io = rev_io
-        super(ruby_io, :w)
+    
+    # Internal class implementing watchers used by Rev::IO
+    class Watcher < IOWatcher
+      def initialize(ruby_io, rev_io, flags, &meth)
+        @rev_io, @meth = rev_io, meth
+        super(ruby_io, flags)
       end
 
-      # Delegate on_writable to the Rev::IO object
-      def on_writable
-        @rev_io.__send__(:on_writable)
-      end
+      # Configure IOWatcher event callbacks to call the method passed to #initialize
+      def on_readable; @meth.call; end
+      def on_writable; @meth.call; end
     end
   end
 end
