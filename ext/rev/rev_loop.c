@@ -29,6 +29,10 @@ static void Rev_Loop_ev_loop_oneshot(struct Rev_Loop *loop_data);
 static void Rev_Loop_dispatch_events(struct Rev_Loop *loop_data);
 
 #define DEFAULT_EVENTBUF_SIZE 32
+#define RUN_LOOP(loop_data, options) \
+  loop_data->running = 1; \
+  ev_loop(loop_data->ev_loop, options); \
+  loop_data->running = 0;
 
 /* 
  * Rev::Loop represents an event loop.  Event watchers can be attached and
@@ -53,7 +57,6 @@ static VALUE Rev_Loop_allocate(VALUE klass)
   struct Rev_Loop *loop = (struct Rev_Loop *)xmalloc(sizeof(struct Rev_Loop));
 
   loop->ev_loop = 0;
-
   loop->running = 0;
   loop->events_received = 0;
   loop->eventbuf_size = DEFAULT_EVENTBUF_SIZE;
@@ -174,22 +177,19 @@ void Rev_Loop_process_event(VALUE watcher, int revents)
 static VALUE Rev_Loop_run_once(VALUE self)
 {
   struct Rev_Loop *loop_data;
+  VALUE nevents;
+  
   Data_Get_Struct(self, struct Rev_Loop, loop_data);
 
-  if(loop_data->running)
-    rb_raise(rb_eRuntimeError, "cannot run loop from within a callback");
-
   assert(loop_data->ev_loop && !loop_data->events_received);
-
-  loop_data->running = 1;
-
-  Rev_Loop_ev_loop_oneshot(loop_data);
+  
+  Rev_Loop_ev_loop_oneshot(loop_data);  
   Rev_Loop_dispatch_events(loop_data);
+  
+  nevents = INT2NUM(loop_data->events_received);
   loop_data->events_received = 0;
-
-  loop_data->running = 0;
-
-  return Qnil;
+  
+  return nevents;
 }
 
 /* Ruby 1.9 supports blocking system calls through rb_thread_blocking_region() */
@@ -198,16 +198,17 @@ static VALUE Rev_Loop_run_once(VALUE self)
 static VALUE Rev_Loop_ev_loop_oneshot_blocking(void *ptr) 
 {
   /* The libev loop has now escaped through the Global VM Lock unscathed! */
-  struct ev_loop *loop = (struct ev_loop *)ptr;
+  struct Rev_Loop *loop_data = (struct Rev_Loop *)ptr;
 
-  ev_loop(loop, EVLOOP_ONESHOT);
+  RUN_LOOP(loop_data, EVLOOP_ONESHOT);
+  
   return Qnil;
 }
 
 static void Rev_Loop_ev_loop_oneshot(struct Rev_Loop *loop_data)
 {
   /* Use Ruby 1.9's rb_thread_blocking_region call to make a blocking system call */
-  rb_thread_blocking_region(Rev_Loop_ev_loop_oneshot_blocking, loop_data->ev_loop, RB_UBF_DFL, 0);
+  rb_thread_blocking_region(Rev_Loop_ev_loop_oneshot_blocking, loop_data, RB_UBF_DFL, 0);
 }
 #endif
 
@@ -234,7 +235,7 @@ static void Rev_Loop_ev_loop_oneshot(struct Rev_Loop *loop_data)
   /* Loop until we receive events */
   while(!loop_data->events_received) {
     TRAP_BEG;
-    ev_loop(loop_data->ev_loop, EVLOOP_ONESHOT);
+    RUN_LOOP(loop_data, EVLOOP_ONESHOT);
     TRAP_END;
 
     rb_thread_schedule();
@@ -253,20 +254,19 @@ static void Rev_Loop_ev_loop_oneshot(struct Rev_Loop *loop_data)
 static VALUE Rev_Loop_run_nonblock(VALUE self)
 {
   struct Rev_Loop *loop_data;
+  VALUE nevents;
+  
   Data_Get_Struct(self, struct Rev_Loop, loop_data);
-
-  if(loop_data->running)
-    rb_raise(rb_eRuntimeError, "cannot run loop from within a callback");
 
   assert(loop_data->ev_loop && !loop_data->events_received);
 
-  loop_data->running = 1;
-  ev_loop(loop_data->ev_loop, EVLOOP_NONBLOCK);
+  RUN_LOOP(loop_data, EVLOOP_NONBLOCK);  
   Rev_Loop_dispatch_events(loop_data);
+  
+  nevents = INT2NUM(loop_data->events_received);
   loop_data->events_received = 0;
-  loop_data->running = 0;
-
-  return Qnil;
+  
+  return nevents;
 }
 
 static void Rev_Loop_dispatch_events(struct Rev_Loop *loop_data)
