@@ -1,5 +1,7 @@
 0.2.1:
 
+* Remove inheritence relationship between Rev::IO and Rev::IOWatcher
+
 * Loosen HTTP/1.1 response parser to accept a common malformation in HTTP/1.1
   chunk headers
 
