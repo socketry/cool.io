@@ -1,5 +1,8 @@
 0.2.1:
 
+* Rev::Loop#run_once and Rev::Loop#run_nonblock now return the number of events
+  received when they were running.
+
 * Remove inheritence relationship between Rev::IO and Rev::IOWatcher
 
 * Loosen HTTP/1.1 response parser to accept a common malformation in HTTP/1.1
