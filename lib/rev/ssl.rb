@@ -6,18 +6,6 @@
 
 require 'openssl'
 
-# --
-# Rev implements SSL by subclassing OpenSSL::SSL::SSLSocket in C
-# and adding implementations for non-blocking versions of the
-# methods it provides.  Unfortunately, this relies on hacks specific
-# to Ruby 1.9.  If you'd like to find a workaround which is compatible
-# with Ruby 1.8, have a look at rev_ssl.c and find out if you can
-# properly initialize an OpenSSL::SSL::SSLSocket.
-# ++
-if RUBY_VERSION.gsub('.', '').to_i < 190
-  raise LoadError, "Rev::SSL not supported in this Ruby version, sorry"
-end
-
 module Rev
   # The easiest way to add SSL support to your Rev applications is to use
   # the SSLSocket class.  However, the SSL module is provided for cases where
@@ -42,11 +30,12 @@ module Rev
     # will fire for checking the peer certificate (ssl_peer_cert) and
     # its validity (ssl_verify_result)
     def ssl_client_start
-      raise "ssl already started" if @ssl_socket
+      raise "ssl already started" if @_ssl_socket
       
       context = respond_to?(:ssl_context) ? ssl_context : OpenSSL::SSL::SSLContext.new
-      @ssl_socket = SSL::IO.new(@io, context)
-      @ssl_init = proc { @ssl_socket.connect_nonblock }
+      
+      @_ssl_socket = SSL::IO.new(@_io, context)
+      @_ssl_init = proc { @_ssl_socket.connect_nonblock }
       
       ssl_init
     end
@@ -55,10 +44,10 @@ module Rev
     # will fire for checking the peer certificate (ssl_peer_cert) and
     # its validity (ssl_verify_result)
     def ssl_server_start
-      raise "ssl already started" if @ssl_socket
+      raise "ssl already started" if @_ssl_socket
       
-      @ssl_socket = SSL::IO.new(@io, ssl_context)
-      @ssl_init = proc { @ssl_socket.accept_nonblock }
+      @_ssl_socket = SSL::IO.new(@_io, ssl_context)
+      @_ssl_init = proc { @_ssl_socket.accept_nonblock }
       
       ssl_init
     end
@@ -69,11 +58,13 @@ module Rev
     
     def ssl_init
       begin
-        @ssl_init.call
+        @_ssl_init.call
         ssl_init_complete
       rescue SSL::IO::ReadAgain
+        puts "got ReadAgain, enabled: #{enabled?}"
         enable unless enabled?
       rescue SSL::IO::WriteAgain
+        puts "got WriteAgain"
         enable_write_watcher
       rescue OpenSSL::SSL::SSLError, Errno::ECONNRESET, Errno::EPIPE
         close
@@ -86,23 +77,24 @@ module Rev
     end
     
     def ssl_init_complete
-      @ssl_init = nil
+      @_ssl_init = nil
       enable unless enabled?
       
-      on_peer_cert(@ssl_socket.peer_cert) if respond_to? :on_peer_cert
-      on_ssl_result(@ssl_socket.verify_result) if respond_to? :on_ssl_result
+      on_peer_cert(@_ssl_socket.peer_cert) if respond_to? :on_peer_cert
+      on_ssl_result(@_ssl_socket.verify_result) if respond_to? :on_ssl_result
       on_ssl_connect if respond_to? :on_ssl_connect
     end
     
     def on_readable
-      if @ssl_init
+      puts "readable"
+      if @_ssl_init
         disable
         ssl_init
         return
       end
       
       begin
-        on_read @ssl_socket.read_nonblock(Rev::IO::INPUT_SIZE)
+        on_read @_ssl_socket.read_nonblock(Rev::IO::INPUT_SIZE)
       rescue Errno::AGAIN, SSL::IO::ReadAgain
         return
       rescue OpenSSL::SSL::SSLError, Errno::ECONNRESET, EOFError
@@ -111,14 +103,14 @@ module Rev
     end
     
     def on_writable
-      if @ssl_init
+      if @_ssl_init
         disable_write_watcher
         ssl_init
         return
       end
       
       begin
-        nbytes = @ssl_socket.write_nonblock @write_buffer.to_str
+        nbytes = @_ssl_socket.write_nonblock @_write_buffer.to_str
       rescue Errno::EAGAIN, SSL::IO::WriteAgain
         return
       rescue OpenSSL::SSL::SSLError, Errno::EPIPE, Errno::ECONNRESET
@@ -126,9 +118,9 @@ module Rev
         return
       end
       
-      @write_buffer.read(nbytes)
+      @_write_buffer.read(nbytes)
       
-      if @write_buffer.empty?
+      if @_write_buffer.empty?
         disable_write_watcher
         on_write_complete
       end
@@ -145,7 +137,7 @@ module Rev
   class SSLSocket < TCPSocket
     # Perform a non-blocking connect to the given host and port
     def self.connect(addr, port, *args)
-      super.instance_eval { @connecting = true; self }
+      super.instance_eval { @_connecting = true; self }
     end
     
     # Returns the OpenSSL::SSL::SSLContext for to use for the session.
@@ -153,7 +145,7 @@ module Rev
     # any certificate checking to be performed, please override this 
     # method and return a context loaded with the appropriate certificates.
     def ssl_context
-      @ssl_context ||= OpenSSL::SSL::SSLContext.new
+      @_ssl_context ||= OpenSSL::SSL::SSLContext.new
     end
     
     # Called when SSL handshaking has successfully completed
@@ -180,7 +172,7 @@ module Rev
     
     def on_connect
       extend SSL
-      @connecting ? ssl_client_start : ssl_server_start
+      @_connecting ? ssl_client_start : ssl_server_start
     end
   end
 end
