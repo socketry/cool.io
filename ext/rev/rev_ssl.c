@@ -44,7 +44,7 @@ static VALUE Rev_SSL_IO_write_nonblock(VALUE self, VALUE str);
 
 /* Ruby 1.8 leaves us no recourse but to commonly couple to the OpenSSL native
    extension through externs.  Ugh */
-#if RUBY_VERSION_MINOR < 9
+#if RUBY_VERSION_CODE < 190
  
 /* Externs from Ruby's OpenSSL native extension , in ossl_ssl.c*/
 extern int ossl_ssl_ex_vcb_idx;
@@ -66,6 +66,9 @@ extern int ossl_ssl_ex_tmp_dh_callback_idx;
 #  define TO_SOCKET(s) s
 #endif
 
+#endif
+
+#ifndef HAVE_RB_STR_SET_LEN
 static void rb_str_set_len(VALUE str, long len)
 {
   RSTRING(str)->len = len;
@@ -98,7 +101,7 @@ void Init_rev_ssl()
   rb_define_method(cRev_SSL_IO, "write_nonblock", Rev_SSL_IO_write_nonblock, 1);
 }
 
-#if RUBY_VERSION_MINOR < 9
+#if RUBY_VERSION_CODE < 190 
 /* SSL initialization for Ruby 1.8 */
 static VALUE
 Rev_SSL_IO_ssl_setup(VALUE self)
@@ -135,7 +138,9 @@ Rev_SSL_IO_ssl_setup(VALUE self)
 
   return Qtrue;
 }  
-#else
+#endif
+
+#if RUBY_VERSION_CODE >= 190
 /* Slightly less insane SSL setup for Ruby 1.9 */
 static VALUE
 Rev_SSL_IO_ssl_setup(VALUE self)
@@ -186,10 +191,10 @@ Rev_SSL_IO_ssl_setup_check(VALUE dummy, VALUE err)
 static VALUE
 Rev_SSL_IO_connect_nonblock(VALUE self)
 {
-#if RUBY_VERSION_MINOR < 9
-  Rev_SSL_IO_ssl_setup(self);
-#else
+#if RUBY_VERSION_CODE >= 190
   rb_rescue(Rev_SSL_IO_ssl_setup, self, Rev_SSL_IO_ssl_setup_check, Qnil);
+#else
+  Rev_SSL_IO_ssl_setup(self);
 #endif
   
   return Rev_SSL_IO_start_ssl(self, SSL_connect, "SSL_connect");
@@ -202,10 +207,10 @@ Rev_SSL_IO_connect_nonblock(VALUE self)
 static VALUE
 Rev_SSL_IO_accept_nonblock(VALUE self)
 {
-#if RUBY_VERSION_MINOR < 9  
-  Rev_SSL_IO_ssl_setup(self);
-#else
+#if RUBY_VERSION_CODE >= 190
   rb_rescue(Rev_SSL_IO_ssl_setup, self, 0, 0);
+#else
+  Rev_SSL_IO_ssl_setup(self);
 #endif
 
   return Rev_SSL_IO_start_ssl(self, SSL_accept, "SSL_accept");
