@@ -68,7 +68,7 @@ module Rev
 
     # Map all header keys to a downcased string version
     def munge_header_keys(head)
-      head.reduce({}) { |h, (k, v)| h[k.to_s.downcase] = v; h }
+      head.inject({}) { |h, (k, v)| h[k.to_s.downcase] = v; h }
     end
 
     # HTTP is kind of retarded that you have to specify
@@ -98,15 +98,15 @@ module Rev
     end
 
     def encode_headers(head)
-      head.reduce('') do |result, (k, v)|
+      head.inject('') do |result, (key, value)|
         # Munge keys from foo-bar-baz to Foo-Bar-Baz
-        k = k.split('-').map(&:capitalize).join('-')
-      result << encode_field(k, v)
+        key = key.split('-').map { |k| k.capitalize }.join('-')
+      result << encode_field(key, value)
       end
     end
 
     def encode_cookies(cookies)
-      cookies.reduce('') { |result, (k, v)| result << encode_field('Cookie', encode_param(k, v)) }
+      cookies.inject('') { |result, (k, v)| result << encode_field('Cookie', encode_param(k, v)) }
     end
   end
 
