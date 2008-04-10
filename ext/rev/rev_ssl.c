@@ -38,6 +38,41 @@ static VALUE Rev_SSL_IO_start_ssl(VALUE self, int (*func)(), const char *funcnam
 static VALUE Rev_SSL_IO_read_nonblock(int argc, VALUE *argv, VALUE self);
 static VALUE Rev_SSL_IO_write_nonblock(VALUE self, VALUE str);
 
+/*
+ * Time to monkey patch some C code!
+ */
+
+/* Ruby 1.8 leaves us no recourse but to commonly couple to the OpenSSL native
+   extension through externs.  Ugh */
+#if RUBY_VERSION_MINOR < 9
+ 
+/* Externs from Ruby's OpenSSL native extension , in ossl_ssl.c*/
+extern int ossl_ssl_ex_vcb_idx;
+extern int ossl_ssl_ex_store_p;
+extern int ossl_ssl_ex_ptr_idx;
+extern int ossl_ssl_ex_client_cert_cb_idx;
+extern int ossl_ssl_ex_tmp_dh_callback_idx;
+
+/* #defines shamelessly copied and pasted from ossl_ssl.c */
+#define ossl_ssl_get_io(o)                rb_iv_get((o),"@io")
+#define ossl_ssl_get_ctx(o)               rb_iv_get((o),"@context")
+#define ossl_sslctx_get_verify_cb(o)      rb_iv_get((o),"@verify_callback")
+#define ossl_sslctx_get_client_cert_cb(o) rb_iv_get((o),"@client_cert_cb")
+#define ossl_sslctx_get_tmp_dh_cb(o)      rb_iv_get((o),"@tmp_dh_callback")
+
+#ifdef _WIN32
+#  define TO_SOCKET(s) _get_osfhandle(s)
+#else
+#  define TO_SOCKET(s) s
+#endif
+
+static void rb_str_set_len(VALUE str, long len)
+{
+  RSTRING(str)->len = len;
+  RSTRING(str)->ptr[len] = '\0';
+}
+#endif
+
 void Init_rev_ssl()
 {
   rb_require("openssl");
@@ -63,6 +98,45 @@ void Init_rev_ssl()
   rb_define_method(cRev_SSL_IO, "write_nonblock", Rev_SSL_IO_write_nonblock, 1);
 }
 
+#if RUBY_VERSION_MINOR < 9
+/* SSL initialization for Ruby 1.8 */
+static VALUE
+Rev_SSL_IO_ssl_setup(VALUE self)
+{
+  VALUE io, v_ctx, cb;
+  SSL_CTX *ctx;
+  SSL *ssl;
+  OpenFile *fptr;
+
+  Data_Get_Struct(self, SSL, ssl);
+  if(!ssl) {
+    v_ctx = ossl_ssl_get_ctx(self);
+    Data_Get_Struct(v_ctx, SSL_CTX, ctx);
+
+    ssl = SSL_new(ctx);
+    if (!ssl) {
+      ossl_raise(eSSLError, "SSL_new:");
+    }
+    DATA_PTR(self) = ssl;
+
+    io = ossl_ssl_get_io(self);
+    GetOpenFile(io, fptr);
+    rb_io_check_readable(fptr);
+    rb_io_check_writable(fptr);
+    SSL_set_fd(ssl, TO_SOCKET(fileno(fptr->f)));
+    SSL_set_ex_data(ssl, ossl_ssl_ex_ptr_idx, (void*)self);
+    cb = ossl_sslctx_get_verify_cb(v_ctx);
+    SSL_set_ex_data(ssl, ossl_ssl_ex_vcb_idx, (void*)cb);
+    cb = ossl_sslctx_get_client_cert_cb(v_ctx);
+    SSL_set_ex_data(ssl, ossl_ssl_ex_client_cert_cb_idx, (void*)cb);
+    cb = ossl_sslctx_get_tmp_dh_cb(v_ctx);
+    SSL_set_ex_data(ssl, ossl_ssl_ex_tmp_dh_callback_idx, (void*)cb);
+  }
+
+  return Qtrue;
+}  
+#else
+/* Slightly less insane SSL setup for Ruby 1.9 */
 static VALUE
 Rev_SSL_IO_ssl_setup(VALUE self)
 {
@@ -95,15 +169,13 @@ Rev_SSL_IO_ssl_setup(VALUE self)
    */
    rb_funcall(self, rb_intern("session="), 1, Qnil);
 }
+#endif
 
 /* Ensure the error raised by calling #session= with a dummy argument is 
  * the one we were expecting */
 static VALUE 
 Rev_SSL_IO_ssl_setup_check(VALUE dummy, VALUE err)
 {
-  if(!rb_obj_is_kind_of(err, rb_eTypeError))
-    rb_raise(rb_eRuntimeError, "Rev::SSL not supported in this Ruby version, sorry");
-
   return Qnil;
 }
 
@@ -114,7 +186,12 @@ Rev_SSL_IO_ssl_setup_check(VALUE dummy, VALUE err)
 static VALUE
 Rev_SSL_IO_connect_nonblock(VALUE self)
 {
+#if RUBY_VERSION_MINOR < 9
+  Rev_SSL_IO_ssl_setup(self);
+#else
   rb_rescue(Rev_SSL_IO_ssl_setup, self, Rev_SSL_IO_ssl_setup_check, Qnil);
+#endif
+  
   return Rev_SSL_IO_start_ssl(self, SSL_connect, "SSL_connect");
 }
 
@@ -125,7 +202,12 @@ Rev_SSL_IO_connect_nonblock(VALUE self)
 static VALUE
 Rev_SSL_IO_accept_nonblock(VALUE self)
 {
+#if RUBY_VERSION_MINOR < 9  
+  Rev_SSL_IO_ssl_setup(self);
+#else
   rb_rescue(Rev_SSL_IO_ssl_setup, self, 0, 0);
+#endif
+
   return Rev_SSL_IO_start_ssl(self, SSL_accept, "SSL_accept");
 }
 

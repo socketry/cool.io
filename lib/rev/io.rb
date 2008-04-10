@@ -21,9 +21,9 @@ module Rev
 
     def initialize(io)
       @_io = io
-      @_write_buffer = Rev::Buffer.new
-      @_read_watcher  = Watcher.new(io, self, :r, &method(:on_readable))
-      @_write_watcher = Watcher.new(io, self, :w, &method(:on_writable))
+      @_write_buffer  = Rev::Buffer.new
+      @_read_watcher  = Watcher.new(io, self, :r)
+      @_write_watcher = Watcher.new(io, self, :w)
     end
 
     #
@@ -134,16 +134,11 @@ module Rev
       end
     end
     
-    # Return a handle to the writing IOWatcher
-    def write_watcher
-      @_write_watcher ||= WriteWatcher.new(@_io, self)
-    end
-    
     def enable_write_watcher
-      if write_watcher.attached?
-        write_watcher.enable unless write_watcher.enabled?
+      if @_write_watcher.attached?
+        @_write_watcher.enable unless @_write_watcher.enabled?
       else
-        write_watcher.attach(evloop)
+        @_write_watcher.attach(evloop)
       end
     end
     
@@ -157,14 +152,14 @@ module Rev
     
     # Internal class implementing watchers used by Rev::IO
     class Watcher < IOWatcher
-      def initialize(ruby_io, rev_io, flags, &meth)
-        @rev_io, @meth = rev_io, meth
+      def initialize(ruby_io, rev_io, flags)
+        @rev_io = rev_io
         super(ruby_io, flags)
       end
 
       # Configure IOWatcher event callbacks to call the method passed to #initialize
-      def on_readable; @meth.call; end
-      def on_writable; @meth.call; end
+      def on_readable; @rev_io.__send__(:on_readable); end
+      def on_writable; @rev_io.__send__(:on_writable); end
     end
   end
 end

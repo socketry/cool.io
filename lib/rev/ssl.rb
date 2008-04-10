@@ -22,8 +22,6 @@ module Rev
   #       ssl_client_start
   #     end
   #   end
-  #
-  # Please be aware that SSL is only supported on Ruby 1.9 at the present time.
   # 
   module SSL
     # Start SSL explicitly in client mode.  After calling this, callbacks
@@ -61,10 +59,8 @@ module Rev
         @_ssl_init.call
         ssl_init_complete
       rescue SSL::IO::ReadAgain
-        puts "got ReadAgain, enabled: #{enabled?}"
         enable unless enabled?
       rescue SSL::IO::WriteAgain
-        puts "got WriteAgain"
         enable_write_watcher
       rescue OpenSSL::SSL::SSLError, Errno::ECONNRESET, Errno::EPIPE
         close
@@ -81,12 +77,12 @@ module Rev
       enable unless enabled?
       
       on_peer_cert(@_ssl_socket.peer_cert) if respond_to? :on_peer_cert
-      on_ssl_result(@_ssl_socket.verify_result) if respond_to? :on_ssl_result
+      # FIXME Rev::SSL::IO#verify_result needs to be adapted to non-blocking
+      #on_ssl_result(@_ssl_socket.verify_result) if respond_to? :on_ssl_result
       on_ssl_connect if respond_to? :on_ssl_connect
     end
     
     def on_readable
-      puts "readable"
       if @_ssl_init
         disable
         ssl_init
@@ -95,7 +91,7 @@ module Rev
       
       begin
         on_read @_ssl_socket.read_nonblock(Rev::IO::INPUT_SIZE)
-      rescue Errno::AGAIN, SSL::IO::ReadAgain
+      rescue Errno::EAGAIN, SSL::IO::ReadAgain
         return
       rescue OpenSSL::SSL::SSLError, Errno::ECONNRESET, EOFError
         close
@@ -127,17 +123,13 @@ module Rev
     end
   end
   
-  # A socket class for outgoing and incoming SSL connections.  Please be aware
-  # that SSL is only supported on Ruby 1.9 at the present time.
-  #
-  # To create a simple SSL server, subclass SSLSocket and pass the new class
-  # name as the klass argument of Rev::TCPServer.
-  #
-  # To make outgoing connections, just use the SSLSocket.connect method.
+  # A socket class for SSL connections
   class SSLSocket < TCPSocket
     # Perform a non-blocking connect to the given host and port
     def self.connect(addr, port, *args)
-      super.instance_eval { @_connecting = true; self }
+      sock = super
+      sock.instance_variable_set(:@_connecting, true)
+      sock
     end
     
     # Returns the OpenSSL::SSL::SSLContext for to use for the session.

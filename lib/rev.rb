@@ -4,6 +4,12 @@
 # See file LICENSE for details
 #++
 
+# Pull in the OpenSSL extension if available
+begin
+  require 'openssl'
+rescue LoadError
+end
+
 require File.dirname(__FILE__) + '/rev_ext'
 require File.dirname(__FILE__) + '/rev/loop'
 require File.dirname(__FILE__) + '/rev/meta'

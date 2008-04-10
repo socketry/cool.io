@@ -3,6 +3,8 @@ require 'mkmf'
 cflags = []
 libs = []
 
+#libs << "/System/Library/Frameworks/Ruby.framework/Versions/1.8/usr/lib/ruby/1.8/universal-darwin9.0/openssl.bundle"
+
 if have_func('rb_thread_blocking_region')
   cflags << '-DHAVE_RB_THREAD_BLOCKING_REGION'
 end
@@ -27,12 +29,9 @@ if have_header('port.h')
   cflags << '-DEV_USE_PORT'
 end
 
-# Only check for openssl on Ruby >= 1.9
-if RUBY_VERSION >= "1.9.0"
-  if have_header('openssl/ssl.h')
-    cflags << '-DHAVE_OPENSSL_SSL_H'
-    libs << '-lssl -lcrypto'
-  end
+if have_header('openssl/ssl.h')
+  cflags << '-DHAVE_OPENSSL_SSL_H'
+  libs << '-lssl -lcrypto'
 end
 
 # ncpu detection specifics
