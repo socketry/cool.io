@@ -95,8 +95,8 @@ select_modify (EV_P_ int fd, int oev, int nev)
 
 #else
 
-    int word = fd / NFDBITS;
-    int mask = 1UL << (fd % NFDBITS);
+    int     word = fd / NFDBITS;
+    fd_mask mask = 1UL << (fd % NFDBITS);
 
     if (expect_false (vec_max < word + 1))
       {
@@ -108,8 +108,8 @@ select_modify (EV_P_ int fd, int oev, int nev)
         vec_wo = ev_realloc (vec_wo, new_max * NFDBYTES); /* could free/malloc */
 
         for (; vec_max < new_max; ++vec_max)
-          ((fd_mask *)vec_ri)[vec_max] =
-          ((fd_mask *)vec_wi)[vec_max] = 0;
+          ((fd_mask *)vec_ri) [vec_max] =
+          ((fd_mask *)vec_wi) [vec_max] = 0;
       }
 
     ((fd_mask *)vec_ri) [word] |= mask;

@@ -1,4 +1,42 @@
-Revision history for libev, a high-performance and full-featured event loop
+Revision history for libev, a high-performance and full-featured event loop.
+
+3.31 Wed Apr 16 20:45:04 CEST 2008
+	- added last minute fix for ev_poll.c by Brandon Black.
+
+3.3  Wed Apr 16 19:04:10 CEST 2008
+        - event_base_loopexit should return 0 on success
+          (W.C.A. Wijngaards).
+	- added linux eventfd support.
+        - try to autodetect epoll and inotify support
+          by libc header version if not using autoconf.
+        - new symbols: EV_DEFAULT_UC and EV_DEFAULT_UC_.
+        - declare functions defined in ev.h as inline if
+          C99 or gcc are available.
+        - enable inlining with gcc versions 2 and 3.
+        - work around broken poll implementations potentially
+          not clearing revents field in ev_poll (Brandon Black)
+          (no such systems are known at this time).
+        - work around a bug in realloc on openbsd and darwin,
+          also makes the errornous valgrind complaints
+          go away (noted by various people).
+        - fix ev_async_pending, add c++ wrapper for ev_async
+          (based on patch sent by Johannes Deisenhofer.
+        - add sensible set method to ev::embed.
+        - made integer constants type int in ev.h.
+
+3.2  Wed Apr  2 17:11:19 CEST 2008
+	- fix a 64 bit overflow issue in the select backend,
+          by using fd_mask instead of int for the mask.
+        - rename internal sighandler to avoid clash with very old perls.
+        - entering ev_loop will not clear the ONESHOT or NONBLOCKING
+          flags of any outer loops anymore.
+        - add ev_async_pending.
+
+3.1  Thu Mar 13 13:45:22 CET 2008
+	- implement ev_async watchers.
+        - only initialise signal pipe on demand.
+	- make use of sig_atomic_t configurable.
+        - improved documentation.
 
 3.0  Mon Jan 28 13:14:47 CET 2008
 	- API/ABI bump to version 3.0.

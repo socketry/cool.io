@@ -1,5 +1,7 @@
 0.2.1:
 
+* Upgrade to libev 3.31
+
 * Rev::Loop#run_once and Rev::Loop#run_nonblock now return the number of events
   received when they were running.
 
