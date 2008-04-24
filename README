@@ -11,8 +11,16 @@ applications.
 
 You can include Rev in your programs with:
 
-  require 'rubygems'
-  require 'rev'
+ require 'rubygems'
+ require 'rev'
+
+For more information, consult the RubyForge page:
+
+ http://rev.rubyforge.org
+
+Questions?  Sign up for the mailing list at:
+
+ http://rubyforge.org/mailman/listinfo/rev-talk
 
 == Anatomy
 
