@@ -71,8 +71,8 @@
 # elements
   token = (ascii -- (CTL | tspecials));
 
-  Reason_Phrase = (any -- CRLF)+ >mark %reason_phrase;
-  Status_Code = digit+ >mark %status_code;
+  Reason_Phrase = (any -- CRLF)* >mark %reason_phrase;
+  Status_Code = digit{3} >mark %status_code;
   http_number = (digit+ "." digit+) ;
   HTTP_Version = ("HTTP/" http_number) >mark %http_version ;
   Status_Line = HTTP_Version " " Status_Code " "? Reason_Phrase :> CRLF;
