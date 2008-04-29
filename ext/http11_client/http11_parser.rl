@@ -75,7 +75,7 @@
   Status_Code = digit+ >mark %status_code;
   http_number = (digit+ "." digit+) ;
   HTTP_Version = ("HTTP/" http_number) >mark %http_version ;
-  Status_Line = HTTP_Version " " Status_Code " " Reason_Phrase :> CRLF;
+  Status_Line = HTTP_Version " " Status_Code " "? Reason_Phrase :> CRLF;
 
   field_name = token+ >start_field %write_field;
   field_value = any* >start_value %write_value;
