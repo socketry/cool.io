@@ -95,7 +95,7 @@ module Rev
 
     # Is the IO object closed?
     def closed?
-      @_io.closed?
+      @_io.nil? or @_io.closed?
     end
 
     #########
