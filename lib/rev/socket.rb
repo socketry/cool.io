@@ -71,6 +71,8 @@ module Rev
 
       def connect_successful?
         @ruby_socket.getsockopt(::Socket::SOL_SOCKET, ::Socket::SO_ERROR).unpack('i').first == 0
+      rescue IOError
+        false
       end
     end
   end
