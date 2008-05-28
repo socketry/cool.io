@@ -1,9 +1,16 @@
+0.2.2:
+
+* Upgrade to libev 3.41
+
+* Relax HTTP/1.1 reponse parser to allow the "reason" portion of the response
+  header to be omitted
+
 0.2.1:
 
 * Upgrade to libev 3.31
 
 * Rev::Loop#run_once and Rev::Loop#run_nonblock now return the number of events
-  received when they were running.
+  received when they were running
 
 * Remove inheritence relationship between Rev::IO and Rev::IOWatcher
 

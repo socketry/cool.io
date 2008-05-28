@@ -1,7 +1,7 @@
 /*
  * libev select fd activity backend
  *
- * Copyright (c) 2007 Marc Alexander Lehmann <libev@schmorp.de>
+ * Copyright (c) 2007,2008 Marc Alexander Lehmann <libev@schmorp.de>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modifica-
@@ -54,12 +54,6 @@
 #if EV_SELECT_IS_WINSOCKET
 # undef EV_SELECT_USE_FD_SET
 # define EV_SELECT_USE_FD_SET 1
-# undef EINTR
-# define EINTR WSAEINTR
-# undef EBADF
-# define EBADF WSAENOTSOCK
-# undef ENOMEM
-# define ENOMEM (errno + 1)
 #endif
 
 #if !EV_SELECT_USE_FD_SET
@@ -98,7 +92,7 @@ select_modify (EV_P_ int fd, int oev, int nev)
     int     word = fd / NFDBITS;
     fd_mask mask = 1UL << (fd % NFDBITS);
 
-    if (expect_false (vec_max < word + 1))
+    if (expect_false (vec_max <= word))
       {
         int new_max = word + 1;
 
@@ -146,6 +140,29 @@ select_poll (EV_P_ ev_tstamp timeout)
     {
       #if EV_SELECT_IS_WINSOCKET
       errno = WSAGetLastError ();
+      #endif
+      #ifdef WSABASEERR
+      /* on windows, select returns incompatible error codes, fix this */
+      if (errno >= WSABASEERR && errno < WSABASEERR + 1000)
+        if (errno == WSAENOTSOCK)
+          errno = EBADF;
+        else
+          errno -= WSABASEERR;
+      #endif
+
+      #ifdef _WIN32
+      /* select on windows errornously returns EINVAL when no fd sets have been
+       * provided (this is documented). what microsoft doesn't tell you that this bug
+       * exists even when the fd sets are provided, so we have to check for this bug
+       * here and emulate by sleeping manually.
+       * we also get EINVAL when the timeout is invalid, but we ignore this case here
+       * and assume that EINVAL always means: you have to wait manually.
+       */
+      if (errno == EINVAL)
+        {
+          ev_sleep (timeout);
+          return;
+        }
       #endif
 
       if (errno == EBADF)
