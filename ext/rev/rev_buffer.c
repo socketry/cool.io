@@ -329,21 +329,6 @@ static VALUE Rev_Buffer_write_to(VALUE self, VALUE io) {
  * the underlying data structures.
  */
 
-/* Inspect the nodes within a buffer */
-static void buffer_inspect(struct buffer *buf)
-{
-  struct buffer_node *n;
-  
-  printf("buffer (%d): ", buf->size);
-  
-  for(n = buf->head; n; n = n->next) {
-    printf("(%d,%d)", n->start, n->end);
-    if(n->next) printf("->");
-  }
-  
-  puts("");
-}
-
 /* Create a new buffer */
 static struct buffer *buffer_new(void)
 {
@@ -494,11 +479,8 @@ static void buffer_append(struct buffer *buf, char *str, unsigned len)
 
   /* If it fits in the remaining space in the tail */
   if(buf->tail && len <= buf->node_size - buf->tail->end) {
-    printf("padding tail: %d bytes, node size: %d, tail end: %d\n", len, buf->node_size, buf->tail->end);
     memcpy(buf->tail->data + buf->tail->end, str, len);
     buf->tail->end += len;
-    
-    buffer_inspect(buf);
     return;
   }
 
@@ -506,19 +488,17 @@ static void buffer_append(struct buffer *buf, char *str, unsigned len)
   if(!buf->head) {
     buf->head = buffer_node_new(buf);
     buf->tail = buf->head;
-    puts("empty list initialized");
   }
 
   /* Build links out of the data */
   while(len > 0) {
     nbytes = buf->node_size - buf->tail->end;
     if(len < nbytes) nbytes = len;
-
-    printf("appending %d bytes of %d\n", nbytes, len);
     
     memcpy(buf->tail->data + buf->tail->end, str, nbytes);
-    str += nbytes;
+    str += nbytes;    
     len -= nbytes;
+    
     buf->tail->end += nbytes;
 
     if(len > 0) {
@@ -526,8 +506,6 @@ static void buffer_append(struct buffer *buf, char *str, unsigned len)
       buf->tail = buf->tail->next;
     }
   }
-  
-  buffer_inspect(buf);
 }
 
 /* Read data from the buffer (and clear what we've read) */
@@ -591,7 +569,6 @@ static int buffer_write_to(struct buffer *buf, int fd)
       if(errno != EAGAIN)
         rb_sys_fail("write");
 
-      buffer_inspect(buf);
       return total_bytes_written;
     }
 
@@ -612,7 +589,6 @@ static int buffer_write_to(struct buffer *buf, int fd)
     if(!buf->head) buf->tail = 0;
   }
 
-  buffer_inspect(buf);
   return total_bytes_written;
 }
 
