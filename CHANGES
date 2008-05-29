@@ -1,5 +1,8 @@
 0.2.2:
 
+* Correct a pointer arithmetic error in the buffering code that could result
+  in data corruption.
+
 * Upgrade to libev 3.41
 
 * Relax HTTP/1.1 reponse parser to allow the "reason" portion of the response
