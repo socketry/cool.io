@@ -479,6 +479,7 @@ static void buffer_append(struct buffer *buf, char *str, unsigned len)
 
   /* If it fits in the remaining space in the tail */
   if(buf->tail && len <= buf->node_size - buf->tail->end) {
+    printf("padding tail: %d bytes, node size: %d, tail end: %d\n", len, buf->node_size, buf->tail->end);
     memcpy(buf->tail->data + buf->tail->end, str, len);
     buf->tail->end += len;
     return;
@@ -488,6 +489,7 @@ static void buffer_append(struct buffer *buf, char *str, unsigned len)
   if(!buf->head) {
     buf->head = buffer_node_new(buf);
     buf->tail = buf->head;
+    puts("empty list initialized");
   }
 
   /* Build links out of the data */
@@ -495,6 +497,8 @@ static void buffer_append(struct buffer *buf, char *str, unsigned len)
     nbytes = buf->node_size - buf->tail->end;
     if(len < nbytes) nbytes = len;
 
+    printf("appending %d bytes of %d\n", nbytes, len);
+    
     memcpy(buf->tail->data + buf->tail->end, str, nbytes);
     len -= nbytes;
     buf->tail->end += nbytes;
