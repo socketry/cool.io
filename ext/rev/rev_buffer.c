@@ -517,6 +517,7 @@ static void buffer_append(struct buffer *buf, char *str, unsigned len)
     printf("appending %d bytes of %d\n", nbytes, len);
     
     memcpy(buf->tail->data + buf->tail->end, str, nbytes);
+    str += nbytes;
     len -= nbytes;
     buf->tail->end += nbytes;
 
