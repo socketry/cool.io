@@ -20,12 +20,12 @@
 #include <errno.h>
 
 /* Default number of bytes in each node's buffer */
-#define DEFAULT_NODE_SIZE 65536
+#define DEFAULT_NODE_SIZE 16384
 
 /* Maximum age of a buffer node in a memory pool, in seconds */
 #define MAX_AGE 60
 
-/* How often to scan the pool for for old nodes */
+/* How often to scan the pool for old nodes */
 #define PURGE_INTERVAL 10
 
 struct buffer {
