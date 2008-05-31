@@ -2,10 +2,10 @@ require 'rubygems'
 
 GEMSPEC = Gem::Specification.new do |s|
   s.name = "rev"
-  s.version = "0.2.2"
+  s.version = "0.2.3"
   s.authors = "Tony Arcieri"
   s.email = "tony@medioh.com"
-  s.date = "2008-4-19"
+  s.date = "2008-5-31"
   s.summary = "Rev is a Ruby binding to the libev high performance event library"
   s.platform = Gem::Platform::RUBY
   s.required_ruby_version = '>= 1.8.6'

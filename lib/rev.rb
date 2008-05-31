@@ -24,6 +24,6 @@ require File.dirname(__FILE__) + '/rev/server'
 require File.dirname(__FILE__) + '/rev/http_client'
 
 module Rev
-  Rev::VERSION = '0.2.2' unless defined? Rev::VERSION
+  Rev::VERSION = '0.2.3' unless defined? Rev::VERSION
   def self.version() VERSION end
 end
