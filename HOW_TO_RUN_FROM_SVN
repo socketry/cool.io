@@ -1,5 +1,5 @@
 how to run it from an svn copy:
 run 
-rake
+rake # same as rake default
 and then
-requiring 'rev' in the lib directory will load it
+require 'rev' from the lib directory should work
