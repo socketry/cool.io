@@ -1,0 +1,5 @@
+how to run it from an svn copy:
+run 
+rake
+and then
+requiring 'rev' in the lib directory will load it
