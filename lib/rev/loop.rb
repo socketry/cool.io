@@ -97,6 +97,7 @@ module Rev
       while @running and not @active_watchers.zero?
         run_once
       end
+      @running = false
     end
 
     # Stop the event loop if it's running
