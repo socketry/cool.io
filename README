@@ -88,6 +88,7 @@ core socket classes are also provided.  Among these are:
 
 Below is an example of how to write an echo server:
 
+  require 'rev'
   HOST = 'localhost'
   PORT = 4321
 
@@ -105,7 +106,7 @@ Below is an example of how to write an echo server:
     end
   end
 
-  server = Rev::TCPServer.new('localhost', PORT, EchoServerConnection)
+  server = Rev::TCPServer.new(HOST, PORT, EchoServerConnection)
   server.attach(Rev::Loop.default)
 
   puts "Echo server listening on #{HOST}:#{PORT}"
