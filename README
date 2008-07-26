@@ -18,6 +18,8 @@ For more information, consult the RubyForge page:
 
 http://rev.rubyforge.org
 
+http://rubyforge.org/projects/rev
+
 Questions?  Sign up for the mailing list at:
 
 http://rubyforge.org/mailman/listinfo/rev-talk
@@ -130,7 +132,7 @@ haven't overridden them in a subclass).  This is especially useful for small
 one off programs or just experimenting with the API.
 
 Any callback (methods prefixed with on_*) can be set on the fly by passing it
-a block. (NOTE: Ruby 1.9 only)
+a block. (NOTE: Ruby 1.9/1.8.7 only)
 
 Below is an example of using this syntax.  It implements an echo server
 identical to the one above:
