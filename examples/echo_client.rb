@@ -21,6 +21,7 @@ class ClientConnection < Rev::TCPSocket
 end
 
 event_loop = Rev::Loop.default
-a = ClientConnection.connect(ADDR, PORT).attach(event_loop)
+client = ClientConnection.connect(ADDR, PORT)
+client.attach(event_loop)
 puts "Echo client started to #{ADDR}:#{PORT}"
 event_loop.run
