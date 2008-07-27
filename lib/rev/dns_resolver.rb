@@ -11,7 +11,6 @@
 #
 # If you do know what you're doing with DNS, feel free to improve this! 
 #++
-
 module Rev
   # A non-blocking DNS resolver.  It provides interfaces for querying both
   # /etc/hosts and nameserves listed in /etc/resolv.conf, or nameservers of
@@ -25,12 +24,16 @@ module Rev
   # automatically detach themselves from the event loop and cannot be used
   # again.
   class DNSResolver < IOWatcher
+   #--
+   # TODO check if it's caching right
     RESOLV_CONF = '/etc/resolv.conf'
     HOSTS = '/etc/hosts'
     DNS_PORT = 53
     DATAGRAM_SIZE = 512
     TIMEOUT = 3 # Retry timeout for each datagram sent
     RETRIES = 4 # Number of retries to attempt
+    # so currently total is 12s before it will err due to timeouts
+    # if it errs due to inability to reach the DNS server [Errno::EHOSTUNREACH], same
 
     # Query /etc/hosts (or the specified hostfile) for the given host
     def self.hosts(host, hostfile = HOSTS)
@@ -50,8 +53,8 @@ module Rev
     # use nameservers listed in /etc/resolv.conf
     def initialize(hostname, *nameservers)
       if nameservers.empty?
-        nameservers = File.read(RESOLV_CONF).scan(/^\s*nameserver\s+([0-9.:]+)/).flatten
-        raise RuntimeError, "no nameservers found in #{RESOLV_CONF}" if nameservers.empty?
+        nameservers = File.read(RESOLV_CONF).scan(/^\s*nameserver\s+([0-9.:]+)/).flatten # TODO could optimize this to just read once
+        raise RuntimeError, "no nameservers found in #{RESOLV_CONF}" if nameservers.empty? # TODO just call resolve_failed, not raise [also handle Errno::ENOENT)]
       end
 
       @nameservers = nameservers
@@ -84,8 +87,10 @@ module Rev
     def on_failure; end
     event_callback :on_failure
 
-    # Called if we don't receive a response, defaults to on_failure
-    alias_method :on_timeout, :on_failure
+    # Called if we don't receive a response, defaults to calling on_failure
+    def on_timeout
+	on_failure
+    end
 
     #########
     protected
@@ -94,7 +99,11 @@ module Rev
     # Send a request to the DNS server
     def send_request
       @socket.connect @nameservers.first, DNS_PORT
-      @socket.send request_message, 0
+      begin
+         @socket.send request_message, 0
+      rescue Errno::EHOSTUNREACH # TODO figure out why it has to be wrapper here, when the other wrapper should be wrapping this one!
+
+      end   
     end
 
     # Called by the subclass when the DNS response is available
@@ -184,8 +193,13 @@ module Rev
 
       def on_timer
         @attempts += 1
-        return @resolver.__send__(:send_request) if @attempts <= RETRIES 
-
+        if @attempts <= RETRIES
+          begin
+            return @resolver.__send__(:send_request)
+          rescue Errno::EHOSTUNREACH # if the DNS is toast try again after the timeout occurs again
+            return nil
+          end 
+        end
         @resolver.__send__(:on_timeout)
         @resolver.detach
       end
