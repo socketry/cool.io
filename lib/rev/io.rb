@@ -21,7 +21,7 @@ module Rev
 
     def initialize(io)
       @_io = io
-      @_write_buffer  = Rev::Buffer.new
+      @_write_buffer  ||= Rev::Buffer.new
       @_read_watcher  = Watcher.new(io, self, :r)
       @_write_watcher = Watcher.new(io, self, :w)
     end
@@ -31,10 +31,10 @@ module Rev
     #
     
     # Attach to the event loop
-    def attach(loop); @_read_watcher.attach loop; self; end
+    def attach(loop); @_read_watcher.attach loop; schedule_write if !@_write_buffer.empty?; self; end
     
     # Detach from the event loop
-    def detach; @_read_watcher.detach; self; end
+    def detach; @_read_watcher.detach; self; end # TODO should these detect write buffers, as well?
     
     # Enable the watcher
     def enable; @_read_watcher.enable; self; end
@@ -128,6 +128,8 @@ module Rev
 
     # Schedule a write to be performed when the IO object becomes writable 
     def schedule_write
+      return unless @_io # this would mean 'we are still pre DNS here'
+      return unless attached? # this would mean 'currently unattached' -- also a state of pre DNS, or just plain not being attached
       begin
         enable_write_watcher      
       rescue IOError
