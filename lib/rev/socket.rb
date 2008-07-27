@@ -10,6 +10,7 @@ require 'resolv'
 module Rev
   class Socket < IO    
     def self.connect(socket, *args)
+
       new(socket, *args).instance_eval do
         @_connector = Connector.new(self, socket)
         self
@@ -38,8 +39,10 @@ module Rev
     event_callback :on_connect_failed
     
     # Called if a hostname failed to resolve when connecting
-    # Defaults to being aliased to on_connect_failed
-    alias_method :on_resolve_failed, :on_connect_failed
+    # Defaults to  calling on_connect_failed
+    def on_resolve_failed
+       on_connect_failed
+    end
     
     #########
     protected
@@ -93,6 +96,8 @@ module Rev
     end
     
     # Perform a non-blocking connect to the given host and port
+    # see examples/echo_client.rb
+    # addr is a string, can be an IP address or a hostname.
     def self.connect(addr, port, *args)
       family = nil
 
@@ -103,7 +108,7 @@ module Rev
       end
  
       if family
-        return super(TCPConnectSocket.new(family, addr, port), *args)
+        return super(TCPConnectSocket.new(family, addr, port), *args) # this creates a 'real' write buffer so we're ok there with regards to already having a write buffer from the get go
       end
 
       if host = Rev::DNSResolver.hosts(addr)
@@ -115,6 +120,7 @@ module Rev
     
     # Called by precreate during asyncronous DNS resolution
     def preinitialize(addr, port, *args)
+      @_write_buffer = Rev::Buffer.new # allow for writing BEFORE the DNS has resolved
       @remote_host, @remote_addr, @remote_port = addr, addr, port
       @_resolver = TCPConnectResolver.new(self, addr, port, *args)
     end
@@ -141,7 +147,7 @@ module Rev
 
     class TCPConnectSocket < ::Socket
       def initialize(family, addr, port, host = addr)
-        @host, @addr, @port = host, addr, port
+        @host,  addr, @port = host, addr, port
         @address_family = nil
 
         @socket = super(family, ::Socket::SOCK_STREAM, 0)
