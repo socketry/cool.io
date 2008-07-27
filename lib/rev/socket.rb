@@ -112,7 +112,7 @@ module Rev
       end
 
       if host = Rev::DNSResolver.hosts(addr)
-        return connect(host, port, *args)
+        return connect(host, port, *args) # calls this same function
       end
 
       precreate(addr, port, *args)
