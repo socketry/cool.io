@@ -39,7 +39,8 @@ module Rev
   end
 
   # TCP server class.  Listens on the specified host and port and creates
-  # new connection objects of the given class.
+  # new connection objects of the given class. This is the most common server class.
+  # Note that the new connection objects will be bound by default to the same event loop that the server is attached to.
   class TCPServer < Server
     def initialize(host, port, klass = TCPSocket, *args, &block)
       listen_socket = ::TCPServer.new(host, port)
