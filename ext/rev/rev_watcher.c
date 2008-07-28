@@ -99,7 +99,8 @@ static VALUE Rev_Watcher_attach(VALUE self, VALUE loop)
   loop_watchers = rb_iv_get(loop, "@watchers");
 
   if(loop_watchers == Qnil) {
-    loop_watchers = rb_ary_new();
+    /* we should never get here */
+    loop_watchers = rb_hash_new();
     rb_iv_set(loop, "@watchers", loop_watchers);
   }
 
@@ -108,7 +109,7 @@ static VALUE Rev_Watcher_attach(VALUE self, VALUE loop)
    * with a loop (and also lets you see within Ruby which watchers are
    * associated with a given loop), but isn't really necessary for any 
    * other reason */
-  rb_ary_push(loop_watchers, self);
+  rb_hash_aset(loop_watchers, self, Qtrue);
 
   active_watchers = rb_iv_get(loop, "@active_watchers");
   if(active_watchers == Qnil)
@@ -142,8 +143,9 @@ static VALUE Rev_Watcher_detach(VALUE self)
 
   /* Remove us from the loop's array of active watchers.  This likely
    * has negative performance and scalability characteristics as this
-   * isn't an O(1) operation.  Hopefully there's a better way... */
-  rb_ary_delete(loop_watchers, self);
+   * isn't an O(1) operation.  Hopefully there's a better way...
+   * Trying a hash for now... */
+  rb_hash_delete(loop_watchers, self);
 
   if(watcher_data->enabled) {
     rb_iv_set(

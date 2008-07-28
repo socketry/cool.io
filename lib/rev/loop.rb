@@ -49,7 +49,7 @@ module Rev
     #     :port   (Solaris 10)
     #
     def initialize(options = {})
-      @watchers = []
+      @watchers = {}
       @active_watchers = 0
       
       flags = 0
