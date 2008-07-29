@@ -15,8 +15,6 @@ end
 
 module Rev
   class Loop
-    attr_reader :watchers
-    
     # In Ruby 1.9 we want a Rev::Loop per thread, but Ruby 1.8 is unithreaded
     if RUBY_VERSION >= "1.9.0"
       # Retrieve the default event loop for the current thread
@@ -109,6 +107,11 @@ module Rev
     # Does the loop have any active watchers?
     def has_active_watchers?
       @active_watchers > 0
+    end
+    
+    # All watchers attached to the current loop
+    def watchers
+      @watchers.keys
     end
     
     #######
