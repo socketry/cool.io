@@ -140,7 +140,7 @@ identical to the one above:
   HOST = '127.0.0.1'
   PORT = 4321
 
-  server = Rev::TCPServer.new(ADDR, PORT) do |c|
+  server = Rev::TCPServer.new(HOST, PORT) do |c|
     c.on_connect { puts "#{remote_addr}:#{remote_port} connected" }
     c.on_close   { puts "#{remote_addr}:#{remote_port} disconnected" }
     c.on_read    { |data| write data }
