@@ -98,6 +98,8 @@ module Rev
 
     # Send a request to the DNS server
     def send_request
+      nameserver = @nameservers.shift
+      @nameservers << nameserver # rotate them
       @socket.connect @nameservers.first, DNS_PORT
       begin
          @socket.send request_message, 0
@@ -108,7 +110,11 @@ module Rev
 
     # Called by the subclass when the DNS response is available
     def on_readable
-      datagram = @socket.recvfrom_nonblock(DATAGRAM_SIZE).first
+      datagram = nil
+      begin
+	datagram = @socket.recvfrom_nonblock(DATAGRAM_SIZE).first
+      rescue Errno::ECONNREFUSED
+      end
       address = response_address datagram rescue nil
       address ? on_success(address) : on_failure
       detach

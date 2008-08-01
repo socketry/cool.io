@@ -61,6 +61,9 @@ module Rev
         if connect_successful?
           @rev_socket.instance_eval { @_connector = nil }
           @rev_socket.attach(evl)
+          @ruby_socket.setsockopt(::Socket::IPPROTO_TCP, ::Socket::TCP_NODELAY, [1].pack("l"))
+          @ruby_socket.setsockopt(::Socket::SOL_SOCKET, ::Socket::SO_KEEPALIVE, true)
+
           @rev_socket.__send__(:on_connect)
         else
           @rev_socket.instance_eval { @_failed = true }
