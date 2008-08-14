@@ -24,6 +24,10 @@ Questions?  Sign up for the mailing list at:
 
 http://rubyforge.org/mailman/listinfo/rev-talk
 
+The latest development code is available at:
+
+http://rev.rubyforge.org/svn/trunk
+
 == Anatomy
 
 Rev builds on two core classes which bind to the libev API:
