@@ -24,9 +24,9 @@ Questions?  Sign up for the mailing list at:
 
 http://rubyforge.org/mailman/listinfo/rev-talk
 
-The latest development code is available at:
+The latest development code is available via github at:
 
-http://rev.rubyforge.org/svn/trunk
+git://github.com/tarcieri/rev.git
 
 == Anatomy
 
