@@ -76,5 +76,5 @@ setup_extension("http11_client", "http11_client")
 
 task :compile => [:rev_ext, :http11_client]
 
-CLEAN.include ['build/*', '**/*.o', '**/*.so', '**/*.a', '**/*.log', 'pkg']
-CLEAN.include ['ext/rev/Makefile', 'lib/rev_ext.*', 'lib/http11_client.*']
+CLEAN.include ["build/*", "**/*.o", "**/*.so", "**/*.a", "**/*.log", "pkg"]
+CLEAN.include ["ext/**/Makefile", "lib/rev_ext.*", "lib/http11_client.*", "ext/**/*.#{Config::CONFIG["DLEXT"]}"]
