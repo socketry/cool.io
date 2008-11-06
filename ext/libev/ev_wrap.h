@@ -22,6 +22,7 @@
 #define vec_ro ((loop)->vec_ro)
 #define vec_wi ((loop)->vec_wi)
 #define vec_wo ((loop)->vec_wo)
+#define vec_eo ((loop)->vec_eo)
 #define vec_max ((loop)->vec_max)
 #define polls ((loop)->polls)
 #define pollmax ((loop)->pollmax)
@@ -94,6 +95,7 @@
 #undef vec_ro
 #undef vec_wi
 #undef vec_wo
+#undef vec_eo
 #undef vec_max
 #undef polls
 #undef pollmax

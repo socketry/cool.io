@@ -65,13 +65,16 @@ VARx(ev_io, pipeev)
 VARx(pid_t, curpid)
 #endif
 
-VARx(int, postfork)  /* true if we need to recreate kernel state after fork */
+VARx(char, postfork)  /* true if we need to recreate kernel state after fork */
 
 #if EV_USE_SELECT || EV_GENWRAP
 VARx(void *, vec_ri)
 VARx(void *, vec_ro)
 VARx(void *, vec_wi)
 VARx(void *, vec_wo)
+#if defined(_WIN32) || EV_GENWRAP
+VARx(void *, vec_eo)
+#endif
 VARx(int, vec_max)
 #endif
 

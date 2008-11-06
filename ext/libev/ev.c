@@ -156,6 +156,7 @@ extern "C" {
 # include <sys/wait.h>
 # include <unistd.h>
 #else
+# include <io.h>
 # define WIN32_LEAN_AND_MEAN
 # include <windows.h>
 # ifndef EV_SELECT_IS_WINSOCKET
@@ -166,7 +167,11 @@ extern "C" {
 /* this block tries to deduce configuration from header-defined symbols and defaults */
 
 #ifndef EV_USE_MONOTONIC
-# define EV_USE_MONOTONIC 0
+# if defined (_POSIX_MONOTONIC_CLOCK) && _POSIX_MONOTONIC_CLOCK >= 0
+#  define EV_USE_MONOTONIC 1
+# else
+#  define EV_USE_MONOTONIC 0
+# endif
 #endif
 
 #ifndef EV_USE_REALTIME
@@ -174,7 +179,11 @@ extern "C" {
 #endif
 
 #ifndef EV_USE_NANOSLEEP
-# define EV_USE_NANOSLEEP 0
+# if _POSIX_C_SOURCE >= 199309L
+#  define EV_USE_NANOSLEEP 1
+# else
+#  define EV_USE_NANOSLEEP 0
+# endif
 #endif
 
 #ifndef EV_USE_SELECT
@@ -279,7 +288,13 @@ extern "C" {
 #endif
 
 #if EV_USE_INOTIFY
+# include <sys/utsname.h>
 # include <sys/inotify.h>
+/* some very old inotify.h headers don't have IN_DONT_FOLLOW */
+# ifndef IN_DONT_FOLLOW
+#  undef EV_USE_INOTIFY
+#  define EV_USE_INOTIFY 0
+# endif
 #endif
 
 #if EV_SELECT_IS_WINSOCKET
@@ -375,7 +390,7 @@ ev_set_syserr_cb (void (*cb)(const char *msg))
 }
 
 static void noinline
-syserr (const char *msg)
+ev_syserr (const char *msg)
 {
   if (!msg)
     msg = "(libev) system error";
@@ -436,6 +451,11 @@ typedef struct
   WL head;
   unsigned char events;
   unsigned char reify;
+  unsigned char emask; /* the epoll backend stores the actual kernel mask in here */
+  unsigned char unused;
+#if EV_USE_EPOLL
+  unsigned int egen;  /* generation counter to counter epoll bugs */
+#endif
 #if EV_SELECT_IS_WINSOCKET
   SOCKET handle;
 #endif
@@ -558,6 +578,9 @@ ev_sleep (ev_tstamp delay)
       tv.tv_sec  = (time_t)delay;
       tv.tv_usec = (long)((delay - (ev_tstamp)(tv.tv_sec)) * 1e6);
 
+      /* here we rely on sys/time.h + sys/types.h + unistd.h providing select */
+      /* somehting nto guaranteed by newer posix versions, but guaranteed */
+      /* by older ones */
       select (0, 0, 0, 0, &tv);
 #endif
     }
@@ -594,6 +617,9 @@ array_realloc (int elem, void *base, int *cur, int cnt)
   *cur = array_nextsize (elem, *cur, cnt);
   return ev_realloc (base, elem * *cur);
 }
+
+#define array_init_zero(base,count)	\
+  memset ((void *)(base), 0, sizeof (*(base)) * (count))
 
 #define array_needsize(type,base,cur,cnt,init)			\
   if (expect_false ((cnt) > (cur)))				\
@@ -647,19 +673,6 @@ queue_events (EV_P_ W *events, int eventcnt, int type)
 
 /*****************************************************************************/
 
-void inline_size
-anfds_init (ANFD *base, int count)
-{
-  while (count--)
-    {
-      base->head   = 0;
-      base->events = EV_NONE;
-      base->reify  = 0;
-
-      ++base;
-    }
-}
-
 void inline_speed
 fd_event (EV_P_ int fd, int revents)
 {
@@ -701,13 +714,13 @@ fd_reify (EV_P)
 #if EV_SELECT_IS_WINSOCKET
       if (events)
         {
-          unsigned long argp;
+          unsigned long arg;
           #ifdef EV_FD_TO_WIN32_HANDLE
             anfd->handle = EV_FD_TO_WIN32_HANDLE (fd);
           #else
             anfd->handle = _get_osfhandle (fd);
           #endif
-          assert (("libev only supports socket fds in this configuration", ioctlsocket (anfd->handle, FIONREAD, &argp) == 0));
+          assert (("libev only supports socket fds in this configuration", ioctlsocket (anfd->handle, FIONREAD, &arg) == 0));
         }
 #endif
 
@@ -770,7 +783,7 @@ fd_ebadf (EV_P)
 
   for (fd = 0; fd < anfdmax; ++fd)
     if (anfds [fd].events)
-      if (!fd_valid (fd) == -1 && errno == EBADF)
+      if (!fd_valid (fd) && errno == EBADF)
         fd_kill (EV_A_ fd);
 }
 
@@ -798,6 +811,7 @@ fd_rearm_all (EV_P)
     if (anfds [fd].events)
       {
         anfds [fd].events = 0;
+        anfds [fd].emask  = 0;
         fd_change (EV_A_ fd, EV_IOFDSET | 1);
       }
 }
@@ -959,25 +973,13 @@ static int signalmax;
 
 static EV_ATOMIC_T gotsig;
 
-void inline_size
-signals_init (ANSIG *base, int count)
-{
-  while (count--)
-    {
-      base->head   = 0;
-      base->gotsig = 0;
-
-      ++base;
-    }
-}
-
 /*****************************************************************************/
 
 void inline_speed
 fd_intern (int fd)
 {
 #ifdef _WIN32
-  int arg = 1;
+  unsigned long arg = 1;
   ioctlsocket (_get_osfhandle (fd), FIONBIO, &arg);
 #else
   fcntl (fd, F_SETFD, FD_CLOEXEC);
@@ -1001,7 +1003,7 @@ evpipe_init (EV_P)
 #endif
         {
           while (pipe (evpipe))
-            syserr ("(libev) error creating signal/async pipe");
+            ev_syserr ("(libev) error creating signal/async pipe");
 
           fd_intern (evpipe [0]);
           fd_intern (evpipe [1]);
@@ -1501,7 +1503,7 @@ ev_loop_fork (EV_P)
 }
 
 #if EV_VERIFY
-void noinline
+static void noinline
 verify_watcher (EV_P_ W w)
 {
   assert (("watcher has invalid priority", ABSPRI (w) >= 0 && ABSPRI (w) < NUMPRI));
@@ -1642,6 +1644,8 @@ ev_default_destroy (void)
   struct ev_loop *loop = ev_default_loop_ptr;
 #endif
 
+  ev_default_loop_ptr = 0;
+
 #ifndef _WIN32
   ev_ref (EV_A); /* child watcher */
   ev_signal_stop (EV_A_ &childev);
@@ -1657,8 +1661,7 @@ ev_default_fork (void)
   struct ev_loop *loop = ev_default_loop_ptr;
 #endif
 
-  if (backend)
-    postfork = 1; /* must be in line with ev_loop_fork */
+  postfork = 1; /* must be in line with ev_loop_fork */
 }
 
 /*****************************************************************************/
@@ -1899,6 +1902,12 @@ ev_unref (EV_P)
   --activecnt;
 }
 
+void
+ev_now_update (EV_P)
+{
+  time_update (EV_A_ 1e100);
+}
+
 static int loop_done;
 
 void
@@ -2117,11 +2126,12 @@ ev_io_start (EV_P_ ev_io *w)
     return;
 
   assert (("ev_io_start called with negative fd", fd >= 0));
+  assert (("ev_io start called with illegal event mask", !(w->events & ~(EV_IOFDSET | EV_READ | EV_WRITE))));
 
   EV_FREQUENT_CHECK;
 
   ev_start (EV_A_ (W)w, 1);
-  array_needsize (ANFD, anfds, anfdmax, fd + 1, anfds_init);
+  array_needsize (ANFD, anfds, anfdmax, fd + 1, array_init_zero);
   wlist_add (&anfds[fd].head, (WL)w);
 
   fd_change (EV_A_ fd, w->events & EV_IOFDSET | 1);
@@ -2323,7 +2333,7 @@ ev_signal_start (EV_P_ ev_signal *w)
     sigprocmask (SIG_SETMASK, &full, &prev);
 #endif
 
-    array_needsize (ANSIG, signals, signalmax, w->signum, signals_init);
+    array_needsize (ANSIG, signals, signalmax, w->signum, array_init_zero);
 
 #ifndef _WIN32
     sigprocmask (SIG_SETMASK, &prev, 0);
@@ -2475,7 +2485,7 @@ static void noinline
 infy_wd (EV_P_ int slot, int wd, struct inotify_event *ev)
 {
   if (slot < 0)
-    /* overflow, need to check for all hahs slots */
+    /* overflow, need to check for all hash slots */
     for (slot = 0; slot < EV_INOTIFY_HASHSIZE; ++slot)
       infy_wd (EV_A_ slot, wd, ev);
   else
@@ -2519,6 +2529,27 @@ infy_init (EV_P)
   if (fs_fd != -2)
     return;
 
+  /* kernels < 2.6.25 are borked
+   * http://www.ussg.indiana.edu/hypermail/linux/kernel/0711.3/1208.html
+   */
+  {
+    struct utsname buf;
+    int major, minor, micro;
+
+    fs_fd = -1;
+
+    if (uname (&buf))
+      return;
+
+    if (sscanf (buf.release, "%d.%d.%d", &major, &minor, &micro) != 3)
+      return;
+
+    if (major < 2
+        || (major == 2 && minor < 6)
+        || (major == 2 && minor == 6 && micro < 25))
+      return;
+  }
+
   fs_fd = inotify_init ();
 
   if (fs_fd >= 0)
@@ -2557,10 +2588,15 @@ infy_fork (EV_P)
           else
             ev_timer_start (EV_A_ &w->timer);
         }
-
     }
 }
 
+#endif
+
+#ifdef _WIN32
+# define EV_LSTAT(p,b) _stati64 (p, b)
+#else
+# define EV_LSTAT(p,b) lstat (p, b)
 #endif
 
 void
@@ -2597,9 +2633,12 @@ stat_timer_cb (EV_P_ ev_timer *w_, int revents)
     || w->prev.st_ctime != w->attr.st_ctime
   ) {
       #if EV_USE_INOTIFY
-        infy_del (EV_A_ w);
-        infy_add (EV_A_ w);
-        ev_stat_stat (EV_A_ w); /* avoid race... */
+        if (fs_fd >= 0)
+          {
+            infy_del (EV_A_ w);
+            infy_add (EV_A_ w);
+            ev_stat_stat (EV_A_ w); /* avoid race... */
+          }
       #endif
 
       ev_feed_event (EV_A_ w, EV_STAT);
@@ -2811,6 +2850,18 @@ embed_prepare_cb (EV_P_ ev_prepare *prepare, int revents)
   }
 }
 
+static void
+embed_fork_cb (EV_P_ ev_fork *fork_w, int revents)
+{
+  ev_embed *w = (ev_embed *)(((char *)fork_w) - offsetof (ev_embed, fork));
+
+  {
+    struct ev_loop *loop = w->other;
+
+    ev_loop_fork (EV_A);
+  }
+}
+
 #if 0
 static void
 embed_idle_cb (EV_P_ ev_idle *idle, int revents)
@@ -2840,6 +2891,9 @@ ev_embed_start (EV_P_ ev_embed *w)
   ev_set_priority (&w->prepare, EV_MINPRI);
   ev_prepare_start (EV_A_ &w->prepare);
 
+  ev_fork_init (&w->fork, embed_fork_cb);
+  ev_fork_start (EV_A_ &w->fork);
+
   /*ev_idle_init (&w->idle, e,bed_idle_cb);*/
 
   ev_start (EV_A_ (W)w, 1);
@@ -2856,10 +2910,9 @@ ev_embed_stop (EV_P_ ev_embed *w)
 
   EV_FREQUENT_CHECK;
 
-  ev_io_stop (EV_A_ &w->io);
+  ev_io_stop      (EV_A_ &w->io);
   ev_prepare_stop (EV_A_ &w->prepare);
-
-  ev_stop (EV_A_ (W)w);
+  ev_fork_stop    (EV_A_ &w->fork);
 
   EV_FREQUENT_CHECK;
 }
@@ -2966,7 +3019,7 @@ once_cb (EV_P_ struct ev_once *once, int revents)
   void (*cb)(int revents, void *arg) = once->cb;
   void *arg = once->arg;
 
-  ev_io_stop (EV_A_ &once->io);
+  ev_io_stop    (EV_A_ &once->io);
   ev_timer_stop (EV_A_ &once->to);
   ev_free (once);
 
@@ -2976,13 +3029,17 @@ once_cb (EV_P_ struct ev_once *once, int revents)
 static void
 once_cb_io (EV_P_ ev_io *w, int revents)
 {
-  once_cb (EV_A_ (struct ev_once *)(((char *)w) - offsetof (struct ev_once, io)), revents);
+  struct ev_once *once = (struct ev_once *)(((char *)w) - offsetof (struct ev_once, io));
+
+  once_cb (EV_A_ once, revents | ev_clear_pending (EV_A_ &once->to));
 }
 
 static void
 once_cb_to (EV_P_ ev_timer *w, int revents)
 {
-  once_cb (EV_A_ (struct ev_once *)(((char *)w) - offsetof (struct ev_once, to)), revents);
+  struct ev_once *once = (struct ev_once *)(((char *)w) - offsetof (struct ev_once, to));
+
+  once_cb (EV_A_ once, revents | ev_clear_pending (EV_A_ &once->io));
 }
 
 void
