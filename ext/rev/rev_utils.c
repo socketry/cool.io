@@ -6,7 +6,9 @@
 
 #include "ruby.h"
 
+#ifdef HAVE_SYS_RESOURCE_H
 #include <sys/resource.h>
+#endif
 
 #ifdef HAVE_SYS_SYSCTL_H
 #include <sys/param.h>
@@ -82,10 +84,16 @@ static VALUE Rev_Utils_maxfds(VALUE self)
 {
   struct rlimit rlim;
 
+#ifdef HAVE_SYS_RESOURCE_H
   if(getrlimit(RLIMIT_NOFILE, &rlim) < 0)
     rb_sys_fail("getrlimit");
 
   return INT2NUM(rlim.rlim_cur);
+#endif
+
+#ifndef HAVE_SYS_RESOURCE_H
+  rb_raise(rb_eRuntimeError, "operation not supported");
+#endif
 }
 
 /**
@@ -99,10 +107,16 @@ static VALUE Rev_Utils_setmaxfds(VALUE self, VALUE max)
 {
   struct rlimit rlim;
 
+#ifdef HAVE_SYS_RESOURCE_H
   rlim.rlim_cur = NUM2INT(max);
 
   if(setrlimit(RLIMIT_NOFILE, &rlim) < 0)
     rb_sys_fail("setrlimit");
 
   return max;
+#endif
+
+#ifndef HAVE_SYS_RESOURCE_H
+  rb_raise(rb_eRuntimeError, "operation not supported");
+#endif
 }

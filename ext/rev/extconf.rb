@@ -37,6 +37,10 @@ if have_header('openssl/ssl.h')
   libs << '-lssl -lcrypto'
 end
 
+if have_header('sys/resource.h')
+  $defs << '-DHAVE_SYS_RESOURCE_H'
+end
+
 # ncpu detection specifics
 case RUBY_PLATFORM
 when /linux/
