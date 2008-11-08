@@ -82,9 +82,9 @@ static VALUE Rev_Utils_ncpus(VALUE self)
  */
 static VALUE Rev_Utils_maxfds(VALUE self)
 {
+#ifdef HAVE_SYS_RESOURCE_H
   struct rlimit rlim;
 
-#ifdef HAVE_SYS_RESOURCE_H
   if(getrlimit(RLIMIT_NOFILE, &rlim) < 0)
     rb_sys_fail("getrlimit");
 
@@ -105,9 +105,9 @@ static VALUE Rev_Utils_maxfds(VALUE self)
  */
 static VALUE Rev_Utils_setmaxfds(VALUE self, VALUE max)
 {
+#ifdef HAVE_SYS_RESOURCE_H
   struct rlimit rlim;
 
-#ifdef HAVE_SYS_RESOURCE_H
   rlim.rlim_cur = NUM2INT(max);
 
   if(setrlimit(RLIMIT_NOFILE, &rlim) < 0)
