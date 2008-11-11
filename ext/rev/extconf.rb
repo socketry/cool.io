@@ -2,6 +2,7 @@ require 'mkmf'
 
 libs = []
 
+
 $defs << "-DRUBY_VERSION_CODE=#{RUBY_VERSION.gsub(/\D/, '')}"
 
 if have_func('rb_thread_blocking_region')
@@ -33,8 +34,8 @@ if have_header('port.h')
 end
 
 if have_header('openssl/ssl.h')
-  $defs << '-DHAVE_OPENSSL_SSL_H'
-  libs << '-lssl -lcrypto'
+   $defs << '-DHAVE_OPENSSL_SSL_H'
+   libs << '-lssl -lcrypto'
 end
 
 if have_header('sys/resource.h')
@@ -55,3 +56,10 @@ $LIBS << ' ' << libs.join(' ')
 
 dir_config('rev_ext')
 create_makefile('rev_ext')
+
+if have_header('openssl/ssl.h') and RUBY_PLATFORM =~ /mingw|win32/
+  print "Note--SSL not yet supported on windows--continuing without SSL support"
+  makefile_contents = File.read 'Makefile'
+  makefile_contents.gsub!('-DHAVE_OPENSSL_SSL_H', '')
+  File.open('Makefile', 'w') { |f| f.write makefile_contents }
+end
