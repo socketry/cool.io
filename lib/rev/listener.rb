@@ -13,6 +13,7 @@ module Rev
   class Listener < IOWatcher
     def initialize(listen_socket)
       @listen_socket = listen_socket
+      print "starting listener with socket #{@listen_socket} #{@listen_socket.to_i}\n"
       super(@listen_socket)
     end
     
@@ -34,7 +35,7 @@ module Rev
     def on_readable
       begin
         on_connection @listen_socket.accept_nonblock
-      rescue Errno::EAGAIN
+      rescue Errno::EAGAIN, Errno::EWOULDBLOCK
         STDERR.puts "warning: listener socket spuriously readable"
       end
     end

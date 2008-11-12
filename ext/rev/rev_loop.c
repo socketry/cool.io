@@ -208,7 +208,7 @@ static VALUE Rev_Loop_ev_loop_oneshot_blocking(void *ptr)
 static void Rev_Loop_ev_loop_oneshot(struct Rev_Loop *loop_data)
 {
   /* Use Ruby 1.9's rb_thread_blocking_region call to make a blocking system call */
-  rb_thread_blocking_region(Rev_Loop_ev_loop_oneshot_blocking, loop_data, RB_UBF_DFL, 0);
+  rb_thread_blocking_region(Rev_Loop_ev_loop_oneshot_blocking, loop_data, RUBY_UBF_IO, 0);
 }
 #endif
 

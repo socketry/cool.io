@@ -1,3 +1,5 @@
+#define EV_STANDALONE /* keeps ev from requiring config.h */
+
 /*
  * libev event processing core, watcher management
  *
@@ -718,7 +720,9 @@ fd_reify (EV_P)
           #ifdef EV_FD_TO_WIN32_HANDLE
             anfd->handle = EV_FD_TO_WIN32_HANDLE (fd);
           #else
-            anfd->handle = _get_osfhandle (fd);
+
+            anfd->handle =  _get_osfhandle(fd);
+	    printf("used get osf for %d -> %d\n", fd, anfd->handle);
           #endif
           assert (("libev only supports socket fds in this configuration", ioctlsocket (anfd->handle, FIONREAD, &arg) == 0));
         }
