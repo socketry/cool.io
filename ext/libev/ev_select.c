@@ -51,11 +51,11 @@
 # endif
 #endif
 
-#if EV_SELECT_IS_WINSOCKET
+#if 1
 # undef EV_SELECT_USE_FD_SET
 # define EV_SELECT_USE_FD_SET 1
 # undef NFDBITS
-# define NFDBITS 0
+# define NFDBITS 8
 #endif
 
 #if !EV_SELECT_USE_FD_SET
@@ -78,7 +78,7 @@ select_modify (EV_P_ int fd, int oev, int nev)
     #else
     int handle = fd;
     #endif
-
+	printf("using fd %d\n", handle);
     /* FD_SET is broken on windows (it adds the fd to a set twice or more,
      * which eventually leads to overflows). Need to call it only on changes.
      */
@@ -86,7 +86,10 @@ select_modify (EV_P_ int fd, int oev, int nev)
     if ((oev ^ nev) & EV_READ)
     #endif
       if (nev & EV_READ)
+      {
+      	printf("setting %d -- before it was set as %d\n", handle, FD_ISSET (handle, (fd_set *)vec_ri));
         FD_SET (handle, (fd_set *)vec_ri);
+	}
       else
         FD_CLR (handle, (fd_set *)vec_ri);
 
@@ -138,8 +141,8 @@ select_poll (EV_P_ ev_tstamp timeout)
   int res;
   int fd_setsize;
 
-  tv.tv_sec  = (long)timeout;
-  tv.tv_usec = (long)((timeout - (ev_tstamp)tv.tv_sec) * 1e6);
+  tv.tv_sec  = 2;
+  tv.tv_usec = 500000;
 
 #if EV_SELECT_USE_FD_SET
   fd_setsize = sizeof (fd_set);
@@ -157,11 +160,12 @@ select_poll (EV_P_ ev_tstamp timeout)
    * the writable bit. this is so uncontrollably lame.
    */
   memcpy (vec_eo, vec_wi, fd_setsize);
-  res = select (vec_max * NFDBITS, (fd_set *)vec_ro, (fd_set *)vec_wo, (fd_set *)vec_eo, &tv);
+  printf("vec max is %d, vec ro is %d, vec ri is %d\n", vec_max, vec_ro, vec_ri);
+  res = select (vec_max +2, (fd_set *)vec_ro, (fd_set *)vec_wo, (fd_set *)vec_eo, &tv);
 #else
   res = select (vec_max * NFDBITS, (fd_set *)vec_ro, (fd_set *)vec_wo, 0, &tv);
 #endif
-
+	printf("select returned %d\n", res);
   if (expect_false (res < 0))
     {
       #if EV_SELECT_IS_WINSOCKET
@@ -215,8 +219,11 @@ select_poll (EV_P_ ev_tstamp timeout)
           #else
           int handle = fd;
           #endif
-
-          if (FD_ISSET (handle, (fd_set *)vec_ro)) events |= EV_READ;
+	printf("using is set for handle %d\n", handle);
+          if (FD_ISSET (handle, (fd_set *)vec_ro)){
+	 	 events |= EV_READ;
+		printf("got readable\n");
+		 }
           if (FD_ISSET (handle, (fd_set *)vec_wo)) events |= EV_WRITE;
           #ifdef _WIN32
           if (FD_ISSET (handle, (fd_set *)vec_eo)) events |= EV_WRITE;

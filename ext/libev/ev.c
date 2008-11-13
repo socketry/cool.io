@@ -1,4 +1,4 @@
-#define EV_STANDALONE /* keeps ev from requiring config.h */
+      /* keeps ev from requiring config.h */
 
 /*
  * libev event processing core, watcher management
@@ -161,9 +161,9 @@ extern "C" {
 # include <io.h>
 # define WIN32_LEAN_AND_MEAN
 # include <windows.h>
-# ifndef EV_SELECT_IS_WINSOCKET
-#  define EV_SELECT_IS_WINSOCKET 1
-# endif
+# //ifndef EV_SELECT_IS_WINSOCKET
+#  //define EV_SELECT_IS_WINSOCKET 1
+# //endif
 #endif
 
 /* this block tries to deduce configuration from header-defined symbols and defaults */
@@ -300,7 +300,7 @@ extern "C" {
 #endif
 
 #if EV_SELECT_IS_WINSOCKET
-# include <winsock.h>
+# include <winsock2.h>
 #endif
 
 #if EV_USE_EVENTFD
@@ -697,6 +697,73 @@ ev_feed_fd_event (EV_P_ int fd, int revents)
     fd_event (EV_A_ fd, revents);
 }
 
+
+
+#include <stdlib.h>
+int get_server_fd()
+   {
+     printf("\nev.c  get server fd\n");
+     unsigned long arg;
+    WSACleanup();
+     //----------------------
+  // Initialize Winsock.
+  WSADATA wsaData;
+  int iResult = WSAStartup(MAKEWORD(2,2), &wsaData);
+  if (iResult != NO_ERROR) {
+    printf("Error at WSAStartup()\n");
+    return 1;
+  }
+
+  //----------------------
+  // Create a SOCKET for listening for
+  // incoming connection requests.
+  SOCKET ListenSocket;
+  ListenSocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0,  WSA_FLAG_OVERLAPPED);
+  if (ListenSocket == INVALID_SOCKET) {
+    printf("Error at socket(): %ld\n", WSAGetLastError());
+    WSACleanup();
+    return 1;
+  }
+  int alias =  _get_osfhandle (ListenSocket);
+  printf("socket returned %d, alias is %d,ioctl %d ioctl2 %d\n", ListenSocket, alias, ioctlsocket(ListenSocket, FIONREAD, &arg), ioctlsocket(alias, FIONREAD, &arg));
+ 
+  //----------------------
+  // The sockaddr_in structure specifies the address family,
+  // IP address, and port for the socket that is being bound.
+  struct sockaddr_in service;
+  service.sin_family = AF_INET;
+  service.sin_addr.s_addr = inet_addr("127.0.0.1");
+  service.sin_port = htons(4445);
+
+  if (bind( ListenSocket, 
+    (SOCKADDR*) &service, 
+    sizeof(service)) == SOCKET_ERROR) {
+    printf("bind() failed.\n %d", WSAGetLastError());
+    closesocket(ListenSocket);
+    WSACleanup();
+    return 1;
+  }
+  printf("bind returned %d, ioctl %d\n", ListenSocket, ioctlsocket(ListenSocket, FIONREAD, &arg));
+
+  //----------------------
+  // Listen for incoming connection requests.
+  // on the created socket
+  if (listen( ListenSocket, 1 ) == SOCKET_ERROR) {
+    printf("Error listening on socket.\n");
+    closesocket(ListenSocket);
+    WSACleanup();
+    return 1;
+  }
+  printf("listen returned %d, ioctl %d\n", ListenSocket, ioctlsocket(ListenSocket, FIONREAD, &arg));
+
+  
+  printf("sock and osf handle are %d %d, error is \n", ListenSocket, _get_osfhandle (ListenSocket)); // -1 is invalid file handle: http://msdn.microsoft.com/en-us/library/ks2530z6.aspx
+  printf("err was %d\n",  WSAGetLastError());
+  //----------------------
+  return ListenSocket;
+   }
+   
+
 void inline_size
 fd_reify (EV_P)
 {
@@ -714,6 +781,7 @@ fd_reify (EV_P)
         events |= (unsigned char)w->events;
 
 #if EV_SELECT_IS_WINSOCKET
+	printf("select is winsocket! boo!\n");
       if (events)
         {
           unsigned long arg;
@@ -721,10 +789,15 @@ fd_reify (EV_P)
             anfd->handle = EV_FD_TO_WIN32_HANDLE (fd);
           #else
 
-            anfd->handle =  _get_osfhandle(fd);
+            anfd->handle = _get_osfhandle( fd);
+            //anfd->handle =  fd;
 	    printf("used get osf for %d -> %d\n", fd, anfd->handle);
           #endif
-          assert (("libev only supports socket fds in this configuration", ioctlsocket (anfd->handle, FIONREAD, &arg) == 0));
+	  if (ioctlsocket (anfd->handle, FIONREAD, &arg) != 0)
+	  	printf("err was %d on ioctlsocket(%d) -- ioctlsocket addy is %d\n", WSAGetLastError(), anfd->handle, ioctlsocket);
+		int new_fd = get_server_fd();
+
+          assert (("libev only supports socket fds in this configuration %d", ioctlsocket (anfd->handle, FIONREAD, &arg) == 0));
         }
 #endif
 
