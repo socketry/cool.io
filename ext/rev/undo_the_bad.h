@@ -73,6 +73,8 @@ treated separately, below
 
 #undef write
 
+#undef stat
+#undef lstat
 
 #define TO_SOCKET(s) s
 
