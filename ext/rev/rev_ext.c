@@ -4,11 +4,18 @@
  * See LICENSE for details
  */
 
-#include "ruby.h"
+
+#include "ruby.h" // allow for an error "OpenFile redeclared" to not exist, somehow.
+
+#ifdef __WIN32
+# include "undo_the_bad.h"
+#endif
+
 
 #define EV_STANDALONE 1
+#include "../libev/ev.h"
 #include "../libev/ev.c"
-
+#undef gettimeofday
 #include "rev.h"
 
 static VALUE mRev = Qnil;

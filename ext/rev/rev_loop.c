@@ -220,6 +220,7 @@ static void Rev_Loop_ev_loop_oneshot(struct Rev_Loop *loop_data)
 /* Stub for scheduler's ev_timer callback */
 static void timer_callback(struct ev_loop *ev_loop, struct ev_timer *timer, int revents)
 {
+   ev_timer_again (ev_loop, timer);
 }
 
 /* Run the event loop, calling rb_thread_schedule every 10ms */

@@ -55,3 +55,11 @@ $LIBS << ' ' << libs.join(' ')
 
 dir_config('rev_ext')
 create_makefile('rev_ext')
+
+
+if have_header('openssl/ssl.h') and RUBY_PLATFORM =~ /mingw|win32/
+  print "Note--SSL not yet supported on windows--continuing without SSL support"
+    makefile_contents = File.read 'Makefile'
+      makefile_contents.gsub!('-DHAVE_OPENSSL_SSL_H', '')
+        File.open('Makefile', 'w') { |f| f.write makefile_contents }
+	end
