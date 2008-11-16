@@ -1,6 +1,7 @@
-/*#include <time.h>
-#include <sys/time.h>
-*/
+#ifdef _WIN32
+# include <time.h>
+# include <sys/time.h>
+#endif
 /*
  * libev win32 compatibility cruft (_not_ a backend)
  *
