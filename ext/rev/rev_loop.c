@@ -8,8 +8,7 @@
 #include "ruby.h"
 #include "rubysig.h"
 
-#define EV_STANDALONE 1
-#include "../libev/ev.h"
+#include "ev_wrap.h"
 
 #include "rev.h"
 

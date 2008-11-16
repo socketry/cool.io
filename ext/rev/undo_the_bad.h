@@ -1,4 +1,4 @@
-
+#include <winsock2.h>
 #undef accept
 
 #undef bind
@@ -79,7 +79,7 @@ treated separately, below
 #define TO_SOCKET(s) s
 
 void
-rb_w32_fdset2(int fd, fd_set *set)
+rb_w32_fdset3(int fd, fd_set *set)
 {
     unsigned int i;
     SOCKET s = TO_SOCKET(fd);
@@ -96,9 +96,8 @@ rb_w32_fdset2(int fd, fd_set *set)
         }
     }
 }
-
 void
-rb_w32_fdclr2(int fd, fd_set *set)
+rb_w32_fdclr3(int fd, fd_set *set)
 {
     unsigned int i;
     SOCKET s = TO_SOCKET(fd);
@@ -116,7 +115,7 @@ rb_w32_fdclr2(int fd, fd_set *set)
 }
 
 int
-rb_w32_fdisset2(int fd, fd_set *set)
+rb_w32_fdisset3(int fd, fd_set *set)
 {
     int ret;
     SOCKET s = TO_SOCKET(fd);
@@ -126,13 +125,12 @@ rb_w32_fdisset2(int fd, fd_set *set)
     return ret;
 }
 
-
 #undef FD_SET
-#define FD_SET(f, s)		rb_w32_fdset2(f, s)
+#define FD_SET(f, s)		rb_w32_fdset3(f, s)
 
 #undef FD_CLR
-#define FD_CLR(f, s)		rb_w32_fdclr2(f, s)
+#define FD_CLR(f, s)		rb_w32_fdclr3(f, s)
 
 #undef FD_ISSET
-#define FD_ISSET(f, s)		rb_w32_fdisset2(f, s)
+#define FD_ISSET(f, s)		rb_w32_fdisset3(f, s)
 
