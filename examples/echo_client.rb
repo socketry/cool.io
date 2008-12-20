@@ -1,5 +1,5 @@
 require File.dirname(__FILE__) + '/../lib/rev'
-#require 'rubygems'; require 'ruby-debug'; Debugger.start
+require 'rubygems'; require 'ruby-debug'; Debugger.start
 ADDR = '127.0.0.1'
 PORT = 4321
 

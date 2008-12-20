@@ -9,7 +9,7 @@
 #include "rubysig.h"
 
 #define EV_STANDALONE 1
-#include "ev_wrap.h"
+#include "../libev/ev.h"
 
 #include "rev.h"
 

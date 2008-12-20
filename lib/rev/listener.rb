@@ -37,7 +37,6 @@ module Rev
         on_connection @listen_socket.accept_nonblock
       rescue Errno::EAGAIN, Errno::EWOULDBLOCK
         STDERR.puts "warning: listener socket spuriously readable"
-	raise
       end
     end
   end
