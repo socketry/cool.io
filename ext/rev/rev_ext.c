@@ -4,10 +4,11 @@
  * See LICENSE for details
  */
 
-#include "ruby.h"
 
-#define EV_STANDALONE 1
-#include "../libev/ev.c"
+#include "ruby.h" // allow for an error "OpenFile redeclared" to not exist, somehow.
+
+#include "ev_wrap.h"
+
 
 #include "rev.h"
 

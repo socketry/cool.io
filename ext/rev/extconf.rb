@@ -2,7 +2,6 @@ require 'mkmf'
 
 libs = []
 
-
 $defs << "-DRUBY_VERSION_CODE=#{RUBY_VERSION.gsub(/\D/, '')}"
 
 if have_func('rb_thread_blocking_region')
@@ -34,8 +33,8 @@ if have_header('port.h')
 end
 
 if have_header('openssl/ssl.h')
-   $defs << '-DHAVE_OPENSSL_SSL_H'
-   libs << '-lssl -lcrypto'
+  $defs << '-DHAVE_OPENSSL_SSL_H'
+  libs << '-lssl -lcrypto'
 end
 
 if have_header('sys/resource.h')
@@ -61,5 +60,8 @@ if have_header('openssl/ssl.h') and RUBY_PLATFORM =~ /mingw|win32/
   print "Note--SSL not yet supported on windows--continuing without SSL support"
   makefile_contents = File.read 'Makefile'
   makefile_contents.gsub!('-DHAVE_OPENSSL_SSL_H', '')
+  makefile_contents.gsub! 'LIBS = $(LIBRUBYARG_SHARED)', 'LIBS = -lws2_32 $(LIBRUBYARG_SHARED)' # for some reason has to come first or ioctlsocket will be mapped to an [inverted] ruby specific version
+
   File.open('Makefile', 'w') { |f| f.write makefile_contents }
 end
+>>>>>>> origin/preprocessor:ext/rev/extconf.rb

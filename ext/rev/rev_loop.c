@@ -8,8 +8,7 @@
 #include "ruby.h"
 #include "rubysig.h"
 
-#define EV_STANDALONE 1
-#include "../libev/ev.h"
+#include "ev_wrap.h"
 
 #include "rev.h"
 
@@ -208,7 +207,7 @@ static VALUE Rev_Loop_ev_loop_oneshot_blocking(void *ptr)
 static void Rev_Loop_ev_loop_oneshot(struct Rev_Loop *loop_data)
 {
   /* Use Ruby 1.9's rb_thread_blocking_region call to make a blocking system call */
-  rb_thread_blocking_region(Rev_Loop_ev_loop_oneshot_blocking, loop_data, RB_UBF_DFL, 0);
+  rb_thread_blocking_region(Rev_Loop_ev_loop_oneshot_blocking, loop_data, RUBY_UBF_IO, 0);
 }
 #endif
 
@@ -220,6 +219,7 @@ static void Rev_Loop_ev_loop_oneshot(struct Rev_Loop *loop_data)
 /* Stub for scheduler's ev_timer callback */
 static void timer_callback(struct ev_loop *ev_loop, struct ev_timer *timer, int revents)
 {
+   ev_timer_again (ev_loop, timer);
 }
 
 /* Run the event loop, calling rb_thread_schedule every 10ms */
