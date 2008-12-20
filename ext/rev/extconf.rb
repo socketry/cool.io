@@ -64,4 +64,3 @@ if have_header('openssl/ssl.h') and RUBY_PLATFORM =~ /mingw|win32/
 
   File.open('Makefile', 'w') { |f| f.write makefile_contents }
 end
->>>>>>> origin/preprocessor:ext/rev/extconf.rb
