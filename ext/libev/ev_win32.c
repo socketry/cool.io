@@ -42,8 +42,6 @@
 /* timeb.h is actually xsi legacy functionality */
 #include <sys/timeb.h>
 
-
-
 /* note: the comment below could not be substantiated, but what would I care */
 /* MSDN says this is required to handle SIGFPE */
 /* my wild guess would be that using something floating-pointy is required */

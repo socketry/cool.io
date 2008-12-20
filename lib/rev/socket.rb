@@ -50,7 +50,6 @@ module Rev
     
     class Connector < IOWatcher
       def initialize(rev_socket, ruby_socket)
-      require 'rubygems'; require 'ruby-debug'; debugger
         @rev_socket, @ruby_socket = rev_socket, ruby_socket
         super(ruby_socket, :w)
       end

@@ -3,7 +3,7 @@ require 'mkmf'
 libs = []
 
 
-$defs << "  -DRUBY_VERSION_CODE=#{RUBY_VERSION.gsub(/\D/, '')}"
+$defs << "-DRUBY_VERSION_CODE=#{RUBY_VERSION.gsub(/\D/, '')}"
 
 if have_func('rb_thread_blocking_region')
   $defs << '-DHAVE_RB_THREAD_BLOCKING_REGION'
@@ -54,14 +54,6 @@ end
 
 $LIBS << ' ' << libs.join(' ')
 
-
-if RUBY_PLATFORM =~ /mingw|win32/
-  $defs << '-DEV_STANDALONE'
-  # test: $defs << '-DEV_SELECT_IS_WINSOCKET=1'
-  # test: don't know how to pass this on the command line... $defs << '-DEV_FD_TO_WIN32_HANDLE(s) (s)'
-end
-
-
 dir_config('rev_ext')
 create_makefile('rev_ext')
 
@@ -71,4 +63,3 @@ if have_header('openssl/ssl.h') and RUBY_PLATFORM =~ /mingw|win32/
   makefile_contents.gsub!('-DHAVE_OPENSSL_SSL_H', '')
   File.open('Makefile', 'w') { |f| f.write makefile_contents }
 end
-
