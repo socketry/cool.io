@@ -1,7 +1,3 @@
-#ifdef _WIN32
-# include <time.h>
-# include <sys/time.h>
-#endif
 /*
  * libev win32 compatibility cruft (_not_ a backend)
  *
@@ -58,6 +54,8 @@ ev_pipe (int filedes [2])
 {
   struct sockaddr_in addr = { 0 };
   int addr_size = sizeof (addr);
+  struct sockaddr_in adr2;
+  int adr2_size;
   SOCKET listener;
   SOCKET sock [2] = { -1, -1 };
 
@@ -71,7 +69,7 @@ ev_pipe (int filedes [2])
   if (bind (listener, (struct sockaddr *)&addr, addr_size))
     goto fail;
 
-  if (getsockname(listener, (struct sockaddr *)&addr, &addr_size))
+  if (getsockname (listener, (struct sockaddr *)&addr, &addr_size))
     goto fail;
 
   if (listen (listener, 1))
@@ -80,10 +78,34 @@ ev_pipe (int filedes [2])
   if ((sock [0] = socket (AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) 
     goto fail;
 
-  if (connect (sock[0], (struct sockaddr *)&addr, addr_size))
+  if (connect (sock [0], (struct sockaddr *)&addr, addr_size))
     goto fail;
 
-  if ((sock[1] = accept (listener, 0, 0)) < 0)
+  if ((sock [1] = accept (listener, 0, 0)) < 0)
+    goto fail;
+
+  /* windows vista returns fantasy port numbers for sockets:
+   * example for two interconnected tcp sockets:
+   *
+   * (Socket::unpack_sockaddr_in getsockname $sock0)[0] == 53364
+   * (Socket::unpack_sockaddr_in getpeername $sock0)[0] == 53363
+   * (Socket::unpack_sockaddr_in getsockname $sock1)[0] == 53363
+   * (Socket::unpack_sockaddr_in getpeername $sock1)[0] == 53365
+   *
+   * wow! tridirectional sockets!
+   *
+   * this way of checking ports seems to work:
+   */
+  if (getpeername (sock [0], (struct sockaddr *)&addr, &addr_size))
+    goto fail;
+
+  if (getsockname (sock [1], (struct sockaddr *)&adr2, &adr2_size))
+    goto fail;
+
+  errno = WSAEINVAL;
+  if (addr_size != adr2_size
+      || addr.sin_addr.s_addr != adr2.sin_addr.s_addr /* just to be sure, I mean, it's windows */
+      || addr.sin_port        != adr2.sin_port)
     goto fail;
 
   closesocket (listener);

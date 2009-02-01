@@ -4,7 +4,7 @@
 
 * Initial Ruby 1.8.7 and 1.9.1 support
 
-* Upgrade to libev 3.48
+* Upgrade to libev 3.52
 
 * Add checks for sys/resource.h and don't allow getting/setting maxfds if it
   isn't present

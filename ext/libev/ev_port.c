@@ -89,7 +89,7 @@ port_poll (EV_P_ ev_tstamp timeout)
   ts.tv_nsec = (long)(timeout - (ev_tstamp)ts.tv_sec) * 1e9;
   res = port_getn (backend_fd, port_events, port_eventmax, &nget, &ts);
 
-  if (res < 0)
+  if (res == -1)
     { 
       if (errno != EINTR && errno != ETIME)
         ev_syserr ("(libev) port_getn");
