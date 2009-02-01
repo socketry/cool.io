@@ -12,6 +12,10 @@ if have_func('rb_str_set_len')
   $defs << '-DHAVE_RB_STR_SET_LEN'
 end
 
+if have_library('rt', 'clock_gettime')
+  libs << "-lrt"
+end
+
 if have_header('sys/select.h')
   $defs << '-DEV_USE_SELECT'
 end
