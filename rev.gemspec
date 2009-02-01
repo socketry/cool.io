@@ -5,7 +5,7 @@ GEMSPEC = Gem::Specification.new do |s|
   s.version = "0.2.3"
   s.authors = "Tony Arcieri"
   s.email = "tony@medioh.com"
-  s.date = "2008-5-31"
+  s.date = "2009-02-01"
   s.summary = "Rev is a Ruby binding to the libev high performance event library"
   s.platform = Gem::Platform::RUBY
   s.required_ruby_version = '>= 1.8.6'
