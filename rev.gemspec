@@ -2,7 +2,7 @@ require 'rubygems'
 
 GEMSPEC = Gem::Specification.new do |s|
   s.name = "rev"
-  s.version = "0.2.3"
+  s.version = "0.2.4"
   s.authors = "Tony Arcieri"
   s.email = "tony@medioh.com"
   s.date = "2009-02-01"
