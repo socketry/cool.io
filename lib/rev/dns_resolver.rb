@@ -24,8 +24,8 @@ module Rev
   # automatically detach themselves from the event loop and cannot be used
   # again.
   class DNSResolver < IOWatcher
-   #--
-   # TODO check if it's caching right
+    #--
+    # TODO check if it's caching right
     RESOLV_CONF = '/etc/resolv.conf'
     HOSTS = '/etc/hosts'
     DNS_PORT = 53
@@ -89,7 +89,7 @@ module Rev
 
     # Called if we don't receive a response, defaults to calling on_failure
     def on_timeout
-	on_failure
+      on_failure
     end
 
     #########
@@ -102,9 +102,8 @@ module Rev
       @nameservers << nameserver # rotate them
       @socket.connect @nameservers.first, DNS_PORT
       begin
-         @socket.send request_message, 0
+        @socket.send request_message, 0
       rescue Errno::EHOSTUNREACH # TODO figure out why it has to be wrapper here, when the other wrapper should be wrapping this one!
-
       end   
     end
 
@@ -112,9 +111,10 @@ module Rev
     def on_readable
       datagram = nil
       begin
-	datagram = @socket.recvfrom_nonblock(DATAGRAM_SIZE).first
+        datagram = @socket.recvfrom_nonblock(DATAGRAM_SIZE).first
       rescue Errno::ECONNREFUSED
       end
+      
       address = response_address datagram rescue nil
       address ? on_success(address) : on_failure
       detach
