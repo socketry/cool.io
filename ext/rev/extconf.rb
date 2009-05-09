@@ -36,7 +36,7 @@ if have_header('port.h')
   $defs << '-DEV_USE_PORT'
 end
 
-if have_header('openssl/ssl.h')
+if have_header('openssl/ssl.h') and RUBY_PLATFORM !~ /mingw|win32/ # win32 and SSL no go currently...needs some help to work
   $defs << '-DHAVE_OPENSSL_SSL_H'
   libs << '-lssl -lcrypto'
 end
@@ -60,11 +60,11 @@ $LIBS << ' ' << libs.join(' ')
 dir_config('rev_ext')
 create_makefile('rev_ext')
 
-if have_header('openssl/ssl.h') and RUBY_PLATFORM =~ /mingw|win32/
-  print "Note--SSL not yet supported on windows--continuing without SSL support"
+# win32 needs to link in "just the right order" for some reason or  ioctlsocket will be mapped to an [inverted] ruby specific version.  See libev mailing list for (not so helpful discussion--true cause I'm not sure, but this overcomes the symptom)
+if RUBY_PLATFORM =~ /mingw|win32/
   makefile_contents = File.read 'Makefile'
-  makefile_contents.gsub!('-DHAVE_OPENSSL_SSL_H', '')
-  makefile_contents.gsub! 'LIBS = $(LIBRUBYARG_SHARED)', 'LIBS = -lws2_32 $(LIBRUBYARG_SHARED)' # for some reason has to come first or ioctlsocket will be mapped to an [inverted] ruby specific version
 
+  makefile_contents.gsub! 'LIBS = $(LIBRUBYARG_SHARED)', 'LIBS = -lws2_32 $(LIBRUBYARG_SHARED)'
   File.open('Makefile', 'w') { |f| f.write makefile_contents }
 end
+
