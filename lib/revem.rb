@@ -1,9 +1,24 @@
 #--
-# Copyright (C)2007 Tony Arcieri, Roger Pack
+# Copyright (C)2007 Tony Arcieri
 # You can redistribute this under the terms of the Ruby license
 # See file LICENSE for details
 #++
 
+
+# This file creates a an EventMachine class
+# that is actually using rev as its underlying socket layer, but uses the EM API.
+# require it instead of eventmachine
+# i.e. 
+# require 'revem'
+# instead of
+# require 'eventmachine'
+# Note: you may want to do both a require 'eventmachine' THEN a require 'revem'
+# so that eventmachine is loaded once, then rev overrides it, then there's no require confusion 
+# (if simple servers hang, requiring 'eventmachine' after 'revem' could be the cause of it).
+# drawbacks: slightly slower than EM.
+# benefits: timers are more accurate using libev than using EM.  Also rev is sometimes more compatible than EM (ex: 1.9 windows)
+# TODO: some things like connection timeouts aren't implemented yet
+# DONE: timers and normal socket functions are implemented.
 require File.dirname(__FILE__) + '/rev'
 
 module EventMachine
