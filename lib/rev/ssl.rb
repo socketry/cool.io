@@ -123,7 +123,12 @@ module Rev
     end
   end
   
-  # A socket class for SSL connections
+  # A socket class for SSL connections.  Please note that this class 
+  # internally uses the on_connect callback for doing SSL setup.  If
+  # you would like a callback when the SSL connection is completed,
+  # please use the on_ssl_connect callback instead.  If you really need
+  # a callback which fires before SSL setup begins, use on_connect but
+  # be sure to call super.
   class SSLSocket < TCPSocket
     # Perform a non-blocking connect to the given host and port
     def self.connect(addr, port, *args)
