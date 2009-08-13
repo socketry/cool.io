@@ -19,9 +19,7 @@ describe Rev::UNIXListener do
     File.socket?(@tmp.path).should == true
     listener = Rev::UNIXListener.new(unix_server)
     File.socket?(@tmp.path).should == true
-    listener.instance_eval {
-      @listen_socket.fileno.should == unix_server.fileno
-    }
+    listener.fileno.should == unix_server.fileno
   end
 
 end

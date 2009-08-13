@@ -15,7 +15,12 @@ module Rev
       @listen_socket = listen_socket
       super(@listen_socket)
     end
-    
+
+    # Returns an integer representing the underlying numeric file descriptor
+    def fileno
+      @listen_socket.fileno
+    end
+
     # Close the listener
     def close
       detach if attached?
