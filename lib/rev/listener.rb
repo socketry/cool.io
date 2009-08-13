@@ -49,11 +49,19 @@ module Rev
     #  :backlog - Max size of the pending connection queue (default 1024)
     #  :reverse_lookup - Retain BasicSocket's reverse DNS functionality (default false)
     #
-    def initialize(addr, port, options = {})
+    # If the specified address is an TCPServer object, it will ignore
+    # the port and :backlog option and create a new Rev::TCPListener out
+    # of the existing TCPServer object.
+    def initialize(addr, port = nil, options = {})
       BasicSocket.do_not_reverse_lookup = true unless options[:reverse_lookup]
       options[:backlog] ||= DEFAULT_BACKLOG
       
-      listen_socket = ::TCPServer.new(addr, port)
+      listen_socket = if ::TCPServer === addr
+        addr
+      else
+        raise ArgumentError, "port must be an integer" if nil == port
+        ::TCPServer.new(addr, port)
+      end
       listen_socket.instance_eval { listen(options[:backlog]) }
       super(listen_socket)
     end
@@ -63,8 +71,10 @@ module Rev
     # Create a new Rev::UNIXListener
     #
     # Accepts the same arguments as UNIXServer.new
+    # Optionally, it can also take anyn existing UNIXServer object
+    # and create a Rev::UNIXListener out of it.
     def initialize(*args)
-      super(::UNIXServer.new(*args))
+      super(::UNIXServer === args.first ? args.first : ::UNIXServer.new(*args))
     end
   end
 end
