@@ -11,8 +11,8 @@ applications.
 
 You can include Rev in your programs with:
 
- <code><pre>require 'rubygems'
- require 'rev'</pre></code>
+ <pre><code>require 'rubygems'
+ require 'rev'</code></pre>
 
 For more information, consult the RubyForge page:
 
@@ -94,7 +94,7 @@ h2. Example Program
 
 Below is an example of how to write an echo server:
 
-  <code><pre>require 'rev'
+  <pre><code>require 'rev'
   HOST = 'localhost'
   PORT = 4321
 
@@ -116,7 +116,7 @@ Below is an example of how to write an echo server:
   server.attach(Rev::Loop.default)
 
   puts "Echo server listening on #{HOST}:#{PORT}"
-  Rev::Loop.default.run</pre></code>
+  Rev::Loop.default.run</code></pre>
 
 Here a new observer type (EchoServerConnection) is made by subclassing an
 existing one and adding new implementations to existing event handlers.
