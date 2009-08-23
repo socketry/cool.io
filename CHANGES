@@ -1,6 +1,9 @@
 0.2.5:
 
+* Upgrade to libev 3.8
+
 * Simplified code loading
+
 * Pull in iobuffer gem
 
 0.2.4:

@@ -1,7 +1,7 @@
 /*
  * loop member variable declarations
  *
- * Copyright (c) 2007,2008 Marc Alexander Lehmann <libev@schmorp.de>
+ * Copyright (c) 2007,2008,2009 Marc Alexander Lehmann <libev@schmorp.de>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modifica-
@@ -48,18 +48,31 @@ VARx(ev_tstamp, timeout_blocktime)
 
 VARx(int, backend)
 VARx(int, activecnt) /* total number of active events ("refcount") */
-VARx(unsigned int, loop_count) /* total number of loop iterations/blocks */
+VARx(unsigned char, loop_done)  /* signal by ev_unloop */
 
 VARx(int, backend_fd)
 VARx(ev_tstamp, backend_fudge) /* assumed typical timer resolution */
 VAR (backend_modify, void (*backend_modify)(EV_P_ int fd, int oev, int nev))
 VAR (backend_poll  , void (*backend_poll)(EV_P_ ev_tstamp timeout))
 
+VARx(ANFD *, anfds)
+VARx(int, anfdmax)
+
+VAR (pendings, ANPENDING *pendings [NUMPRI])
+VAR (pendingmax, int pendingmax [NUMPRI])
+VAR (pendingcnt, int pendingcnt [NUMPRI])
+VARx(ev_prepare, pending_w) /* dummy pending watcher */
+
+/* for reverse feeding of events */
+VARx(W *, rfeeds)
+VARx(int, rfeedmax)
+VARx(int, rfeedcnt)
+
 #if EV_USE_EVENTFD || EV_GENWRAP
 VARx(int, evfd)
 #endif
 VAR (evpipe, int evpipe [2])
-VARx(ev_io, pipeev)
+VARx(ev_io, pipe_w)
 
 #if !defined(_WIN32) || EV_GENWRAP
 VARx(pid_t, curpid)
@@ -104,13 +117,6 @@ VARx(struct port_event *, port_events)
 VARx(int, port_eventmax)
 #endif
 
-VARx(ANFD *, anfds)
-VARx(int, anfdmax)
-
-VAR (pendings, ANPENDING *pendings [NUMPRI])
-VAR (pendingmax, int pendingmax [NUMPRI])
-VAR (pendingcnt, int pendingcnt [NUMPRI])
-
 VARx(int *, fdchanges)
 VARx(int, fdchangemax)
 VARx(int, fdchangecnt)
@@ -146,8 +152,8 @@ VARx(int, forkmax)
 VARx(int, forkcnt)
 #endif
 
-VARx(EV_ATOMIC_T, gotasync)
 #if EV_ASYNC_ENABLE || EV_GENWRAP
+VARx(EV_ATOMIC_T, async_pending)
 VARx(struct ev_async **, asyncs)
 VARx(int, asyncmax)
 VARx(int, asynccnt)
@@ -158,6 +164,23 @@ VARx(int, fs_fd)
 VARx(ev_io, fs_w)
 VARx(char, fs_2625) /* whether we are running in linux 2.6.25 or newer */
 VAR (fs_hash, ANFS fs_hash [EV_INOTIFY_HASHSIZE])
+#endif
+
+VARx(EV_ATOMIC_T, sig_pending)
+#if EV_USE_SIGNALFD || EV_GENWRAP
+VARx(int, sigfd)
+VARx(ev_io, sigfd_w)
+VARx(sigset_t, sigfd_set)
+#endif
+
+#if EV_MINIMAL < 2 || EV_GENWRAP
+VARx(unsigned int, loop_count) /* total number of loop iterations/blocks */
+VARx(unsigned int, loop_depth) /* #ev_loop enters - #ev_loop leaves */
+
+VARx(void *, userdata)
+VAR (release_cb, void (*release_cb)(EV_P))
+VAR (acquire_cb, void (*acquire_cb)(EV_P))
+VAR (invoke_cb , void (*invoke_cb) (EV_P))
 #endif
 
 #undef VARx
