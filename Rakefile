@@ -9,7 +9,7 @@ include FileUtils
 load 'rev.gemspec'
 
 # Default Rake task is compile
-task :default => :compile
+task :default => %w(compile spec)
 
 # RDoc
 Rake::RDocTask.new(:rdoc) do |task|

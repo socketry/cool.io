@@ -4,7 +4,7 @@
 
 * Simplified code loading
 
-* Pull in iobuffer gem
+* Pull in iobuffer gem and change outstanding uses of Rev::Buffer to IO::Buffer
 
 0.2.4:
 
