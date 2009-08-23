@@ -123,7 +123,7 @@ module Rev
     
     # Called by precreate during asyncronous DNS resolution
     def preinitialize(addr, port, *args)
-      @_write_buffer = IO::Buffer.new # allow for writing BEFORE the DNS has resolved
+      @_write_buffer = ::IO::Buffer.new # allow for writing BEFORE the DNS has resolved
       @remote_host, @remote_addr, @remote_port = addr, addr, port
       @_resolver = TCPConnectResolver.new(self, addr, port, *args)
     end
