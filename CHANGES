@@ -1,3 +1,8 @@
+0.2.5:
+
+* Simplified code loading
+* Pull in iobuffer gem
+
 0.2.4:
 
 * Ugh, botched my first release from the git repo.  Oh well.  Try, try again.
