@@ -1,7 +1,7 @@
 /*
  * libev epoll fd activity backend
  *
- * Copyright (c) 2007,2008 Marc Alexander Lehmann <libev@schmorp.de>
+ * Copyright (c) 2007,2008,2009 Marc Alexander Lehmann <libev@schmorp.de>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modifica-
@@ -119,7 +119,13 @@ static void
 epoll_poll (EV_P_ ev_tstamp timeout)
 {
   int i;
-  int eventcnt = epoll_wait (backend_fd, epoll_events, epoll_eventmax, (int)ceil (timeout * 1000.));
+  int eventcnt;
+  
+  /* epoll wait times cannot be larger than (LONG_MAX - 999UL) / HZ msecs, which is below */
+  /* the default libev max wait time, however. */
+  EV_RELEASE_CB;
+  eventcnt = epoll_wait (backend_fd, epoll_events, epoll_eventmax, (int)ceil (timeout * 1000.));
+  EV_ACQUIRE_CB;
 
   if (expect_false (eventcnt < 0))
     {
@@ -177,7 +183,12 @@ epoll_poll (EV_P_ ev_tstamp timeout)
 int inline_size
 epoll_init (EV_P_ int flags)
 {
-  backend_fd = epoll_create (256);
+#ifdef EPOLL_CLOEXEC
+  backend_fd = epoll_create1 (EPOLL_CLOEXEC);
+
+  if (backend_fd <= 0)
+#endif
+    backend_fd = epoll_create (256);
 
   if (backend_fd < 0)
     return 0;

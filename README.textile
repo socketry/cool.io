@@ -1,4 +1,4 @@
-= Rev
+h1. Rev
 
 Rev is an event library for Ruby, built on the libev event library which 
 provides a cross-platform interface to high performance system calls .  This 
@@ -11,8 +11,10 @@ applications.
 
 You can include Rev in your programs with:
 
- require 'rubygems'
- require 'rev'
+<pre>
+require 'rubygems'
+require 'rev'
+</pre>
 
 For more information, consult the RubyForge page:
 
@@ -28,7 +30,7 @@ The latest development code is available via github at:
 
 git://github.com/tarcieri/rev.git
 
-== Anatomy
+h2. Anatomy
 
 Rev builds on two core classes which bind to the libev API:
 
@@ -39,7 +41,7 @@ Rev builds on two core classes which bind to the libev API:
   an event observer to a loop and start running it, you will begin receiving
   callbacks to particlar methods when events occur.
 
-== Watchers
+h2. Watchers
 
 There are presently two types of watchers:
 
@@ -49,7 +51,7 @@ There are presently two types of watchers:
 * Rev::TimerWatcher - This class waits for a specified duration then fires
   an event.  You can also configure it to fire an event at specified intervals.
 
-== Using Watchers
+h2. Using Watchers
 
 Watchers have five important methods:
 
@@ -70,7 +72,7 @@ Watchers have five important methods:
 * evloop - This returns the Rev::Loop object which the watcher is currently
   bound to.
 
-== Asynchronous Wrappers
+h2. Asynchronous Wrappers
 
 Several classes which provide asynchronous event-driven wrappers for Ruby's
 core socket classes are also provided.  Among these are:
@@ -90,33 +92,35 @@ core socket classes are also provided.  Among these are:
 * Rev::HttpClient - An HTTP/1.1 client with support for chunked encoding
   and streaming response processing through asynchronous callbacks.
 
-== Example Program
+h2. Example Program
 
 Below is an example of how to write an echo server:
 
-  require 'rev'
-  HOST = 'localhost'
-  PORT = 4321
+<pre>
+require 'rev'
+HOST = 'localhost'
+PORT = 4321
 
-  class EchoServerConnection < Rev::TCPSocket
-    def on_connect
-      puts "#{remote_addr}:#{remote_port} connected"
-    end
-
-    def on_close
-      puts "#{remote_addr}:#{remote_port} disconnected"
-    end
-
-    def on_read(data)
-      write data
-    end
+class EchoServerConnection < Rev::TCPSocket
+  def on_connect
+    puts "#{remote_addr}:#{remote_port} connected"
   end
 
-  server = Rev::TCPServer.new(HOST, PORT, EchoServerConnection)
-  server.attach(Rev::Loop.default)
+  def on_close
+    puts "#{remote_addr}:#{remote_port} disconnected"
+  end
 
-  puts "Echo server listening on #{HOST}:#{PORT}"
-  Rev::Loop.default.run
+  def on_read(data)
+    write data
+  end
+end
+
+server = Rev::TCPServer.new(HOST, PORT, EchoServerConnection)
+server.attach(Rev::Loop.default)
+
+puts "Echo server listening on #{HOST}:#{PORT}"
+Rev::Loop.default.run
+</pre>
 
 Here a new observer type (EchoServerConnection) is made by subclassing an
 existing one and adding new implementations to existing event handlers.
@@ -127,40 +131,3 @@ Rev::Watcher) is created and attached to the event loop.
 Once this is done, the event loop is started with event_loop.run.  This method
 will block until there are no active watchers for the loop or the loop is
 stopped explicitly with event_loop.stop.
-
-== Defining Callbacks at Runtime
-
-It's often tedious to subclass in order to just change one callback.  Rev 
-gives you the ability to change event callbacks on the fly (provided you
-haven't overridden them in a subclass).  This is especially useful for small
-one off programs or just experimenting with the API.
-
-Any callback (methods prefixed with on_*) can be set on the fly by passing it
-a block. (NOTE: Ruby 1.9/1.8.7 only)
-
-Below is an example of using this syntax.  It implements an echo server
-identical to the one above:
-
-  HOST = '127.0.0.1'
-  PORT = 4321
-
-  server = Rev::TCPServer.new(HOST, PORT) do |c|
-    c.on_connect { puts "#{remote_addr}:#{remote_port} connected" }
-    c.on_close   { puts "#{remote_addr}:#{remote_port} disconnected" }
-    c.on_read    { |data| write data }
-  end
-
-  server.attach(Rev::Loop.default)
-
-  puts "Echo server listening on #{HOST}:#{PORT}"
-  Rev::Loop.default.run
-
-As you can see, it provides a more concise (albeint slightly slower) 
-expression of the same server as above, without the need to subclass.
-
-Rev::TCPServer will automatically yield new connections if a block is
-given.  In this case the "c" variable being passed to the block is
-a new instance of Rev::TCPSocket representing the newly created connection.
-
-The above example sets the on_connect, on_close, and on_read callbacks each
-time a new connection is created.

@@ -23,7 +23,7 @@ void Init_rev_ext()
   Init_rev_watcher();
   Init_rev_io_watcher();
   Init_rev_timer_watcher();
-  Init_rev_buffer();
+  Init_rev_stat_watcher();
   Init_rev_utils();
   
 #ifdef HAVE_OPENSSL_SSL_H

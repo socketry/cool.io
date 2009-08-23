@@ -44,6 +44,7 @@ struct Rev_Watcher
   union {
     struct ev_io ev_io;
     struct ev_timer ev_timer;
+    struct ev_stat ev_stat;
   } event_types;
 
   int enabled;

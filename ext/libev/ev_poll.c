@@ -1,7 +1,7 @@
 /*
  * libev poll fd activity backend
  *
- * Copyright (c) 2007,2008 Marc Alexander Lehmann <libev@schmorp.de>
+ * Copyright (c) 2007,2008,2009 Marc Alexander Lehmann <libev@schmorp.de>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modifica-
@@ -89,7 +89,11 @@ static void
 poll_poll (EV_P_ ev_tstamp timeout)
 {
   struct pollfd *p;
-  int res = poll (polls, pollcnt, (int)ceil (timeout * 1000.));
+  int res;
+  
+  EV_RELEASE_CB;
+  res = poll (polls, pollcnt, (int)ceil (timeout * 1000.));
+  EV_ACQUIRE_CB;
 
   if (expect_false (res < 0))
     {

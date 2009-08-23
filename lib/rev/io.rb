@@ -21,7 +21,7 @@ module Rev
 
     def initialize(io)
       @_io = io
-      @_write_buffer  ||= Rev::Buffer.new
+      @_write_buffer  ||= ::IO::Buffer.new
       @_read_watcher  = Watcher.new(io, self, :r)
       @_write_watcher = Watcher.new(io, self, :w)
     end

@@ -1,3 +1,13 @@
+0.2.5:
+
+* Add Rev::StatWatcher to monitor filesystem changes
+
+* Upgrade to libev 3.8
+
+* Simplified code loading
+
+* Pull in iobuffer gem and change outstanding uses of Rev::Buffer to IO::Buffer
+
 0.2.4:
 
 * Ugh, botched my first release from the git repo.  Oh well.  Try, try again.

@@ -1,5 +1,68 @@
 Revision history for libev, a high-performance and full-featured event loop.
 
+3.8  Sun Aug  9 14:30:45 CEST 2009
+	- incompatible change: do not necessarily reset signal handler
+          to SIG_DFL when a sighandler is stopped.
+        - ev_default_destroy did not properly free or zero some members,
+          potentially causing crashes and memory corruption on repated
+          ev_default_destroy/ev_default_loop calls.
+	- take advantage of signalfd on GNU/Linux systems.
+	- document that the signal mask might be in an unspecified
+          state when using libev's signal handling.
+        - take advantage of some GNU/Linux calls to set cloexec/nonblock
+          on fd creation, to avoid race conditions.
+
+3.7  Fri Jul 17 16:36:32 CEST 2009
+	- ev_unloop and ev_loop wrongly used a global variable to exit loops,
+          instead of using a per-loop variable (bug caught by accident...).
+	- the ev_set_io_collect_interval interpretation has changed.
+        - add new functionality: ev_set_userdata, ev_userdata,
+          ev_set_invoke_pending_cb, ev_set_loop_release_cb,
+          ev_invoke_pending, ev_pending_count, together with a long example
+          about thread locking.
+        - add ev_timer_remaining (as requested by Denis F. Latypoff).
+        - add ev_loop_depth.
+        - calling ev_unloop in fork/prepare watchers will no longer poll
+          for new events.
+	- Denis F. Latypoff corrected many typos in example code snippets.
+        - honor autoconf detection of EV_USE_CLOCK_SYSCALL, also double-
+          check that the syscall number is available before trying to
+          use it (reported by ry@tinyclouds).
+        - use GetSystemTimeAsFileTime instead of _timeb on windows, for
+          slightly higher accuracy.
+        - properly declare ev_loop_verify and ev_now_update even when
+          !EV_MULTIPLICITY.
+        - do not compile in any priority code when EV_MAXPRI == EV_MINPRI.
+        - support EV_MINIMAL==2 for a reduced API.
+        - actually 0-initialise struct sigaction when installing signals.
+        - add section on hibernate and stopped processes to ev_timer docs.
+
+3.6  Tue Apr 28 02:49:30 CEST 2009
+	- multiple timers becoming ready within an event loop iteration
+          will be invoked in the "correct" order now.
+	- do not leave the event loop early just because we have no active
+          watchers, fixing a problem when embedding a kqueue loop
+          that has active kernel events but no registered watchers
+          (reported by blacksand blacksand).
+	- correctly zero the idx values for arrays, so destroying and
+          reinitialising the default loop actually works (patch by
+          Malek Hadj-Ali).
+        - implement ev_suspend and ev_resume.
+        - new EV_CUSTOM revents flag for use by applications.
+        - add documentation section about priorites.
+        - add a glossary to the dcoumentation.
+        - extend the ev_fork description slightly.
+        - optimize a jump out of call_pending.
+
+3.53 Sun Feb 15 02:38:20 CET 2009
+	- fix a bug in event pipe creation on win32 that would cause a
+          failed assertion on event loop creation (patch by Malek Hadj-Ali).
+	- probe for CLOCK_REALTIME support at runtime as well and fall
+          back to gettimeofday if there is an error, to support older
+          operating systems with newer header files/libraries.
+        - prefer gettimeofday over clock_gettime with USE_CLOCK_SYSCALL
+          (default most everywhere), otherwise not.
+
 3.52 Wed Jan  7 21:43:02 CET 2009
 	- fix compilation of select backend in fd_set mode when NFDBITS is
           missing (to get it to compile on QNX, reported by Rodrigo Campos).
@@ -13,7 +76,7 @@ Revision history for libev, a high-performance and full-featured event loop.
           attacks harder (but not impossible - it's windows). Make sure
           it even works under vista, which thinks that getpeer/sockname
           should return fantasy port numbers.
-        - include "libev" all assertion messages for potentially
+        - include "libev" in all assertion messages for potentially
           clearer diagnostics.
         - event_get_version (libevent compatibility) returned
           a useless string instead of the expected version string

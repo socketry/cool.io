@@ -145,7 +145,7 @@ module Rev
       @parser_nbytes = 0
 
       @state = :response_header
-      @data = Rev::Buffer.new
+      @data = ::IO::Buffer.new
 
       @response_header = HttpResponseHeader.new
       @chunk_header = HttpChunkHeader.new
