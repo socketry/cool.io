@@ -2,10 +2,10 @@ require 'rubygems'
 
 GEMSPEC = Gem::Specification.new do |s|
   s.name = "rev"
-  s.version = "0.2.5"
+  s.version = "0.3.0"
   s.authors = "Tony Arcieri"
   s.email = "tony@medioh.com"
-  s.date = "2009-08-22"
+  s.date = "2009-08-26"
   s.summary = "Rev is a Ruby binding to the libev high performance event library"
   s.platform = Gem::Platform::RUBY
   s.required_ruby_version = '>= 1.8.6'
@@ -22,8 +22,8 @@ GEMSPEC = Gem::Specification.new do |s|
 
   # RDoc settings
   s.has_rdoc = true
-  s.rdoc_options = %w(--title Rev --main README --line-numbers)
-  s.extra_rdoc_files = ["LICENSE", "README", "CHANGES"]
+  s.rdoc_options = %w(--title Rev --main README.textile --line-numbers)
+  s.extra_rdoc_files = ["LICENSE", "README.textile", "CHANGES"]
 
   # Extensions
   s.extensions = FileList["ext/**/extconf.rb"].to_a

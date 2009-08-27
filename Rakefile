@@ -15,9 +15,9 @@ task :default => %w(compile spec)
 Rake::RDocTask.new(:rdoc) do |task|
   task.rdoc_dir = 'doc'
   task.title    = 'Rev'
-  task.options = %w(--title Revactor --main README --line-numbers)
+  task.options = %w(--title Revactor --main README.textile --line-numbers)
   task.rdoc_files.include(['ext/rev/*.c', 'lib/**/*.rb'])
-  task.rdoc_files.include(['README', 'LICENSE'])
+  task.rdoc_files.include(['README.textile', 'LICENSE'])
 end
 
 # Rebuild parser Ragel

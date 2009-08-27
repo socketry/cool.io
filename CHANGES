@@ -1,6 +1,10 @@
-0.2.5:
+0.3.0:
 
 * Add Rev::StatWatcher to monitor filesystem changes
+
+* Add Rev::Listener#fileno for accessing the underlying file descriptor
+
+* Support for creating Rev::Listeners from existing TCPServers/UNIXServers
 
 * Upgrade to libev 3.8
 
