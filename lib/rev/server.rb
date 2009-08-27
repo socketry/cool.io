@@ -53,7 +53,7 @@ module Rev
   # creates new connection objects of the given class.
   class UNIXServer < Server
     def initialize(path, klass = UNIXSocket, *args, &block)
-      super(::UNIXServer.new(*args), klass, *args, &block)
+      super(::UNIXServer.new(path), klass, *args, &block)
     end
   end
 end
