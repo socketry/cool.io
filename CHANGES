@@ -12,6 +12,8 @@
 
 * Pull in iobuffer gem and change outstanding uses of Rev::Buffer to IO::Buffer
 
+* Fix memory leaks resulting from strange semantics of Ruby's xrealloc
+
 0.2.4:
 
 * Ugh, botched my first release from the git repo.  Oh well.  Try, try again.

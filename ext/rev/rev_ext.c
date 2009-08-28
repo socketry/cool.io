@@ -16,8 +16,6 @@ static VALUE mRev = Qnil;
 
 void Init_rev_ext() 
 {
-  ev_set_allocator((void *(*)(void *, long))xrealloc);
-
   /* Initializers for other modules */
   Init_rev_loop();
   Init_rev_watcher();
