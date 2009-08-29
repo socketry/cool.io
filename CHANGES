@@ -14,6 +14,10 @@
 
 * Fix memory leaks resulting from strange semantics of Ruby's xrealloc
 
+* Rev::UNIXServer: use path instead of the first argument
+
+* Rev::Server-based classes can build off ::*Server objects
+
 0.2.4:
 
 * Ugh, botched my first release from the git repo.  Oh well.  Try, try again.
