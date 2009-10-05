@@ -39,7 +39,7 @@ module Rev
     def on_readable
       begin
         on_connection @listen_socket.accept_nonblock
-      rescue Errno::EAGAIN
+      rescue Errno::EAGAIN, Errno::ECONNABORTED
       end
     end
   end
