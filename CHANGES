@@ -1,6 +1,10 @@
 0.3.1:
 
-*
+* Removed warning about spuriously readable sockets from Rev::Listener
+
+* Rev::Listener ignores ECONNABORTED from accept_nonblock
+
+* Document rationale for EAGAIN/ECONNABORTED handling in Rev::Listener
 
 0.3.0:
 
