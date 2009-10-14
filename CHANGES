@@ -1,5 +1,7 @@
 0.3.1:
 
+* Configurable intervals for Rev::StatWatcher
+
 * Fix broken version number :(
 
 * Removed warning about spuriously readable sockets from Rev::Listener

@@ -16,7 +16,7 @@ static VALUE cRev_Watcher = Qnil;
 static VALUE cRev_StatWatcher = Qnil;
 static VALUE cRev_Loop = Qnil;
 
-static VALUE Rev_StatWatcher_initialize(VALUE self, VALUE path);
+static VALUE Rev_StatWatcher_initialize(int argc, VALUE *argv, VALUE self);
 static VALUE Rev_StatWatcher_attach(VALUE self, VALUE loop);
 static VALUE Rev_StatWatcher_detach(VALUE self);
 static VALUE Rev_StatWatcher_enable(VALUE self);
@@ -39,7 +39,7 @@ void Init_rev_stat_watcher()
   cRev_StatWatcher = rb_define_class_under(mRev, "StatWatcher", cRev_Watcher);
   cRev_Loop = rb_define_class_under(mRev, "Loop", rb_cObject);
 
-  rb_define_method(cRev_StatWatcher, "initialize", Rev_StatWatcher_initialize, 1);
+  rb_define_method(cRev_StatWatcher, "initialize", Rev_StatWatcher_initialize, -1);
   rb_define_method(cRev_StatWatcher, "attach", Rev_StatWatcher_attach, 1);
   rb_define_method(cRev_StatWatcher, "detach", Rev_StatWatcher_detach, 0);
   rb_define_method(cRev_StatWatcher, "enable", Rev_StatWatcher_enable, 0);
@@ -50,14 +50,24 @@ void Init_rev_stat_watcher()
 
 /**
  *  call-seq:
- *    Rev::StatWatcher.initialize(path) -> Rev::StatWatcher
+ *    Rev::StatWatcher.initialize(path, interval = 0) -> Rev::StatWatcher
  * 
  * Create a new Rev::StatWatcher for the given path.  This will monitor the
- * given path for changes at the filesystem level.
+ * given path for changes at the filesystem level.  The interval argument
+ * specified how often in seconds the path should be polled for changes.
+ * Setting interval to zero uses an "automatic" value (typically around 5
+ * seconds) which optimizes performance.  Otherwise, values less than
+ * 0.1 are not particularly meaningful.  Where available (at present, on Linux)
+ * high performance file monitoring interfaces will be used instead of polling.
  */
-static VALUE Rev_StatWatcher_initialize(VALUE self, VALUE path)
+static VALUE Rev_StatWatcher_initialize(int argc, VALUE *argv, VALUE self)
 {
+	VALUE path, interval;
   struct Rev_Watcher *watcher_data;
+
+  rb_scan_args(argc, argv, "11", &path, &interval);
+  if(interval != Qnil)
+    interval = rb_convert_type(interval, T_FLOAT, "Float", "to_f");
 
   path = rb_String(path);
   rb_iv_set(self, "@path", path);
@@ -69,7 +79,7 @@ static VALUE Rev_StatWatcher_initialize(VALUE self, VALUE path)
       &watcher_data->event_types.ev_stat, 
       Rev_StatWatcher_libev_callback, 
       RSTRING_PTR(path), 
-      0
+      interval == Qnil ? 0 : NUM2DBL(interval)
   );  
   watcher_data->event_types.ev_stat.data = (void *)self;
 
