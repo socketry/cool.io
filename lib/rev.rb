@@ -23,6 +23,6 @@ require 'iobuffer'
 end
 
 module Rev
-  Rev::VERSION = '0.3.1' unless defined? Rev::VERSION
+  Rev::VERSION = '0.3.2' unless defined? Rev::VERSION
   def self.version() VERSION end
 end
