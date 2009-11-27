@@ -12,6 +12,14 @@
 
 #include "rev.h"
 
+#if defined(HAVE_RB_THREAD_BLOCKING_REGION)
+#  define Rev_Loop_may_block_safely() (1)
+#elif defined(HAVE_RB_THREAD_ALONE)
+#  define Rev_Loop_may_block_safely() (rb_thread_alone())
+#else /* just in case Ruby changes: */
+#  define Rev_Loop_may_block_safely() (0)
+#endif
+
 static VALUE mRev = Qnil;
 static VALUE cRev_Loop = Qnil;
 
@@ -175,19 +183,26 @@ void Rev_Loop_process_event(VALUE watcher, int revents)
  */
 static VALUE Rev_Loop_run_once(VALUE self)
 {
-  struct Rev_Loop *loop_data;
   VALUE nevents;
-  
-  Data_Get_Struct(self, struct Rev_Loop, loop_data);
 
-  assert(loop_data->ev_loop && !loop_data->events_received);
-  
-  Rev_Loop_ev_loop_oneshot(loop_data);  
-  Rev_Loop_dispatch_events(loop_data);
-  
-  nevents = INT2NUM(loop_data->events_received);
-  loop_data->events_received = 0;
-  
+  if (Rev_Loop_may_block_safely()) {
+    struct Rev_Loop *loop_data;
+
+    Data_Get_Struct(self, struct Rev_Loop, loop_data);
+
+    assert(loop_data->ev_loop && !loop_data->events_received);
+
+    Rev_Loop_ev_loop_oneshot(loop_data);
+    Rev_Loop_dispatch_events(loop_data);
+
+    nevents = INT2NUM(loop_data->events_received);
+    loop_data->events_received = 0;
+
+  } else {
+    nevents = Rev_Loop_run_nonblock(self);
+    rb_thread_schedule();
+  }
+
   return nevents;
 }
 
