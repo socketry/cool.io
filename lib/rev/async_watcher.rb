@@ -31,7 +31,12 @@ module Rev
     def on_readable
       # Read a byte from the pipe.  This clears readability, unless
       # another signal is pending
-      @reader.read 1
+      begin
+        @reader.read_nonblock 1
+      rescue Errno::EAGAIN
+        # in case there are spurious wakeups from forked processs
+        return
+      end
       on_signal
     end
   end
