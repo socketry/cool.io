@@ -14,7 +14,7 @@ GEMSPEC = Gem::Specification.new do |s|
   s.files = Dir.glob("{lib,ext,examples}/**/*") + ['Rakefile', 'rev.gemspec']
   
   # Dependencies
-  s.add_dependency "iobuffer", ">= 0.1.2"
+  s.add_dependency "iobuffer", ">= 0.1.3"
 
   # RubyForge info
   s.homepage = "http://rev.rubyforge.org"
