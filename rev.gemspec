@@ -5,7 +5,7 @@ GEMSPEC = Gem::Specification.new do |s|
   s.version = "0.3.2"
   s.authors = "Tony Arcieri"
   s.email = "tony@medioh.com"
-  s.date = "2009-10-13"
+  s.date = "2009-11-28"
   s.summary = "Rev is a Ruby binding to the libev high performance event library"
   s.platform = Gem::Platform::RUBY
   s.required_ruby_version = '>= 1.8.6'
@@ -14,7 +14,7 @@ GEMSPEC = Gem::Specification.new do |s|
   s.files = Dir.glob("{lib,ext,examples}/**/*") + ['Rakefile', 'rev.gemspec']
   
   # Dependencies
-  s.add_dependency "iobuffer", ">= 0.1.0"
+  s.add_dependency "iobuffer", ">= 0.1.2"
 
   # RubyForge info
   s.homepage = "http://rev.rubyforge.org"
