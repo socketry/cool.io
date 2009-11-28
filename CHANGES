@@ -1,6 +1,12 @@
 0.3.2:
 
-* None yet!
+* Perform a blocking system call if we're the only thread running (1.8 only)
+
+* Run in non-blocking mode if we're the only thread in the process (1.8 only)
+
+* Make Rev::Loop#run_nonblock signal-safe
+
+* Fix spurious firing of Rev::AsyncWatchers
 
 0.3.1:
 
