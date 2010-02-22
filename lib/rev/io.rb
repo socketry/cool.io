@@ -106,8 +106,11 @@ module Rev
     def on_readable
       begin
         on_read @_io.read_nonblock(INPUT_SIZE)
-      rescue Errno::EAGAIN
-      rescue Errno::ECONNRESET, EOFError
+      rescue Errno::EAGAIN, Errno::EINTR
+        return
+
+      # SystemCallError catches Errno::ECONNRESET amongst others.
+      rescue SystemCallError, EOFError, IOError, SocketError
         close
       end
     end
@@ -116,7 +119,11 @@ module Rev
     def on_writable
       begin
         @_write_buffer.write_to(@_io)
-      rescue Errno::EPIPE, Errno::ECONNRESET
+      rescue Errno::EINTR
+        return
+
+      # SystemCallError catches Errno::EPIPE & Errno::ECONNRESET amongst others.
+      rescue SystemCallError, IOError, SocketError
         return close
       end
       
