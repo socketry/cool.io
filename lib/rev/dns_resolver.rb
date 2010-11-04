@@ -5,11 +5,16 @@
 #
 # Gimpy hacka asynchronous DNS resolver
 #
-# Word to the wise: I don't know what I'm doing here.  This was cobbled together as
-# best I could with extremely limited knowledge of the DNS format.  There's obviously
-# a ton of stuff it doesn't support (like IPv6 and TCP).
+# Word to the wise: I don't know what I'm doing here.  This was cobbled together
+# as best I could with extremely limited knowledge of the DNS format.  There's
+# obviously a ton of stuff it doesn't support (like IPv6 and TCP).
 #
 # If you do know what you're doing with DNS, feel free to improve this! 
+# A good starting point my be this EventMachine Net::DNS-based asynchronous
+# resolver:
+#
+# http://gist.github.com/663299
+#
 #++
 module Rev
   # A non-blocking DNS resolver.  It provides interfaces for querying both
