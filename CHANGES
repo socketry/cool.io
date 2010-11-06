@@ -10,6 +10,8 @@
 
 * Update to RSpec 2.0
 
+* Update to libev 4.01
+
 0.3.2:
 
 * Perform a blocking system call if we're the only thread running (1.8 only)

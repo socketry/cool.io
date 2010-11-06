@@ -47,6 +47,7 @@
 #define kqueue_eventmax ((loop)->kqueue_eventmax)
 #define port_events ((loop)->port_events)
 #define port_eventmax ((loop)->port_eventmax)
+#define iocp ((loop)->iocp)
 #define fdchanges ((loop)->fdchanges)
 #define fdchangemax ((loop)->fdchangemax)
 #define fdchangecnt ((loop)->fdchangecnt)
@@ -69,6 +70,9 @@
 #define forks ((loop)->forks)
 #define forkmax ((loop)->forkmax)
 #define forkcnt ((loop)->forkcnt)
+#define cleanups ((loop)->cleanups)
+#define cleanupmax ((loop)->cleanupmax)
+#define cleanupcnt ((loop)->cleanupcnt)
 #define async_pending ((loop)->async_pending)
 #define asyncs ((loop)->asyncs)
 #define asyncmax ((loop)->asyncmax)
@@ -135,6 +139,7 @@
 #undef kqueue_eventmax
 #undef port_events
 #undef port_eventmax
+#undef iocp
 #undef fdchanges
 #undef fdchangemax
 #undef fdchangecnt
@@ -157,6 +162,9 @@
 #undef forks
 #undef forkmax
 #undef forkcnt
+#undef cleanups
+#undef cleanupmax
+#undef cleanupcnt
 #undef async_pending
 #undef asyncs
 #undef asyncmax
