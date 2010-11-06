@@ -78,10 +78,10 @@ def setup_extension(dir, extension)
   end
 end
 
-setup_extension("rev", "rev_ext")
+setup_extension("cool.io", "cool.io_ext")
 setup_extension("http11_client", "http11_client")
 
-task :compile => [:rev_ext, :http11_client]
+task :compile => %w(cool.io_ext http11_client)
 
 # Rebuild parser Ragel
 task :http11_parser do
@@ -94,5 +94,5 @@ task :http11_parser do
 end
 
 CLEAN.include ["build/*", "**/*.o", "**/*.so", "**/*.a", "**/*.log", "pkg"]
-CLEAN.include ["ext/**/Makefile", "lib/rev_ext.*", "lib/http11_client.*"]
+CLEAN.include ["ext/**/Makefile", "lib/cool.io_ext.*", "lib/http11_client.*"]
 CLEAN.include ["ext/**/*.#{Config::CONFIG["DLEXT"]}"]

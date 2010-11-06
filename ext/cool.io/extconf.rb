@@ -61,8 +61,8 @@ end
 
 $LIBS << ' ' << libs.join(' ')
 
-dir_config('rev_ext')
-create_makefile('rev_ext')
+dir_config('cool.io_ext')
+create_makefile('cool.io_ext')
 
 # win32 needs to link in "just the right order" for some reason or  ioctlsocket will be mapped to an [inverted] ruby specific version.  See libev mailing list for (not so helpful discussion--true cause I'm not sure, but this overcomes the symptom)
 if RUBY_PLATFORM =~ /mingw|win32/

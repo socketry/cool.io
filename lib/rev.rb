@@ -15,7 +15,7 @@ require 'rubygems'
 require 'iobuffer'
 
 %w(
-  /rev_ext /rev/loop /rev/meta /rev/io_watcher /rev/timer_watcher 
+  /cool.io_ext /rev/loop /rev/meta /rev/io_watcher /rev/timer_watcher 
   /rev/async_watcher /rev/listener /rev/io /rev/dns_resolver 
   /rev/socket /rev/server /rev/http_client
 ).each do |file|

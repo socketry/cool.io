@@ -14,7 +14,7 @@
 
 static VALUE mRev = Qnil;
 
-void Init_rev_ext() 
+void Init_cool() 
 {
   /* Initializers for other modules */
   Init_rev_loop();
