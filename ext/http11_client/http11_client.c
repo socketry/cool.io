@@ -10,7 +10,7 @@
 #include "http11_parser.h"
 #include <ctype.h>
 
-static VALUE mRev;
+static VALUE mCoolio;
 static VALUE cHttpClientParser;
 static VALUE eHttpClientParserError;
 
@@ -284,11 +284,11 @@ VALUE HttpClientParser_nread(VALUE self)
 void Init_http11_client()
 {
 
-  mRev = rb_define_module("Rev");
+  mCoolio = rb_define_module("Coolio");
 
-  eHttpClientParserError = rb_define_class_under(mRev, "HttpClientParserError", rb_eIOError);
+  eHttpClientParserError = rb_define_class_under(mCoolio, "HttpClientParserError", rb_eIOError);
 
-  cHttpClientParser = rb_define_class_under(mRev, "HttpClientParser", rb_cObject);
+  cHttpClientParser = rb_define_class_under(mCoolio, "HttpClientParser", rb_cObject);
   rb_define_alloc_func(cHttpClientParser, HttpClientParser_alloc);
   rb_define_method(cHttpClientParser, "initialize", HttpClientParser_init,0);
   rb_define_method(cHttpClientParser, "reset", HttpClientParser_reset,0);
@@ -298,5 +298,3 @@ void Init_http11_client()
   rb_define_method(cHttpClientParser, "finished?", HttpClientParser_is_finished,0);
   rb_define_method(cHttpClientParser, "nread", HttpClientParser_nread,0);
 }
-
-
