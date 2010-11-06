@@ -1,10 +1,10 @@
 #--
-# Copyright (C)2007 Tony Arcieri
+# Copyright (C)2007-10 Tony Arcieri
 # You can redistribute this under the terms of the Ruby license
 # See file LICENSE for details
 #++
 
-module Rev
+module Coolio
   module Meta
     # Use an alternate watcher with the attach/detach/enable/disable methods
     # if it is presently assigned.  This is useful if you are waiting for

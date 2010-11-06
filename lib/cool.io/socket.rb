@@ -7,7 +7,7 @@
 require 'socket'
 require 'resolv'
 
-module Rev
+module Coolio
   class Socket < IO    
     def self.connect(socket, *args)
 
@@ -49,8 +49,8 @@ module Rev
     #########
     
     class Connector < IOWatcher
-      def initialize(rev_socket, ruby_socket)
-        @rev_socket, @ruby_socket = rev_socket, ruby_socket
+      def initialize(coolio_socket, ruby_socket)
+        @coolio_socket, @ruby_socket = coolio_socket, ruby_socket
         super(ruby_socket, :w)
       end
       
@@ -59,15 +59,15 @@ module Rev
         detach
 
         if connect_successful?
-          @rev_socket.instance_eval { @_connector = nil }
-          @rev_socket.attach(evl)
+          @coolio_socket.instance_eval { @_connector = nil }
+          @coolio_socket.attach(evl)
           @ruby_socket.setsockopt(::Socket::IPPROTO_TCP, ::Socket::TCP_NODELAY, [1].pack("l"))
           @ruby_socket.setsockopt(::Socket::SOL_SOCKET, ::Socket::SO_KEEPALIVE, true)
 
-          @rev_socket.__send__(:on_connect)
+          @coolio_socket.__send__(:on_connect)
         else
-          @rev_socket.instance_eval { @_failed = true }
-          @rev_socket.__send__(:on_connect_failed)
+          @coolio_socket.instance_eval { @_failed = true }
+          @coolio_socket.__send__(:on_connect_failed)
         end
       end      
 
@@ -114,7 +114,7 @@ module Rev
         return super(TCPConnectSocket.new(family, addr, port), *args) # this creates a 'real' write buffer so we're ok there with regards to already having a write buffer from the get go
       end
 
-      if host = Rev::DNSResolver.hosts(addr)
+      if host = Coolio::DNSResolver.hosts(addr)
         return connect(host, port, *args) # calls this same function
       end
 
@@ -170,7 +170,7 @@ module Rev
       end
     end
 
-    class TCPConnectResolver < Rev::DNSResolver
+    class TCPConnectResolver < Coolio::DNSResolver
       def initialize(socket, host, port, *args)
         @sock, @host, @port, @args = socket, host, port, args
         super(host)

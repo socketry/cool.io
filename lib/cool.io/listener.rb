@@ -1,12 +1,12 @@
 #--
-# Copyright (C)2007 Tony Arcieri
+# Copyright (C)2007-10 Tony Arcieri
 # You can redistribute this under the terms of the Ruby license
 # See file LICENSE for details
 #++
 
 require 'socket'
 
-module Rev
+module Coolio
   # Listeners wait for incoming connections.  When a listener receives a
   # connection it fires the on_connection event with the newly accepted
   # socket as a parameter.
@@ -35,7 +35,7 @@ module Rev
     protected
     #########
 
-    # Rev callback for handling new connections
+    # Coolio callback for handling new connections
     def on_readable
       begin
         on_connection @listen_socket.accept_nonblock
@@ -56,14 +56,14 @@ module Rev
   class TCPListener < Listener
     DEFAULT_BACKLOG = 1024
     
-    # Create a new Rev::TCPListener on the specified address and port.
+    # Create a new Coolio::TCPListener on the specified address and port.
     # Accepts the following options:
     #
     #  :backlog - Max size of the pending connection queue (default 1024)
     #  :reverse_lookup - Retain BasicSocket's reverse DNS functionality (default false)
     #
     # If the specified address is an TCPServer object, it will ignore
-    # the port and :backlog option and create a new Rev::TCPListener out
+    # the port and :backlog option and create a new Coolio::TCPListener out
     # of the existing TCPServer object.
     def initialize(addr, port = nil, options = {})
       BasicSocket.do_not_reverse_lookup = true unless options[:reverse_lookup]
@@ -81,11 +81,11 @@ module Rev
   end
 
   class UNIXListener < Listener
-    # Create a new Rev::UNIXListener
+    # Create a new Coolio::UNIXListener
     #
     # Accepts the same arguments as UNIXServer.new
     # Optionally, it can also take anyn existing UNIXServer object
-    # and create a Rev::UNIXListener out of it.
+    # and create a Coolio::UNIXListener out of it.
     def initialize(*args)
       super(::UNIXServer === args.first ? args.first : ::UNIXServer.new(*args))
     end

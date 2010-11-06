@@ -1,13 +1,13 @@
 #--
-# Copyright (C)2007 Tony Arcieri
+# Copyright (C)2007-10 Tony Arcieri
 # Includes portions originally Copyright (C)2005 Zed Shaw
 # You can redistribute this under the terms of the Ruby license
 # See file LICENSE for details
 #++
 
-require File.dirname(__FILE__) + '/../http11_client'
+require 'http11_client'
 
-module Rev
+module Coolio
   # A simple hash is returned for each request made by HttpClient with
   # the headers that were given by the server for that request.
   class HttpResponseHeader < Hash
@@ -110,15 +110,15 @@ module Rev
     end
   end
 
-  # HTTP client class implemented as a subclass of Rev::TCPSocket.  Encodes
+  # HTTP client class implemented as a subclass of Coolio::TCPSocket.  Encodes
   # requests and allows streaming consumption of the response.  Response is
   # parsed with a Ragel-generated whitelist parser which supports chunked
   # HTTP encoding.
   #
   # == Example
   #
-  #   loop = Rev::Loop.default
-  #   client = Rev::HttpClient.connect("www.google.com").attach
+  #   loop = Coolio::Loop.default
+  #   client = Coolio::HttpClient.connect("www.google.com").attach
   #   client.get('/search', query: {q: 'foobar'})
   #   loop.run
   #
@@ -209,7 +209,7 @@ module Rev
     #########
 
     #
-    # Rev callbacks
+    # Coolio callbacks
     #
         
     def on_connect
@@ -244,7 +244,7 @@ module Rev
       head['content-length'] ||= body ? body.length : 0
 
       # Set the User-Agent if it hasn't been specified
-      head['user-agent'] ||= "Rev #{Rev::VERSION}"
+      head['user-agent'] ||= "Coolio #{Coolio::VERSION}"
 
       # Default to Connection: close
       head['connection'] ||= 'close'
@@ -292,7 +292,7 @@ module Rev
       
       begin
         @parser_nbytes = @parser.execute(header, @data.to_str, @parser_nbytes)
-      rescue Rev::HttpClientParserError
+      rescue Coolio::HttpClientParserError
         on_error "invalid HTTP format, parsing fails"
         @state = :invalid
       end

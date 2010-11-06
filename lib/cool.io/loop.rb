@@ -1,34 +1,34 @@
 #--
-# Copyright (C)2007 Tony Arcieri
+# Copyright (C)2007-10 Tony Arcieri
 # You can redistribute this under the terms of the Ruby license
 # See file LICENSE for details
 #++
 
 require 'thread'
 
-# Monkeypatch Thread to include a method for obtaining the default Rev::Loop
+# Monkeypatch Thread to include a method for obtaining the default Coolio::Loop
 class Thread
-  def _rev_loop
-    @_rev_loop ||= Rev::Loop.new
+  def _coolio_loop
+    @_coolio_loop ||= Coolio::Loop.new
   end
 end
 
-module Rev
+module Coolio
   class Loop
-    # In Ruby 1.9 we want a Rev::Loop per thread, but Ruby 1.8 is unithreaded
+    # In Ruby 1.9 we want a Coolio::Loop per thread, but Ruby 1.8 is unithreaded
     if RUBY_VERSION >= "1.9.0"
       # Retrieve the default event loop for the current thread
       def self.default
-        Thread.current._rev_loop
+        Thread.current._coolio_loop
       end
     else
       # Retrieve the default event loop
       def self.default
-        @@_rev_loop ||= Rev::Loop.new
+        @@_coolio_loop ||= Coolio::Loop.new
       end
     end
 
-    # Create a new Rev::Loop
+    # Create a new Coolio::Loop
     #
     # Options:
     #

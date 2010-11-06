@@ -4,7 +4,7 @@
 # See file LICENSE for details
 #++
 
-module Rev
+module Coolio
   class TimerWatcher
     # The actual implementation of this class resides in the C extension
     # Here we metaprogram proper event_callbacks for the callback methods

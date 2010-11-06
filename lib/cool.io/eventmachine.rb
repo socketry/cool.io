@@ -4,6 +4,8 @@
 # See file LICENSE for details
 #++
 
+require 'cool.io'
+
 # EventMachine emulation for Cool.io:
 #
 #   require 'coolio/eventmachine'
@@ -12,23 +14,20 @@
 # Benefits: timers are more accurate using libev than using EM
 # TODO: some things like connection timeouts aren't implemented yet
 # DONE: timers and normal socket functions are implemented.
-
-require 'rev'
-
 module EventMachine
   class << self
     # Start the Reactor loop
     def run
       yield if block_given?
-      Rev::Loop.default.run
+      Coolio::Loop.default.run
     end
 
     # Stop the Reactor loop
     def stop_event_loop
-      Rev::Loop.default.stop
+      Coolio::Loop.default.stop
     end
 
-    class OneShotEMTimer < Rev::TimerWatcher
+    class OneShotEMTimer < Coolio::TimerWatcher
       def setup(proc)
         @proc = proc
       end
@@ -38,7 +37,7 @@ module EventMachine
       end
     end
 
-    # ltodo: use Rev's PeriodicTimer to wrap EM's two similar to it
+    # ltodo: use Coolio's PeriodicTimer to wrap EM's two similar to it
     # todo: close all connections on 'stop', I believe
 
     def add_timer(interval, proc = nil, &block)
@@ -47,7 +46,7 @@ module EventMachine
       t.setup(block) 
       
       # fire 'er off ltodo: do we keep track of these timers in memory?
-      t.attach(Rev::Loop.default)
+      t.attach(Coolio::Loop.default)
       t
     end
 
@@ -72,7 +71,7 @@ module EventMachine
 
       wrapped_child = CallsBackToEM.connect(addr, port, *args) # ltodo: args? what? they're used? also TODOC TODO FIX
       conn = klass.new(wrapped_child) # ltodo [?] addr, port, *args)
-      wrapped_child.attach(Rev::Loop.default) # necessary
+      wrapped_child.attach(Coolio::Loop.default) # necessary
       conn.heres_your_socket(wrapped_child)
       wrapped_child.call_back_to_this(conn) # calls post_init for us
       yield conn if block_given?
@@ -87,14 +86,14 @@ module EventMachine
         Class.new( Connection ) {handler and include handler}
       end
       
-      server = Rev::TCPServer.new(addr, port, CallsBackToEM, *args) do |wrapped_child| 
+      server = Coolio::TCPServer.new(addr, port, CallsBackToEM, *args) do |wrapped_child| 
         conn = klass.new(wrapped_child)
         conn.heres_your_socket(wrapped_child) # ideally NOT have this :)
         wrapped_child.call_back_to_this(conn) 
         block.call(conn) if block
       end
 
-      server.attach(Rev::Loop.default)
+      server.attach(Coolio::Loop.default)
     end
 
     def stop_server(server)
@@ -103,7 +102,7 @@ module EventMachine
 
     # Set the maximum number of descriptors available to this process
     def set_descriptor_table_size(nfds)
-      Rev::Utils.maxfds = nfds
+      Coolio::Utils.maxfds = nfds
     end
 
     # Compatibility noop.  Handled automatically by libev
@@ -113,8 +112,8 @@ module EventMachine
     def kqueue; end
   end
 
-  class CallsBackToEM < Rev::TCPSocket
-    class ConnectTimer < Rev::TimerWatcher
+  class CallsBackToEM < Coolio::TCPSocket
+    class ConnectTimer < Coolio::TimerWatcher
       attr_accessor :parent
       def on_timer
        @parent.connection_has_timed_out
@@ -178,7 +177,7 @@ module EventMachine
       # the connect timer currently kills TCPServer classes.  I'm not sure why.
       #@connection_timer = ConnectTimer.new(14) # needs to be at least higher than 12 :)
       #@connection_timer.parent = a
-      #@connection_timer.attach(Rev::Loop.default)
+      #@connection_timer.attach(Coolio::Loop.default)
       a
     end
   end
@@ -203,29 +202,29 @@ module EventMachine
     
     # Callback fired when data is received
     # def receive_data(data); end
-    def heres_your_socket(instantiated_rev_socket)
-      instantiated_rev_socket.call_back_to_this self
-      @wrapped_rev = instantiated_rev_socket
+    def heres_your_socket(instantiated_coolio_socket)
+      instantiated_coolio_socket.call_back_to_this self
+      @wrapped_coolio = instantiated_coolio_socket
     end
 
     # Send data to the current connection -- called by them
     def send_data(data)
-      @wrapped_rev.write data
+      @wrapped_coolio.write data
     end
     
     # Close the connection, optionally after writing
     def close_connection(after_writing = false)
       return close_connection_after_writing if after_writing
-      @wrapped_rev.close
+      @wrapped_coolio.close
     end
     
     # Close the connection after all data has been written
     def close_connection_after_writing
-      @wrapped_rev.output_buffer_size.zero? ? @wrapped_rev.close : @wrapped_rev.should_close_after_writing
+      @wrapped_coolio.output_buffer_size.zero? ? @wrapped_coolio.close : @wrapped_coolio.should_close_after_writing
     end
 
     def get_peername
-      family, port, host_name, host_ip = @wrapped_rev.peeraddr
+      family, port, host_name, host_ip = @wrapped_coolio.peeraddr
       Socket.pack_sockaddr_in(port, host_ip) # pack it up :)
     end
   end

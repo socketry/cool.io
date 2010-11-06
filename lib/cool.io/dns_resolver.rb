@@ -1,5 +1,5 @@
 #--
-# Copyright (C)2007 Tony Arcieri
+# Copyright (C)2007-10 Tony Arcieri
 # You can redistribute this under the terms of the Ruby license
 # See file LICENSE for details
 #
@@ -16,7 +16,8 @@
 # http://gist.github.com/663299
 #
 #++
-module Rev
+
+module Coolio
   # A non-blocking DNS resolver.  It provides interfaces for querying both
   # /etc/hosts and nameserves listed in /etc/resolv.conf, or nameservers of
   # your choosing.
@@ -52,7 +53,7 @@ module Rev
       hosts[host]
     end
 
-    # Create a new Rev::Watcher descended object to resolve the
+    # Create a new Coolio::Watcher descended object to resolve the
     # given hostname.  If you so desire you can also specify a
     # list of nameservers to query.  By default the resolver will
     # use nameservers listed in /etc/resolv.conf

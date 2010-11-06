@@ -1,17 +1,17 @@
 #--
-# Copyright (C)2007 Tony Arcieri
+# Copyright (C)2007-10 Tony Arcieri
 # You can redistribute this under the terms of the Ruby license
 # See file LICENSE for details
 #++
 
-module Rev
-  # A buffered I/O class witch fits into the Rev Watcher framework.
+module Coolio
+  # A buffered I/O class witch fits into the Coolio Watcher framework.
   # It provides both an observer which reads data as it's received
   # from the wire and a buffered write watcher which stores data and writes
   # it out each time the socket becomes writable.
   #
   # This class is primarily meant as a base class for other streams
-  # which need non-blocking writing, and is used to implement Rev's
+  # which need non-blocking writing, and is used to implement Coolio's
   # Socket class and its associated subclasses.
   class IO
     extend Meta
@@ -159,16 +159,16 @@ module Rev
       @_write_watcher.detach if @_write_watcher and @_write_watcher.attached?
     end
     
-    # Internal class implementing watchers used by Rev::IO
+    # Internal class implementing watchers used by Coolio::IO
     class Watcher < IOWatcher
-      def initialize(ruby_io, rev_io, flags)
-        @rev_io = rev_io
+      def initialize(ruby_io, coolio_io, flags)
+        @coolio_io = coolio_io
         super(ruby_io, flags)
       end
 
       # Configure IOWatcher event callbacks to call the method passed to #initialize
-      def on_readable; @rev_io.__send__(:on_readable); end
-      def on_writable; @rev_io.__send__(:on_writable); end
+      def on_readable; @coolio_io.__send__(:on_readable); end
+      def on_writable; @coolio_io.__send__(:on_writable); end
     end
   end
 end

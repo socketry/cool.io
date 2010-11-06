@@ -1,10 +1,10 @@
 #--
-# Copyright (C)2007 Tony Arcieri
+# Copyright (C)2007-10 Tony Arcieri
 # You can redistribute this under the terms of the Ruby license
 # See file LICENSE for details
 #++
 
-module Rev
+module Coolio
   class Server < Listener
     # Servers listen for incoming connections and create new connection objects
     # whenever incoming connections are received.  The default class for new
@@ -12,7 +12,7 @@ module Rev
     def initialize(listen_socket, klass = Socket, *args, &block)
       # Ensure the provided class responds to attach
       unless klass.allocate.is_a? IO
-        raise ArgumentError, "can't convert #{klass} to Rev::IO"
+        raise ArgumentError, "can't convert #{klass} to Coolio::IO"
       end
 
       # Verify the arity of the provided arguments
@@ -47,7 +47,7 @@ module Rev
   # new connection objects of the given class. This is the most common server class.
   # Note that the new connection objects will be bound by default to the same event loop that the server is attached to.
   # Optionally, it can also take any existing core TCPServer object as
-  # +host+ and create a Rev::TCPServer out of it.
+  # +host+ and create a Coolio::TCPServer out of it.
   class TCPServer < Server
     def initialize(host, port = nil, klass = TCPSocket, *args, &block)
       listen_socket = if ::TCPServer === host
@@ -64,7 +64,7 @@ module Rev
   # UNIX server class.  Listens on the specified UNIX domain socket and
   # creates new connection objects of the given class.
   # Optionally, it can also take any existing core UNIXServer object as
-  # +path+ and create a Rev::UNIXServer out of it.
+  # +path+ and create a Coolio::UNIXServer out of it.
   class UNIXServer < Server
     def initialize(path, klass = UNIXSocket, *args, &block)
       s = ::UNIXServer === path ? path : ::UNIXServer.new(path)
