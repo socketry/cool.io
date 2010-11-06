@@ -18,4 +18,8 @@ coverage
 rdoc
 pkg
 
+## RUBINIUS
+*.rbc
+
 ## PROJECT::SPECIFIC
+conftest.dSYM

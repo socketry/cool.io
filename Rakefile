@@ -1,38 +1,50 @@
+require 'rubygems'
 require 'rake'
 require 'rake/clean'
-require 'rake/rdoctask'
-require 'rake/gempackagetask'
-require 'fileutils'
-include FileUtils
 
-# Load Rev Gemspec
-load 'rev.gemspec'
-
-# Default Rake task is compile
-task :default => %w(compile spec)
-
-# RDoc
-Rake::RDocTask.new(:rdoc) do |task|
-  task.rdoc_dir = 'doc'
-  task.title    = 'Rev'
-  task.options = %w(--title Revactor --main README.textile --line-numbers)
-  task.rdoc_files.include(['ext/rev/*.c', 'lib/**/*.rb'])
-  task.rdoc_files.include(['README.textile', 'LICENSE'])
-end
-
-# Rebuild parser Ragel
-task :ragel do
-  Dir.chdir "ext/http11_client" do
-    target = "http11_parser.c"
-    File.unlink target if File.exist? target
-    sh "ragel http11_parser.rl | rlgen-cd -G2 -o #{target}"
-    raise "Failed to build C source" unless File.exist? target
+begin
+  require 'jeweler'
+  Jeweler::Tasks.new do |gem|
+    gem.name = "cool.io"
+    gem.summary = "The cool event framework for Ruby"
+    gem.description = "A Ruby wrapper around the libev high performance event library"
+    gem.email = "tony@medioh.com"
+    gem.homepage = "http://github.com/tarcieri/cool.io"
+    gem.authors = ["Tony Arcieri"]
+    gem.add_dependency "iobuffer", ">= 0.1.3"
+    gem.add_development_dependency "rspec", "~> 2.0.0"
+    gem.extensions = FileList["ext/**/extconf.rb"].to_a
+    
+    # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
   end
+  Jeweler::GemcutterTasks.new
+rescue LoadError
+  puts "Jeweler (or a dependency) not available. Install it with: gem install jeweler"
 end
 
-# Gem
-Rake::GemPackageTask.new(GEMSPEC) do |pkg|
-  pkg.need_tar = true
+require 'rspec/core/rake_task'
+RSpec::Core::RakeTask.new(:spec) do |spec|
+  spec.pattern = 'spec/**/*_spec.rb'
+  spec.rspec_opts = %w[-fs -c -b]
+end
+
+RSpec::Core::RakeTask.new(:rcov) do |spec|
+  spec.pattern = 'spec/**/*_spec.rb'
+  spec.rcov = true
+  spec.rspec_opts = %w[-fs -c -b]
+end
+
+task :default => %w(compile spec)
+task :spec => :check_dependencies
+
+require 'rake/rdoctask'
+Rake::RDocTask.new do |rdoc|
+  version = File.exist?('VERSION') ? File.read('VERSION') : ""
+
+  rdoc.rdoc_dir = 'rdoc'
+  rdoc.title = "cool.io #{version}"
+  rdoc.rdoc_files.include('README*')
+  rdoc.rdoc_files.include('lib/**/*.rb')
 end
 
 def make(makedir)
@@ -51,12 +63,7 @@ def setup_extension(dir, extension)
     "#{ext}/*.h",
     "#{ext}/extconf.rb",
     "#{ext}/Makefile",
-    "lib"
   ] 
-  
-  task "lib" do
-    directory "lib"
-  end
 
   desc "Builds just the #{extension} extension"
   task extension.to_sym => ["#{ext}/Makefile", ext_so ]
@@ -77,4 +84,5 @@ setup_extension("http11_client", "http11_client")
 task :compile => [:rev_ext, :http11_client]
 
 CLEAN.include ["build/*", "**/*.o", "**/*.so", "**/*.a", "**/*.log", "pkg"]
-CLEAN.include ["ext/**/Makefile", "lib/rev_ext.*", "lib/http11_client.*", "ext/**/*.#{Config::CONFIG["DLEXT"]}"]
+CLEAN.include ["ext/**/Makefile", "lib/rev_ext.*", "lib/http11_client.*"]
+CLEAN.include ["ext/**/*.#{Config::CONFIG["DLEXT"]}"]
