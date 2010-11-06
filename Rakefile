@@ -83,6 +83,16 @@ setup_extension("http11_client", "http11_client")
 
 task :compile => [:rev_ext, :http11_client]
 
+# Rebuild parser Ragel
+task :http11_parser do
+  Dir.chdir "ext/http11_client" do
+    target = "http11_parser.c"
+    File.unlink target if File.exist? target
+    sh "ragel http11_parser.rl | rlgen-cd -G2 -o #{target}"
+    raise "Failed to build C source" unless File.exist? target
+  end
+end
+
 CLEAN.include ["build/*", "**/*.o", "**/*.so", "**/*.a", "**/*.log", "pkg"]
 CLEAN.include ["ext/**/Makefile", "lib/rev_ext.*", "lib/http11_client.*"]
 CLEAN.include ["ext/**/*.#{Config::CONFIG["DLEXT"]}"]
