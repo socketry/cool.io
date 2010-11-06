@@ -2,10 +2,10 @@ require File.expand_path('../spec_helper', __FILE__)
 require 'tempfile'
 require 'fcntl'
 
-describe Coolio::AsyncWatcher do
+describe Cool.io::AsyncWatcher do
 
   it "does not signal on spurious wakeups" do
-    aw = Coolio::AsyncWatcher.new
+    aw = Cool.io::AsyncWatcher.new
     tmp = Tempfile.new('coolio_async_watcher_test')
     nr_fork = 2 # must be at least two for spurious wakeups
 
@@ -21,7 +21,7 @@ describe Coolio::AsyncWatcher do
     children = nr_fork.times.map do
       fork do
         trap(:TERM) { exit!(0) }
-        rloop = Coolio::Loop.default
+        rloop = Cool.io::Loop.default
         aw.attach(rloop)
         wr.write '.' # signal to master that we're ready
         rloop.run

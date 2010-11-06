@@ -23,3 +23,8 @@ module Coolio
   VERSION = File.read(File.expand_path('../../VERSION', __FILE__)).strip
   def self.version; VERSION; end
 end
+
+module Cool
+  # Allow Coolio module to be referenced as Cool.io
+  def self.io; Coolio; end
+end
