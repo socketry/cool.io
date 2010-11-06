@@ -1,3 +1,15 @@
+0.9.0:
+
+* Rename the project to cool.io
+
+* Bump the version all the way to 0.9! Hell yeah! 1.0 soon!
+
+* Rename the main module from Rev to Coolio, with deprecation warnings for Rev
+
+* Use Jeweler to manage the gem
+
+* Update to RSpec 2.0
+
 0.3.2:
 
 * Perform a blocking system call if we're the only thread running (1.8 only)
