@@ -40,11 +40,6 @@ if have_header('port.h')
   $defs << '-DEV_USE_PORT'
 end
 
-if have_header('openssl/ssl.h') and RUBY_PLATFORM !~ /mingw|win32/ # win32 and SSL no go currently...needs some help to work
-  $defs << '-DHAVE_OPENSSL_SSL_H'
-  libs << '-lssl -lcrypto'
-end
-
 if have_header('sys/resource.h')
   $defs << '-DHAVE_SYS_RESOURCE_H'
 end

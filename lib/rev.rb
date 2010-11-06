@@ -1,28 +1,28 @@
 #--
-# Copyright (C)2007 Tony Arcieri
+# Copyright (C)2007-10 Tony Arcieri
 # You can redistribute this under the terms of the Ruby license
 # See file LICENSE for details
 #++
 
-# Pull in the OpenSSL extension if available
-begin
-  require 'openssl'
-rescue LoadError
-end
-
-# Pull in iobuffer gem
-require 'rubygems'
 require 'iobuffer'
+require "cool.io_ext"
 
-%w(
-  /cool.io_ext /rev/loop /rev/meta /rev/io_watcher /rev/timer_watcher 
-  /rev/async_watcher /rev/listener /rev/io /rev/dns_resolver 
-  /rev/socket /rev/server /rev/http_client
-).each do |file|
-  require File.dirname(__FILE__) + file
-end
+# Legacy constant
+Rev = Coolio
 
-module Rev
-  Rev::VERSION = '0.3.2' unless defined? Rev::VERSION
-  def self.version() VERSION end
+require "rev/loop"
+require "rev/meta"
+require "rev/io_watcher"
+require "rev/timer_watcher"
+require "rev/async_watcher"
+require "rev/listener"
+require "rev/io"
+require "rev/dns_resolver"
+require "rev/socket"
+require "rev/server"
+require "rev/http_client"
+
+module Coolio
+  VERSION = File.read File.expand_path('../../VERSION', __FILE__)
+  def self.version; VERSION; end
 end

@@ -15,38 +15,38 @@
 #include <sys/sysctl.h>
 #endif
 
-static VALUE mRev = Qnil;
-static VALUE cRev_Utils = Qnil;
+static VALUE mCoolio = Qnil;
+static VALUE cCoolio_Utils = Qnil;
 
-static VALUE Rev_Utils_ncpus(VALUE self);
-static VALUE Rev_Utils_maxfds(VALUE self);
-static VALUE Rev_Utils_setmaxfds(VALUE self, VALUE max);
+static VALUE Coolio_Utils_ncpus(VALUE self);
+static VALUE Coolio_Utils_maxfds(VALUE self);
+static VALUE Coolio_Utils_setmaxfds(VALUE self, VALUE max);
 
 /*
  * Assorted utility routines
  */
-void Init_rev_utils()
+void Init_coolio_utils()
 {
-  mRev = rb_define_module("Rev");
-  cRev_Utils = rb_define_module_under(mRev, "Utils");
+  mCoolio = rb_define_module("Coolio");
+  cCoolio_Utils = rb_define_module_under(mCoolio, "Utils");
 
-  rb_define_singleton_method(cRev_Utils, "ncpus", Rev_Utils_ncpus, 0);
-  rb_define_singleton_method(cRev_Utils, "maxfds", Rev_Utils_maxfds, 0);
-  rb_define_singleton_method(cRev_Utils, "maxfds=", Rev_Utils_setmaxfds, 1);
+  rb_define_singleton_method(cCoolio_Utils, "ncpus", Coolio_Utils_ncpus, 0);
+  rb_define_singleton_method(cCoolio_Utils, "maxfds", Coolio_Utils_maxfds, 0);
+  rb_define_singleton_method(cCoolio_Utils, "maxfds=", Coolio_Utils_setmaxfds, 1);
 }
 
 /**
  *  call-seq:
- *    Rev::Utils.ncpus -> Integer
+ *    Coolio::Utils.ncpus -> Integer
  * 
  * Return the number of CPUs in the present system
  */
-static VALUE Rev_Utils_ncpus(VALUE self)
+static VALUE Coolio_Utils_ncpus(VALUE self)
 {
   int ncpus = 0;
 
 #ifdef HAVE_LINUX_PROCFS
-#define HAVE_REV_UTILS_NCPUS
+#define HAVE_COOLIO_UTILS_NCPUS
   char buf[512];
   FILE *cpuinfo;
   
@@ -60,14 +60,14 @@ static VALUE Rev_Utils_ncpus(VALUE self)
 #endif
 
 #ifdef HAVE_SYSCTLBYNAME
-#define HAVE_REV_UTILS_NCPUS
+#define HAVE_COOLIO_UTILS_NCPUS
   size_t size = sizeof(int);
 
   if(sysctlbyname("hw.ncpu", &ncpus, &size, NULL, 0)) 
     return INT2NUM(1);
 #endif
 
-#ifndef HAVE_REV_UTILS_NCPUS
+#ifndef HAVE_COOLIO_UTILS_NCPUS
   rb_raise(rb_eRuntimeError, "operation not supported");
 #endif
 
@@ -76,11 +76,11 @@ static VALUE Rev_Utils_ncpus(VALUE self)
 
 /**
  *  call-seq:
- *    Rev::Utils.maxfds -> Integer
+ *    Coolio::Utils.maxfds -> Integer
  * 
  * Return the maximum number of files descriptors available to the process
  */
-static VALUE Rev_Utils_maxfds(VALUE self)
+static VALUE Coolio_Utils_maxfds(VALUE self)
 {
 #ifdef HAVE_SYS_RESOURCE_H
   struct rlimit rlim;
@@ -98,12 +98,12 @@ static VALUE Rev_Utils_maxfds(VALUE self)
 
 /**
  *  call-seq:
- *    Rev::Utils.maxfds=(count) -> Integer
+ *    Coolio::Utils.maxfds=(count) -> Integer
  * 
  * Set the number of file descriptors available to the process.  May require
  * superuser privileges.
  */
-static VALUE Rev_Utils_setmaxfds(VALUE self, VALUE max)
+static VALUE Coolio_Utils_setmaxfds(VALUE self, VALUE max)
 {
 #ifdef HAVE_SYS_RESOURCE_H
   struct rlimit rlim;

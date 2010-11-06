@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Tony Arcieri
+ * Copyright (C) 2007-10 Tony Arcieri
  * You may redistribute this under the terms of the Ruby license.
  * See LICENSE for details
  */
@@ -7,33 +7,32 @@
 #include <assert.h>
 #include "ruby.h"
 #include "rubysig.h"
-
 #include "ev_wrap.h"
 
-#include "rev.h"
+#include "cool.io.h"
 
 #if defined(HAVE_RB_THREAD_BLOCKING_REGION)
-#  define Rev_Loop_may_block_safely() (1)
+#  define Coolio_Loop_may_block_safely() (1)
 #elif defined(HAVE_RB_THREAD_ALONE)
-#  define Rev_Loop_may_block_safely() (rb_thread_alone())
+#  define Coolio_Loop_may_block_safely() (rb_thread_alone())
 #else /* just in case Ruby changes: */
-#  define Rev_Loop_may_block_safely() (0)
+#  define Coolio_Loop_may_block_safely() (0)
 #endif
 
-static VALUE mRev = Qnil;
-static VALUE cRev_Loop = Qnil;
+static VALUE mCoolio = Qnil;
+static VALUE cCoolio_Loop = Qnil;
 
-static VALUE Rev_Loop_allocate(VALUE klass);
-static void Rev_Loop_mark(struct Rev_Loop *loop);
-static void Rev_Loop_free(struct Rev_Loop *loop);
+static VALUE Coolio_Loop_allocate(VALUE klass);
+static void Coolio_Loop_mark(struct Coolio_Loop *loop);
+static void Coolio_Loop_free(struct Coolio_Loop *loop);
 
-static VALUE Rev_Loop_initialize(VALUE self);
-static VALUE Rev_Loop_ev_loop_new(VALUE self, VALUE flags);
-static VALUE Rev_Loop_run_once(VALUE self);
-static VALUE Rev_Loop_run_nonblock(VALUE self);
+static VALUE Coolio_Loop_initialize(VALUE self);
+static VALUE Coolio_Loop_ev_loop_new(VALUE self, VALUE flags);
+static VALUE Coolio_Loop_run_once(VALUE self);
+static VALUE Coolio_Loop_run_nonblock(VALUE self);
 
-static void Rev_Loop_ev_loop_oneshot(struct Rev_Loop *loop_data);
-static void Rev_Loop_dispatch_events(struct Rev_Loop *loop_data);
+static void Coolio_Loop_ev_loop_oneshot(struct Coolio_Loop *loop_data);
+static void Coolio_Loop_dispatch_events(struct Coolio_Loop *loop_data);
 
 #define DEFAULT_EVENTBUF_SIZE 32
 #define RUN_LOOP(loop_data, options) \
@@ -42,41 +41,41 @@ static void Rev_Loop_dispatch_events(struct Rev_Loop *loop_data);
   loop_data->running = 0;
 
 /* 
- * Rev::Loop represents an event loop.  Event watchers can be attached and
+ * Coolio::Loop represents an event loop.  Event watchers can be attached and
  * unattached.  When an event loop is run, all currently attached watchers
  * are monitored for events, and their respective callbacks are signaled
  * whenever events occur.
  */
-void Init_rev_loop()
+void Init_coolio_loop()
 {
-  mRev = rb_define_module("Rev");
-  cRev_Loop = rb_define_class_under(mRev, "Loop", rb_cObject);
-  rb_define_alloc_func(cRev_Loop, Rev_Loop_allocate);
+  mCoolio = rb_define_module("Coolio");
+  cCoolio_Loop = rb_define_class_under(mCoolio, "Loop", rb_cObject);
+  rb_define_alloc_func(cCoolio_Loop, Coolio_Loop_allocate);
  
-  rb_define_method(cRev_Loop, "initialize", Rev_Loop_initialize, 0);
-  rb_define_private_method(cRev_Loop, "ev_loop_new", Rev_Loop_ev_loop_new, 1);
-  rb_define_method(cRev_Loop, "run_once", Rev_Loop_run_once, 0);
-  rb_define_method(cRev_Loop, "run_nonblock", Rev_Loop_run_nonblock, 0);
+  rb_define_method(cCoolio_Loop, "initialize", Coolio_Loop_initialize, 0);
+  rb_define_private_method(cCoolio_Loop, "ev_loop_new", Coolio_Loop_ev_loop_new, 1);
+  rb_define_method(cCoolio_Loop, "run_once", Coolio_Loop_run_once, 0);
+  rb_define_method(cCoolio_Loop, "run_nonblock", Coolio_Loop_run_nonblock, 0);
 }
 
-static VALUE Rev_Loop_allocate(VALUE klass)
+static VALUE Coolio_Loop_allocate(VALUE klass)
 {
-  struct Rev_Loop *loop = (struct Rev_Loop *)xmalloc(sizeof(struct Rev_Loop));
+  struct Coolio_Loop *loop = (struct Coolio_Loop *)xmalloc(sizeof(struct Coolio_Loop));
 
   loop->ev_loop = 0;
   loop->running = 0;
   loop->events_received = 0;
   loop->eventbuf_size = DEFAULT_EVENTBUF_SIZE;
-  loop->eventbuf = (struct Rev_Event *)xmalloc(sizeof(struct Rev_Event) * DEFAULT_EVENTBUF_SIZE);
+  loop->eventbuf = (struct Coolio_Event *)xmalloc(sizeof(struct Coolio_Event) * DEFAULT_EVENTBUF_SIZE);
 
-  return Data_Wrap_Struct(klass, Rev_Loop_mark, Rev_Loop_free, loop);
+  return Data_Wrap_Struct(klass, Coolio_Loop_mark, Coolio_Loop_free, loop);
 }
 
-static void Rev_Loop_mark(struct Rev_Loop *loop)
+static void Coolio_Loop_mark(struct Coolio_Loop *loop)
 {
 }
 
-static void Rev_Loop_free(struct Rev_Loop *loop)
+static void Coolio_Loop_free(struct Coolio_Loop *loop)
 {
   if(!loop->ev_loop)
     return;
@@ -87,16 +86,16 @@ static void Rev_Loop_free(struct Rev_Loop *loop)
   xfree(loop);
 }
 
-static VALUE Rev_Loop_initialize(VALUE self)
+static VALUE Coolio_Loop_initialize(VALUE self)
 {
-  Rev_Loop_ev_loop_new(self, INT2NUM(0));
+  Coolio_Loop_ev_loop_new(self, INT2NUM(0));
 }
 
-/* Wrapper for populating a Rev_Loop struct with a new event loop */
-static VALUE Rev_Loop_ev_loop_new(VALUE self, VALUE flags)
+/* Wrapper for populating a Coolio_Loop struct with a new event loop */
+static VALUE Coolio_Loop_ev_loop_new(VALUE self, VALUE flags)
 {
-  struct Rev_Loop *loop_data;
-  Data_Get_Struct(self, struct Rev_Loop, loop_data);
+  struct Coolio_Loop *loop_data;
+  Data_Get_Struct(self, struct Coolio_Loop, loop_data);
 
   if(loop_data->ev_loop)
     rb_raise(rb_eRuntimeError, "loop already initialized");
@@ -107,15 +106,15 @@ static VALUE Rev_Loop_ev_loop_new(VALUE self, VALUE flags)
 }
 
 /* libev callback for receiving events */
-void Rev_Loop_process_event(VALUE watcher, int revents)
+void Coolio_Loop_process_event(VALUE watcher, int revents)
 {
-  struct Rev_Loop *loop_data;
-  struct Rev_Watcher *watcher_data;
+  struct Coolio_Loop *loop_data;
+  struct Coolio_Watcher *watcher_data;
 
   /* The Global VM lock isn't held right now, but hopefully
    * we can still do this safely */
-  Data_Get_Struct(watcher, struct Rev_Watcher, watcher_data);
-  Data_Get_Struct(watcher_data->loop, struct Rev_Loop, loop_data);
+  Data_Get_Struct(watcher, struct Coolio_Watcher, watcher_data);
+  Data_Get_Struct(watcher_data->loop, struct Coolio_Loop, loop_data);
 
   /*  Well, what better place to explain how this all works than
    *  where the most wonky and convoluted stuff is going on!
@@ -125,7 +124,7 @@ void Rev_Loop_process_event(VALUE watcher, int revents)
    *  -> release GVL -> event syscall -> libev callback
    *  (GVL = Global VM Lock)             ^^^ You are here
    *
-   *  We released the GVL in the Rev_Loop_run_once() function
+   *  We released the GVL in the Coolio_Loop_run_once() function
    *  so other Ruby threads can run while we make a blocking 
    *  system call (one of epoll, kqueue, port, poll, or select,
    *  depending on the platform).
@@ -156,16 +155,16 @@ void Rev_Loop_process_event(VALUE watcher, int revents)
    *  an O(1) event loop whose heart is in the kernel itself. w00t!
    *
    *  So, stash the event in the loop's data struct.  When we return
-   *  the ev_loop() call being made in the Rev_Loop_run_once_blocking()
+   *  the ev_loop() call being made in the Coolio_Loop_run_once_blocking()
    *  function below will also return, at which point the GVL is
    *  reacquired and we can call out to Ruby */
 
   /* Grow the event buffer if it's too small */
   if(loop_data->events_received >= loop_data->eventbuf_size) {
     loop_data->eventbuf_size *= 2;
-    loop_data->eventbuf = (struct Rev_Event *)xrealloc(
+    loop_data->eventbuf = (struct Coolio_Event *)xrealloc(
         loop_data->eventbuf, 
-        sizeof(struct Rev_Event) * loop_data->eventbuf_size
+        sizeof(struct Coolio_Event) * loop_data->eventbuf_size
         );
   }
 
@@ -177,29 +176,29 @@ void Rev_Loop_process_event(VALUE watcher, int revents)
 
 /**
  *  call-seq:
- *    Rev::Loop.run_once -> nil
+ *    Coolio::Loop.run_once -> nil
  * 
- * Run the Rev::Loop once, blocking until events are received.
+ * Run the Coolio::Loop once, blocking until events are received.
  */
-static VALUE Rev_Loop_run_once(VALUE self)
+static VALUE Coolio_Loop_run_once(VALUE self)
 {
   VALUE nevents;
 
-  if (Rev_Loop_may_block_safely()) {
-    struct Rev_Loop *loop_data;
+  if (Coolio_Loop_may_block_safely()) {
+    struct Coolio_Loop *loop_data;
 
-    Data_Get_Struct(self, struct Rev_Loop, loop_data);
+    Data_Get_Struct(self, struct Coolio_Loop, loop_data);
 
     assert(loop_data->ev_loop && !loop_data->events_received);
 
-    Rev_Loop_ev_loop_oneshot(loop_data);
-    Rev_Loop_dispatch_events(loop_data);
+    Coolio_Loop_ev_loop_oneshot(loop_data);
+    Coolio_Loop_dispatch_events(loop_data);
 
     nevents = INT2NUM(loop_data->events_received);
     loop_data->events_received = 0;
 
   } else {
-    nevents = Rev_Loop_run_nonblock(self);
+    nevents = Coolio_Loop_run_nonblock(self);
     rb_thread_schedule();
   }
 
@@ -209,20 +208,20 @@ static VALUE Rev_Loop_run_once(VALUE self)
 /* Ruby 1.9 supports blocking system calls through rb_thread_blocking_region() */
 #ifdef HAVE_RB_THREAD_BLOCKING_REGION
 #define HAVE_EV_LOOP_ONESHOT
-static VALUE Rev_Loop_ev_loop_oneshot_blocking(void *ptr) 
+static VALUE Coolio_Loop_ev_loop_oneshot_blocking(void *ptr) 
 {
   /* The libev loop has now escaped through the Global VM Lock unscathed! */
-  struct Rev_Loop *loop_data = (struct Rev_Loop *)ptr;
+  struct Coolio_Loop *loop_data = (struct Coolio_Loop *)ptr;
 
   RUN_LOOP(loop_data, EVLOOP_ONESHOT);
   
   return Qnil;
 }
 
-static void Rev_Loop_ev_loop_oneshot(struct Rev_Loop *loop_data)
+static void Coolio_Loop_ev_loop_oneshot(struct Coolio_Loop *loop_data)
 {
   /* Use Ruby 1.9's rb_thread_blocking_region call to make a blocking system call */
-  rb_thread_blocking_region(Rev_Loop_ev_loop_oneshot_blocking, loop_data, RUBY_UBF_IO, 0);
+  rb_thread_blocking_region(Coolio_Loop_ev_loop_oneshot_blocking, loop_data, RUBY_UBF_IO, 0);
 }
 #endif
 
@@ -238,7 +237,7 @@ static void timer_callback(struct ev_loop *ev_loop, struct ev_timer *timer, int 
 }
 
 /* Run the event loop, calling rb_thread_schedule every 10ms */
-static void Rev_Loop_ev_loop_oneshot(struct Rev_Loop *loop_data)
+static void Coolio_Loop_ev_loop_oneshot(struct Coolio_Loop *loop_data)
 {
   struct ev_timer timer;
   struct timeval tv;
@@ -262,23 +261,23 @@ static void Rev_Loop_ev_loop_oneshot(struct Rev_Loop *loop_data)
 
 /**
  *  call-seq:
- *    Rev::Loop.run_nonblock -> nil
+ *    Coolio::Loop.run_nonblock -> nil
  * 
- * Run the Rev::Loop once, but return immediately if there are no pending events.
+ * Run the Coolio::Loop once, but return immediately if there are no pending events.
  */
-static VALUE Rev_Loop_run_nonblock(VALUE self)
+static VALUE Coolio_Loop_run_nonblock(VALUE self)
 {
-  struct Rev_Loop *loop_data;
+  struct Coolio_Loop *loop_data;
   VALUE nevents;
   
-  Data_Get_Struct(self, struct Rev_Loop, loop_data);
+  Data_Get_Struct(self, struct Coolio_Loop, loop_data);
 
   assert(loop_data->ev_loop && !loop_data->events_received);
 
   TRAP_BEG;
   RUN_LOOP(loop_data, EVLOOP_NONBLOCK);  
   TRAP_END;
-  Rev_Loop_dispatch_events(loop_data);
+  Coolio_Loop_dispatch_events(loop_data);
   
   nevents = INT2NUM(loop_data->events_received);
   loop_data->events_received = 0;
@@ -286,10 +285,10 @@ static VALUE Rev_Loop_run_nonblock(VALUE self)
   return nevents;
 }
 
-static void Rev_Loop_dispatch_events(struct Rev_Loop *loop_data)
+static void Coolio_Loop_dispatch_events(struct Coolio_Loop *loop_data)
 {
   int i;
-  struct Rev_Watcher *watcher_data;
+  struct Coolio_Watcher *watcher_data;
 
   for(i = 0; i < loop_data->events_received; i++) {
     /* A watcher with pending events may have been detached from the loop
@@ -298,7 +297,7 @@ static void Rev_Loop_dispatch_events(struct Rev_Loop *loop_data)
     if(loop_data->eventbuf[i].watcher == Qnil)
       continue;
 
-    Data_Get_Struct(loop_data->eventbuf[i].watcher, struct Rev_Watcher, watcher_data);
+    Data_Get_Struct(loop_data->eventbuf[i].watcher, struct Coolio_Watcher, watcher_data);
     watcher_data->dispatch_callback(loop_data->eventbuf[i].watcher, loop_data->eventbuf[i].revents);
   }
 }
