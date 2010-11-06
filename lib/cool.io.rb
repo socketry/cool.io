@@ -5,8 +5,8 @@
 #++
 
 require 'iobuffer'
-require "cool.io_ext"
 
+require "cool.io_ext"
 require "cool.io/loop"
 require "cool.io/meta"
 require "cool.io/io"
@@ -23,6 +23,3 @@ module Coolio
   VERSION = File.read File.expand_path('../../VERSION', __FILE__)
   def self.version; VERSION; end
 end
-
-# Legacy constant
-Rev = Coolio
