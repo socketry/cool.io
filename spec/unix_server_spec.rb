@@ -4,7 +4,7 @@ require 'tempfile'
 describe Coolio::UNIXServer do
 
   before :each do
-    @tmp = Tempfile.new('rev_unix_server_spec')
+    @tmp = Tempfile.new('coolio_unix_server_spec')
     File.unlink(@tmp.path).should == 1
     File.exist?(@tmp.path).should == false
   end

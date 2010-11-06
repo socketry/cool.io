@@ -6,7 +6,7 @@ describe Coolio::AsyncWatcher do
 
   it "does not signal on spurious wakeups" do
     aw = Coolio::AsyncWatcher.new
-    tmp = Tempfile.new('rev_async_watcher_test')
+    tmp = Tempfile.new('coolio_async_watcher_test')
     nr_fork = 2 # must be at least two for spurious wakeups
 
     # We have aetter chance of failing if this overflows the pipe buffer

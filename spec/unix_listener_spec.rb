@@ -4,7 +4,7 @@ require 'tempfile'
 describe Coolio::UNIXListener do
 
   before :each do
-    @tmp = Tempfile.new('rev_unix_listener_spec')
+    @tmp = Tempfile.new('coolio_unix_listener_spec')
     File.unlink(@tmp.path).should == 1
     File.exist?(@tmp.path).should == false
   end
