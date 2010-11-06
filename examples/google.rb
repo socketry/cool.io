@@ -1,8 +1,9 @@
-#require 'rubygems'
-#require 'rev'
-require File.dirname(__FILE__) + '/../lib/rev'
+$LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
 
-l = Rev::Loop.default
-c = Rev::HttpClient.connect("www.google.com", 80).attach(l)
+require 'rubygems'
+require 'cool.io'
+
+l = Coolio::Loop.default
+c = Coolio::HttpClient.connect("www.google.com", 80).attach(l)
 c.request('GET', '/search', :query => { :q => 'feces'})
 l.run

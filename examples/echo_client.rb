@@ -1,9 +1,12 @@
-require File.dirname(__FILE__) + '/../lib/rev'
+$LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
+
+require 'rubygems'
+require 'cool.io'
 
 ADDR = '127.0.0.1'
 PORT = 4321
 
-class ClientConnection < Rev::TCPSocket
+class ClientConnection < Coolio::TCPSocket
   def on_connect
     puts "#{remote_addr}:#{remote_port} connected"
     write "bounce this back to me"
@@ -28,7 +31,7 @@ class ClientConnection < Rev::TCPSocket
 
 end
 
-event_loop = Rev::Loop.default
+event_loop = Coolio::Loop.default
 client = ClientConnection.connect(ADDR, PORT)
 client.attach(event_loop)
 puts "Echo client connecting to #{ADDR}:#{PORT}..."

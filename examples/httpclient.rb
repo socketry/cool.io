@@ -1,6 +1,9 @@
-require File.dirname(__FILE__) + '/../lib/rev'
+$LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
 
-class MyHttpClient < Rev::HttpClient
+require 'rubygems'
+require 'cool.io'
+
+class MyHttpClient < Coolio::HttpClient
   def on_connect
     super
     STDERR.puts "Connected to #{remote_host}:#{remote_port}"
@@ -29,7 +32,7 @@ class MyHttpClient < Rev::HttpClient
   end
 end
 
-l = Rev::Loop.default
+l = Coolio::Loop.default
 c = MyHttpClient.connect("www.google.com", 80).attach(l)
 c.request('GET', '/search', :query => { :q => 'foobar' })
 l.run
