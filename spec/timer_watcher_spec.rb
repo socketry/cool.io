@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/../lib/rev'
+require File.expand_path('../spec_helper', __FILE__)
 
 describe Rev::TimerWatcher do
 
