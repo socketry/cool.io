@@ -274,9 +274,7 @@ static VALUE Coolio_Loop_run_nonblock(VALUE self)
 
   assert(loop_data->ev_loop && !loop_data->events_received);
 
-  TRAP_BEG;
   RUN_LOOP(loop_data, EVLOOP_NONBLOCK);  
-  TRAP_END;
   Coolio_Loop_dispatch_events(loop_data);
   
   nevents = INT2NUM(loop_data->events_received);
