@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Tony Arcieri"]
-  s.date = %q{2010-11-06}
+  s.date = %q{2010-11-07}
   s.description = %q{A Ruby wrapper around the libev high performance event library}
   s.email = %q{tony@medioh.com}
   s.extensions = ["ext/cool.io/extconf.rb", "ext/http11_client/extconf.rb"]
@@ -24,6 +24,7 @@ Gem::Specification.new do |s|
      "README.markdown",
      "Rakefile",
      "VERSION",
+     "cool.io.gemspec",
      "examples/echo_client.rb",
      "examples/echo_server.rb",
      "examples/google.rb",
@@ -42,6 +43,7 @@ Gem::Specification.new do |s|
      "ext/cool.io/watcher.c",
      "ext/cool.io/watcher.h",
      "ext/http11_client/.gitignore",
+     "ext/http11_client/LICENSE",
      "ext/http11_client/ext_help.h",
      "ext/http11_client/extconf.rb",
      "ext/http11_client/http11_client.c",
@@ -63,7 +65,6 @@ Gem::Specification.new do |s|
      "ext/libev/ev_win32.c",
      "ext/libev/ev_wrap.h",
      "ext/libev/test_libev_win32.c",
-     "ext/libev/update_ev_wrap",
      "lib/.gitignore",
      "lib/cool.io.rb",
      "lib/cool.io/async_watcher.rb",
@@ -98,15 +99,15 @@ Gem::Specification.new do |s|
   s.summary = %q{The cool event framework for Ruby}
   s.test_files = [
     "spec/async_watcher_spec.rb",
-     "spec/spec_helper.rb",
-     "spec/timer_watcher_spec.rb",
-     "spec/unix_listener_spec.rb",
-     "spec/unix_server_spec.rb",
      "spec/possible_tests/schedules_other_threads.rb",
      "spec/possible_tests/test_on_resolve_failed.rb",
      "spec/possible_tests/test_resolves.rb",
      "spec/possible_tests/test_write_during_resolve.rb",
      "spec/possible_tests/works_straight.rb",
+     "spec/spec_helper.rb",
+     "spec/timer_watcher_spec.rb",
+     "spec/unix_listener_spec.rb",
+     "spec/unix_server_spec.rb",
      "examples/echo_client.rb",
      "examples/echo_server.rb",
      "examples/google.rb",
