@@ -274,9 +274,15 @@ static VALUE Coolio_Loop_run_nonblock(VALUE self)
 
   assert(loop_data->ev_loop && !loop_data->events_received);
 
+#ifdef HAVE_RB_THREAD_BLOCKING_REGION
+  /* FIXME: hurr durr need some way to pass EVLOOP_NONBLOCK to this function */
+  Coolio_Loop_ev_loop_oneshot(loop_data);
+#else
   TRAP_BEG;
   RUN_LOOP(loop_data, EVLOOP_NONBLOCK);  
   TRAP_END;
+#endif
+
   Coolio_Loop_dispatch_events(loop_data);
   
   nevents = INT2NUM(loop_data->events_received);
