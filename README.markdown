@@ -15,13 +15,11 @@ You can include Cool.io in your programs with:
 	require 'rubygems'
 	require 'cool.io'
 
-Questions?  Sign up for the mailing list at:
-
-http://rubyforge.org/mailman/listinfo/cool.io-talk
+Questions?  [Sign up for the mailing list at](http://rubyforge.org/mailman/listinfo/rev-talk)
 
 The latest development code is available via github at:
 
-git://github.com/tarcieri/cool.io.git
+[git://github.com/tarcieri/cool.io.git](git://github.com/tarcieri/cool.io.git)
 
 Anatomy
 -------
