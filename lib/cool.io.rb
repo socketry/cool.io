@@ -22,6 +22,7 @@ require "cool.io/http_client"
 module Coolio
   VERSION = File.read(File.expand_path('../../VERSION', __FILE__)).strip
   def self.version; VERSION; end
+  def self.inspect; "Cool.io"; end
 end
 
 module Cool

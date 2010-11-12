@@ -6,7 +6,7 @@ require 'cool.io'
 ADDR = '127.0.0.1'
 PORT = 4321
 
-class ClientConnection < Coolio::TCPSocket
+class ClientConnection < Cool.io::TCPSocket
   def on_connect
     puts "#{remote_addr}:#{remote_port} connected"
     write "bounce this back to me"
@@ -31,7 +31,7 @@ class ClientConnection < Coolio::TCPSocket
 
 end
 
-event_loop = Coolio::Loop.default
+event_loop = Cool.io::Loop.default
 client = ClientConnection.connect(ADDR, PORT)
 client.attach(event_loop)
 puts "Echo client connecting to #{ADDR}:#{PORT}..."

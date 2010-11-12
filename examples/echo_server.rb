@@ -6,7 +6,7 @@ require 'cool.io'
 ADDR = '127.0.0.1'
 PORT = 4321
 
-class EchoServerConnection < Coolio::TCPSocket
+class EchoServerConnection < Cool.io::TCPSocket
   def on_connect
     puts "#{remote_addr}:#{remote_port} connected"
   end
@@ -20,8 +20,8 @@ class EchoServerConnection < Coolio::TCPSocket
   end
 end
 
-event_loop = Coolio::Loop.default
-Coolio::TCPServer.new(ADDR, PORT, EchoServerConnection).attach(event_loop)
+event_loop = Cool.io::Loop.default
+Cool.io::TCPServer.new(ADDR, PORT, EchoServerConnection).attach(event_loop)
 
 puts "Echo server listening on #{ADDR}:#{PORT}"
 event_loop.run
