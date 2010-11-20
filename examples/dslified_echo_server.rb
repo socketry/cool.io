@@ -20,8 +20,6 @@ cool.io.connection :echo_server_connection do
   end
 end
 
-server = cool.io.server ADDR, PORT, :echo_server_connection
-cool.io.attach server
-
 puts "Echo server listening on #{ADDR}:#{PORT}"
+cool.io.server ADDR, PORT, :echo_server_connection
 cool.io.run

@@ -118,10 +118,8 @@ Cool.io provides a Sinatra-like DSL for authoring event-driven programs:
       end
     end
 
-    server = cool.io.server ADDR, PORT, :echo_server_connection
-    cool.io.attach server
-
     puts "Echo server listening on #{ADDR}:#{PORT}"
+    cool.io.server ADDR, PORT, :echo_server_connection
     cool.io.run
     
 This creates a new connection class called :echo_server_connection and defines
@@ -131,10 +129,8 @@ We then create a new server on the given address and port. When this server
 receives new connections, it will create new instances of the given connection
 class for each connection.
 
-Finally, we attach our newly created server to the Cool.io event loop, so the
-loop will monitor it for incoming events, and kick everything off with 
-cool.io.run. Calling cool.io.run will block, listening for events on the server
-we attached to the loop.
+Finally, we kick everything off with cool.io.run. Calling cool.io.run will 
+block, listening for events on our server.
     
 Using Cool.io subclasses directly
 ---------------------------------

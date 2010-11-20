@@ -15,24 +15,6 @@ module Coolio
       Cool.io::Loop.default.run
     end
     
-    # Attach something to the default Cool.io event loop
-    def attach(watcher)
-      unless watcher.respond_to? :attach
-        raise ArgumentError, "#{watcher.inspect} cannot be attached to the event loop"
-      end
-      
-      watcher.attach Cool.io::Loop.default
-    end
-    
-    # Detach something from the default Cool.io event loop
-    def detach(watcher)
-      unless watcher.respond_to? :detach
-        raise ArgumentError, "#{watcher.inspect} cannot be detached from the event loop"
-      end
-      
-      watcher.detach Cool.io::Loop.default
-    end
-    
     # Create a new Cool.io::TCPServer
     def server(host, port, connection_name, *initializer_args)
       class_name = connection_name.to_s.split('_').map { |s| s.capitalize }.join
@@ -43,7 +25,8 @@ module Coolio
         raise NameError, "No connection type registered for #{connection_name.inspect}"
       end
       
-      Cool.io::TCPServer.new host, port, klass, *initializer_args
+      server = Cool.io::TCPServer.new host, port, klass, *initializer_args
+      server.attach Cool.io::Loop.default
     end
     
     # Create a new Cool.io::TCPSocket class
