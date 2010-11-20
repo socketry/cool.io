@@ -36,13 +36,19 @@ Cool.io builds on two core classes which bind to the libev API:
 Watchers
 --------
 
-There are presently two types of watchers:
+There are presently four types of watchers:
 
 * Cool.io::IOWatcher - This class waits for an IO object to become readable,
   writable, or both.
 
 * Cool.io::TimerWatcher - This class waits for a specified duration then fires
   an event.  You can also configure it to fire an event at specified intervals.
+
+* Cool.io::StatWatcher - Monitors files or directories for changes
+
+* Cool.io::AsyncWatcher - Can be used to wake up a Cool.io::Loop running in a
+  different thread. This allows each thread to run a separate Cool.io::Loop and
+  for the different event loops to be able to signal each other.
 
 Using Watchers
 --------------
