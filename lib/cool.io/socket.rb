@@ -39,10 +39,8 @@ module Coolio
     event_callback :on_connect_failed
     
     # Called if a hostname failed to resolve when connecting
-    # Defaults to  calling on_connect_failed
-    def on_resolve_failed
-       on_connect_failed
-    end
+    # Defaults to calling on_connect_failed
+    alias_method :on_resolve_failed, :on_connect_failed
     
     #########
     protected

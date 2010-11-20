@@ -25,7 +25,7 @@ module Coolio
     end
     
     # Create a new Cool.io::TCPServer
-    def server(host, port, connection_name)
+    def server(host, port, connection_name, *initializer_args)
       class_name = connection_name.to_s.split('_').map { |s| s.capitalize }.join
       
       begin
@@ -34,7 +34,7 @@ module Coolio
         raise NameError, "No connection type registered for #{connection_name.inspect}"
       end
       
-      Cool.io::TCPServer.new host, port, klass
+      Cool.io::TCPServer.new host, port, klass, initializer_args
     end
     
     # Create a new Cool.io::TCPSocket class
@@ -55,20 +55,39 @@ module Coolio
         @klass = klass
       end
       
+      # Declare an initialize function
       def initializer(&action)
         @klass.send :define_method, :initialize, &action
       end
       
+      # Declare the on_connect callback
       def on_connect(&action)
         @klass.send :define_method, :on_connect, &action
       end
       
+      # Declare a callback fired if we failed to connect
+      def on_connect_failed(&action)
+        @klass.send :define_method, :on_connect_failed, &action
+      end
+      
+      # Declare a callback fired if DNS resolution failed
+      def on_resolve_failed(&action)
+        @klass.send :define_method, :on_resolve_failed, &action
+      end
+      
+      # Declare the on_close callback
       def on_close(&action)
         @klass.send :define_method, :on_close, &action
       end
       
+      # Declare the on_read callback
       def on_read(&action)
         @klass.send :define_method, :on_read, &action
+      end
+      
+      # Declare the on_write_complete callback
+      def on_write_complete(&action)
+        @klass.send :define_method, :on_write_complete, &action
       end
     end
   end
