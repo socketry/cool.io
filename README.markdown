@@ -96,7 +96,51 @@ core socket classes are also provided.  Among these are:
 Example Program
 ---------------
 
-Below is an example of how to write an echo server:
+Cool.io provides a Sinatra-like DSL for authoring event-driven programs:
+
+    require 'rubygems'
+    require 'cool.io'
+
+    ADDR = '127.0.0.1'
+    PORT = 4321
+
+    cool.io.connection :echo_server_connection do
+      on_connect do
+        puts "#{remote_addr}:#{remote_port} connected"
+      end
+
+      on_close do
+        puts "#{remote_addr}:#{remote_port} disconnected"
+      end
+
+      on_read do |data|
+        write data
+      end
+    end
+
+    server = cool.io.server ADDR, PORT, :echo_server_connection
+    cool.io.attach server
+
+    puts "Echo server listening on #{ADDR}:#{PORT}"
+    cool.io.run
+    
+This creates a new connection class called :echo_server_connection and defines
+a set of callbacks for when various events occur.
+
+We then create a new server on the given address and port. When this server
+receives new connections, it will create new instances of the given connection
+class for each connection.
+
+Finally, we attach our newly created server to the Cool.io event loop, so the
+loop will monitor it for incoming events, and kick everything off with 
+cool.io.run. Calling cool.io.run will block, listening for events on the server
+we attached to the loop.
+    
+Using Cool.io subclasses directly
+---------------------------------
+
+Below is an example of how to write an echo server using a subclass instead of
+the DSL:
 
 	require 'cool.io'
 	HOST = 'localhost'
