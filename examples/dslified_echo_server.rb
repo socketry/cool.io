@@ -6,7 +6,7 @@ require 'cool.io'
 ADDR = '127.0.0.1'
 PORT = 4321
 
-cool.io.connection :echo_server do
+cool.io.connection :echo_server_connection do
   on_connect do
     puts "#{remote_addr}:#{remote_port} connected"
   end
@@ -20,7 +20,7 @@ cool.io.connection :echo_server do
   end
 end
 
-server = cool.io.server ADDR, PORT, :echo_server
+server = cool.io.server ADDR, PORT, :echo_server_connection
 cool.io.attach server
 
 puts "Echo server listening on #{ADDR}:#{PORT}"

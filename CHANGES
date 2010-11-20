@@ -1,3 +1,7 @@
+1.0.0:
+
+* Fancy new DSL
+
 0.9.0:
 
 * Rename the project to cool.io
@@ -11,6 +15,8 @@
 * Update to RSpec 2.0
 
 * Update to libev 4.01
+
+* Initial Rubinius support
 
 0.3.2:
 
