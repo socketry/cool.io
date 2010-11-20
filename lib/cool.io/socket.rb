@@ -121,7 +121,7 @@ module Coolio
     
     # Called by precreate during asyncronous DNS resolution
     def preinitialize(addr, port, *args)
-      @_write_buffer = ::IO::Buffer.new # allow for writing BEFORE the DNS has resolved
+      @_write_buffer = ::IO::Buffer.new # allow for writing BEFORE DNS has resolved
       @remote_host, @remote_addr, @remote_port = addr, addr, port
       @_resolver = TCPConnectResolver.new(self, addr, port, *args)
     end
@@ -135,7 +135,7 @@ module Coolio
       
       super
       
-      @address_family, @remote_port, @remote_host, @remote_addr = socket.peeraddr  
+      @address_family, @remote_port, @remote_host, @remote_addr = socket.peeraddr
     end
     
     def peeraddr

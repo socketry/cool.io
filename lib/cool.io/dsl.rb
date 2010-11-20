@@ -5,6 +5,9 @@
 #++
 
 module Coolio
+  # A module we stash all the connections defined by the DSL under
+  module Connections; end
+  
   # A DSL for defining Cool.io connection types and servers
   module DSL
     # Define all methods on the metaclass
@@ -15,18 +18,22 @@ module Coolio
       Cool.io::Loop.default.run
     end
     
+    # Connect to the given host and port using the given connection class
+    def connect(host, port, connection_name, *initializer_args)
+      klass = self[connection_name]
+      
+      client = klass.connect host, port, *initializer_args
+      client.attach Cool.io::Loop.default
+      client
+    end
+    
     # Create a new Cool.io::TCPServer
     def server(host, port, connection_name, *initializer_args)
-      class_name = connection_name.to_s.split('_').map { |s| s.capitalize }.join
-      
-      begin
-        klass = Coolio.const_get class_name
-      rescue NameError
-        raise NameError, "No connection type registered for #{connection_name.inspect}"
-      end
+      klass = self[connection_name]
       
       server = Cool.io::TCPServer.new host, port, klass, *initializer_args
       server.attach Cool.io::Loop.default
+      server
     end
     
     # Create a new Cool.io::TCPSocket class
@@ -38,7 +45,18 @@ module Coolio
       connection_builder = ConnectionBuilder.new connection
       connection_builder.instance_eval &block
       
-      Coolio.const_set class_name, connection
+      Coolio::Connections.const_set class_name, connection
+    end
+    
+    # Look up a connection class by its name
+    def [](connection_name)
+      class_name = connection_name.to_s.split('_').map { |s| s.capitalize }.join
+    
+      begin
+        Coolio::Connections.const_get class_name
+      rescue NameError
+        raise NameError, "No connection type registered for #{connection_name.inspect}"
+      end
     end
     
     # Builder for Cool.io::TCPSocket classes
@@ -85,15 +103,14 @@ module Coolio
   end
 end
 
-module Cool
-  module IOThunk
-    def self.io; Coolio::DSL; end
-  end
-end
-
+# The Cool module containing all our coolness
 module Cool
   module Coolness
     def cool; Cool::IOThunk; end
+  end
+  
+  module IOThunk
+    def self.io; Coolio::DSL; end
   end
 end
 
