@@ -151,9 +151,9 @@ module Coolio
         @host,  addr, @port = host, addr, port
         @address_family = nil
 
-        @socket = super(family, ::Socket::SOCK_STREAM, 0)
+        super(family, ::Socket::SOCK_STREAM, 0)
         begin
-          @socket.connect_nonblock(::Socket.sockaddr_in(port, addr))
+          connect_nonblock(::Socket.sockaddr_in(port, addr))
         rescue Errno::EINPROGRESS
         end
       end
