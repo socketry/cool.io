@@ -43,7 +43,7 @@ module Coolio
         raise NameError, "No connection type registered for #{connection_name.inspect}"
       end
       
-      Cool.io::TCPServer.new host, port, klass, initializer_args
+      Cool.io::TCPServer.new host, port, klass, *initializer_args
     end
     
     # Create a new Cool.io::TCPSocket class
