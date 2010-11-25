@@ -19,8 +19,17 @@ module Coolio
     end
     
     # Connect to the given host and port using the given connection class
-    def connect(host, port, connection_name, *initializer_args)
-      klass = self[connection_name]
+    def connect(host, port, connection_name = nil, *initializer_args, &block)
+      if block_given?
+        initializer_args.unshift connection_name if connection_name
+        
+        klass = Class.new Cool.io::TCPSocket
+        connection_builder = ConnectionBuilder.new klass
+        connection_builder.instance_eval &block
+      else
+        raise ArgumentError, "no connection name or block given" unless connection_name
+        klass = self[connection_name]
+      end
       
       client = klass.connect host, port, *initializer_args
       client.attach Cool.io::Loop.default

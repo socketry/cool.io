@@ -6,7 +6,7 @@ require 'cool.io'
 ADDR = '127.0.0.1'
 PORT = 4321
 
-cool.io.connection :echo_client_connection do
+cool.io.connect ADDR, PORT do
   on_connect do
     puts "Connected to #{remote_host}:#{remote_port}"
     write "bounce this back to me"
@@ -31,5 +31,4 @@ cool.io.connection :echo_client_connection do
 end
 
 puts "Echo client connecting to #{ADDR}:#{PORT}..."
-cool.io.connect ADDR, PORT, :echo_client_connection
 cool.io.run 
