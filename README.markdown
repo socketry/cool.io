@@ -15,7 +15,7 @@ You can include Cool.io in your programs with:
 	require 'rubygems'
 	require 'cool.io'
 
-Questions?  [Sign up for the mailing list](http://rubyforge.org/mailman/listinfo/rev-talk)
+Questions? Sign up for the mailing list by emailing: [cool.io@librelist.com](mailto:cool.io@librelist.com)
 
 The latest development code is available via github at:
 
