@@ -1,6 +1,8 @@
 Cool.io
 =======
 
+[http://coolio.github.com](http://coolio.github.com)
+
 Cool.io is an event library for Ruby, built on the libev event library which 
 provides a cross-platform interface to high performance system calls .  This 
 includes the epoll system call for Linux, the kqueue system call for BSDs and 
