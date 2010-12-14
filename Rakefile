@@ -12,7 +12,7 @@ begin
     gem.homepage = "http://github.com/tarcieri/cool.io"
     gem.authors = ["Tony Arcieri"]
     gem.add_dependency "iobuffer", ">= 0.1.3"
-    gem.add_development_dependency "rspec", "~> 2.1.0"
+    gem.add_development_dependency "rspec", ">= 2.1.0"
     gem.extensions = FileList["ext/**/extconf.rb"].to_a
     
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
