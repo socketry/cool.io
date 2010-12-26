@@ -13,6 +13,7 @@ begin
     gem.authors = ["Tony Arcieri"]
     gem.add_dependency "iobuffer", ">= 0.1.3"
     gem.add_development_dependency "rspec", ">= 2.1.0"
+    gem.add_development_dependency "rake-compiler", "~> 0.7.5"
     gem.extensions = FileList["ext/**/extconf.rb"].to_a
     
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
@@ -47,41 +48,13 @@ Rake::RDocTask.new do |rdoc|
   rdoc.rdoc_files.include('lib/**/*.rb')
 end
 
-def make(makedir)
-  Dir.chdir(makedir) { sh 'make' }
+require 'rake/extensiontask'
+Rake::ExtensionTask.new('http11_client') do |ext|
 end
 
-def extconf(dir)
-  Dir.chdir(dir) { ruby "extconf.rb" }
+Rake::ExtensionTask.new('cool.io_ext') do |ext|
+  ext.ext_dir = 'ext/cool.io'
 end
-
-def setup_extension(dir, extension)
-  ext = "ext/#{dir}"
-  ext_so = "#{ext}/#{extension}.#{Config::CONFIG['DLEXT']}"
-  ext_files = FileList[
-    "#{ext}/*.c",
-    "#{ext}/*.h",
-    "#{ext}/extconf.rb",
-    "#{ext}/Makefile",
-  ] 
-
-  desc "Builds just the #{extension} extension"
-  task extension.to_sym => ["#{ext}/Makefile", ext_so ]
-
-  file "#{ext}/Makefile" => ["#{ext}/extconf.rb"] do
-    extconf "#{ext}"
-  end
-
-  file ext_so => ext_files do
-    make "#{ext}"
-    cp ext_so, "lib"
-  end
-end
-
-setup_extension("cool.io", "cool.io_ext")
-setup_extension("http11_client", "http11_client")
-
-task :compile => %w(cool.io_ext http11_client)
 
 # Rebuild parser Ragel
 task :http11_parser do
@@ -92,7 +65,3 @@ task :http11_parser do
     raise "Failed to build C source" unless File.exist? target
   end
 end
-
-CLEAN.include ["build/*", "**/*.o", "**/*.so", "**/*.a", "**/*.log", "pkg"]
-CLEAN.include ["ext/**/Makefile", "lib/cool.io_ext.*", "lib/http11_client.*"]
-CLEAN.include ["ext/**/*.#{Config::CONFIG["DLEXT"]}"]
