@@ -9,7 +9,7 @@
 # as best I could with extremely limited knowledge of the DNS format.  There's
 # obviously a ton of stuff it doesn't support (like IPv6 and TCP).
 #
-# If you do know what you're doing with DNS, feel free to improve this! 
+# If you do know what you're doing with DNS, feel free to improve this!
 # A good starting point my be this EventMachine Net::DNS-based asynchronous
 # resolver:
 #
@@ -65,10 +65,10 @@ module Coolio
 
       @nameservers = nameservers
       @question = request_question hostname
-      
+
       @socket = UDPSocket.new
       @timer = Timeout.new(self)
-      
+
       super(@socket)
     end
 
@@ -110,7 +110,7 @@ module Coolio
       begin
         @socket.send request_message, 0
       rescue Errno::EHOSTUNREACH # TODO figure out why it has to be wrapper here, when the other wrapper should be wrapping this one!
-      end   
+      end
     end
 
     # Called by the subclass when the DNS response is available
@@ -120,7 +120,7 @@ module Coolio
         datagram = @socket.recvfrom_nonblock(DATAGRAM_SIZE).first
       rescue Errno::ECONNREFUSED
       end
-      
+
       address = response_address datagram rescue nil
       address ? on_success(address) : on_failure
       detach
@@ -128,7 +128,7 @@ module Coolio
 
     def request_question(hostname)
       raise ArgumentError, "hostname cannot be nil" if hostname.nil?
-      
+
       # Query name
       message = hostname.split('.').map { |s| [s.size].pack('C') << s }.join + "\0"
 
@@ -149,7 +149,7 @@ module Coolio
       qdcount = 1
 
       # No answer, authority, or additional records
-      ancount = nscount = arcount = 0 
+      ancount = nscount = arcount = 0
 
       message << [qdcount, ancount, nscount, arcount].pack('nnnn')
       message << @question
@@ -210,7 +210,7 @@ module Coolio
             return @resolver.__send__(:send_request)
           rescue Errno::EHOSTUNREACH # if the DNS is toast try again after the timeout occurs again
             return nil
-          end 
+          end
         end
         @resolver.__send__(:on_timeout)
         @resolver.detach

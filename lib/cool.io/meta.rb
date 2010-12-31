@@ -37,9 +37,9 @@ module Coolio
               @#{method}_callback = block
               return
             end
-            
+
             if @#{method}_callback
-              instance_exec(*args, &@#{method}_callback) 
+              instance_exec(*args, &@#{method}_callback)
             end
           end
         EOD

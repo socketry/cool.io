@@ -8,7 +8,7 @@ require 'socket'
 require 'resolv'
 
 module Coolio
-  class Socket < IO    
+  class Socket < IO
     def self.connect(socket, *args)
 
       new(socket, *args).instance_eval do
@@ -16,42 +16,42 @@ module Coolio
         self
       end
     end
-    
+
     watcher_delegate :@_connector
 
     def attach(evloop)
       raise RuntimeError, "connection failed" if @_failed
-      
+
       if @_connector
         @_connector.attach(evloop)
         return self
       end
-      
+
       super
     end
 
     # Called upon completion of a socket connection
     def on_connect; end
     event_callback :on_connect
-    
+
     # Called if a socket connection failed to complete
     def on_connect_failed; end
     event_callback :on_connect_failed
-    
+
     # Called if a hostname failed to resolve when connecting
     # Defaults to calling on_connect_failed
     alias_method :on_resolve_failed, :on_connect_failed
-    
+
     #########
     protected
     #########
-    
+
     class Connector < IOWatcher
       def initialize(coolio_socket, ruby_socket)
         @coolio_socket, @ruby_socket = coolio_socket, ruby_socket
         super(ruby_socket, :w)
       end
-      
+
       def on_writable
         evl = evloop
         detach
@@ -67,7 +67,7 @@ module Coolio
           @coolio_socket.instance_eval { @_failed = true }
           @coolio_socket.__send__(:on_connect_failed)
         end
-      end      
+      end
 
       #######
       private
@@ -80,11 +80,11 @@ module Coolio
       end
     end
   end
-  
+
   class TCPSocket < Socket
     attr_reader :remote_host, :remote_addr, :remote_port, :address_family
     watcher_delegate :@_resolver
-    
+
     # Similar to .new, but used in cases where the resulting object is in a
     # "half-open" state.  This is primarily used for when asynchronous
     # DNS resolution is taking place.  We don't actually have a handle to
@@ -95,7 +95,7 @@ module Coolio
       obj.__send__(:preinitialize, *args, &block)
       obj
     end
-    
+
     # Perform a non-blocking connect to the given host and port
     # see examples/echo_client.rb
     # addr is a string, can be an IP address or a hostname.
@@ -107,7 +107,7 @@ module Coolio
       elsif(Resolv::IPv6.create(addr) rescue nil)
         family = ::Socket::AF_INET6
       end
- 
+
       if family
         return super(TCPConnectSocket.new(family, addr, port), *args) # this creates a 'real' write buffer so we're ok there with regards to already having a write buffer from the get go
       end
@@ -118,30 +118,30 @@ module Coolio
 
       precreate(addr, port, *args)
     end
-    
+
     # Called by precreate during asyncronous DNS resolution
     def preinitialize(addr, port, *args)
       @_write_buffer = ::IO::Buffer.new # allow for writing BEFORE DNS has resolved
       @remote_host, @remote_addr, @remote_port = addr, addr, port
       @_resolver = TCPConnectResolver.new(self, addr, port, *args)
     end
-    
+
     private :preinitialize
-    
+
     def initialize(socket)
       unless socket.is_a?(::TCPSocket) or socket.is_a?(TCPConnectSocket)
         raise TypeError, "socket must be a TCPSocket"
       end
-      
+
       super
-      
+
       @address_family, @remote_port, @remote_host, @remote_addr = socket.peeraddr
     end
-    
+
     def peeraddr
       [@address_family, @remote_port, @remote_host, @remote_addr]
     end
-    
+
     #########
     protected
     #########
@@ -195,26 +195,26 @@ module Coolio
 
       def on_failure
         @sock.__send__(:on_resolve_failed)
-        @sock.instance_eval do 
-          @_resolver = nil 
+        @sock.instance_eval do
+          @_resolver = nil
           @_failed = true
         end
         return
       end
     end
   end
-  
+
   class UNIXSocket < Socket
     attr_reader :path, :address_family
-    
+
     # Connect to the given UNIX domain socket
     def self.connect(path, *args)
       new(::UNIXSocket.new(path), *args)
     end
-    
+
     def initialize(socket)
       raise ArgumentError, "socket must be a UNIXSocket" unless socket.is_a? ::UNIXSocket
-      
+
       super
       @address_family, @path = socket.peeraddr
     end

@@ -55,7 +55,7 @@ module Coolio
 
   class TCPListener < Listener
     DEFAULT_BACKLOG = 1024
-    
+
     # Create a new Coolio::TCPListener on the specified address and port.
     # Accepts the following options:
     #
@@ -68,7 +68,7 @@ module Coolio
     def initialize(addr, port = nil, options = {})
       BasicSocket.do_not_reverse_lookup = true unless options[:reverse_lookup]
       options[:backlog] ||= DEFAULT_BACKLOG
-      
+
       listen_socket = if ::TCPServer === addr
         addr
       else

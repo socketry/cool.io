@@ -43,8 +43,8 @@ module EventMachine
     def add_timer(interval, proc = nil, &block)
       block ||= proc
       t = OneShotEMTimer.new(interval, false) # non repeating
-      t.setup(block) 
-      
+      t.setup(block)
+
       # fire 'er off ltodo: do we keep track of these timers in memory?
       t.attach(Coolio::Loop.default)
       t
@@ -53,7 +53,7 @@ module EventMachine
     def cancel_timer(t)
       # guess there's a case where EM you can say 'cancel' but it's already fired?
       # kind of odd but it happens
-     t.detach if t.attached? 
+     t.detach if t.attached?
     end
 
     def set_comm_inactivity_timeout(*args); end # TODO
@@ -76,7 +76,7 @@ module EventMachine
       wrapped_child.call_back_to_this(conn) # calls post_init for us
       yield conn if block_given?
     end
-    
+
     # Start a TCP server on the given address and port
     def start_server(addr, port, handler = Connection, *args, &block)
       # make sure we're a 'real' class here
@@ -85,11 +85,11 @@ module EventMachine
       else
         Class.new( Connection ) {handler and include handler}
       end
-      
-      server = Coolio::TCPServer.new(addr, port, CallsBackToEM, *args) do |wrapped_child| 
+
+      server = Coolio::TCPServer.new(addr, port, CallsBackToEM, *args) do |wrapped_child|
         conn = klass.new(wrapped_child)
         conn.heres_your_socket(wrapped_child) # ideally NOT have this :)
-        wrapped_child.call_back_to_this(conn) 
+        wrapped_child.call_back_to_this(conn)
         block.call(conn) if block
       end
 
@@ -126,9 +126,9 @@ module EventMachine
     end
 
     def on_connect
-      # @connection_timer.detach if @connection_timer 
+      # @connection_timer.detach if @connection_timer
       # won't need that anymore :) -- with server connecteds we don't have it, anyway
-      
+
       # TODO should server accepted's call this? They don't currently
       # [and can't, since on_connect gets called basically in the initializer--needs some code love for that to happen :)
       @call_back_to_this.connection_completed if @call_back_to_this
@@ -136,10 +136,10 @@ module EventMachine
 
     def connection_has_timed_out
       return if closed?
-      
+
       # wonder if this works when you're within a half-connected phase.
       # I think it does.  What about TCP state?
-      close unless closed? 
+      close unless closed?
       @call_back_to_this.unbind
     end
 
@@ -188,18 +188,18 @@ module EventMachine
       #  initialize *args
       #end
     end
-    
+
     # we will need to call 'their functions' appropriately -- the commented out ones, here
-    # 
+    #
     # Callback fired when connection is created
     def post_init
-      # I thought we were 'overriding' EM's existing methods, here.  
+      # I thought we were 'overriding' EM's existing methods, here.
       # Huh? Why do we have to define these then?
     end
 
     # Callback fired when connection is closed
     def unbind; end
-    
+
     # Callback fired when data is received
     # def receive_data(data); end
     def heres_your_socket(instantiated_coolio_socket)
@@ -211,13 +211,13 @@ module EventMachine
     def send_data(data)
       @wrapped_coolio.write data
     end
-    
+
     # Close the connection, optionally after writing
     def close_connection(after_writing = false)
       return close_connection_after_writing if after_writing
       @wrapped_coolio.close
     end
-    
+
     # Close the connection after all data has been written
     def close_connection_after_writing
       @wrapped_coolio.output_buffer_size.zero? ? @wrapped_coolio.close : @wrapped_coolio.should_close_after_writing

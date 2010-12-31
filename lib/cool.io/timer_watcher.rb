@@ -10,7 +10,7 @@ module Coolio
     # Here we metaprogram proper event_callbacks for the callback methods
     # These can take a block and store it to be called when the event
     # is actually fired.
-    
+
     extend Meta
     event_callback :on_timer
   end

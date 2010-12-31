@@ -29,7 +29,7 @@ module Coolio
     def content_length
       Integer(self[HttpClient::CONTENT_LENGTH]) rescue nil
     end
- 
+
     # Is the transfer encoding chunked?
     def chunked_encoding?
       /chunked/i === self[HttpClient::TRANSFER_ENCODING]
@@ -56,14 +56,14 @@ module Coolio
     def escape(s)
       s.to_s.gsub(/([^ a-zA-Z0-9_.-]+)/n) {
         '%'+$1.unpack('H2'*$1.size).join('%').upcase
-      }.tr(' ', '+') 
+      }.tr(' ', '+')
     end
 
     # Unescapes a URI escaped string.
     def unescape(s)
       s.tr('+', ' ').gsub(/((?:%[0-9a-fA-F]{2})+)/n){
         [$1.delete('%')].pack('H*')
-      } 
+      }
     end
 
     # Map all header keys to a downcased string version
@@ -151,11 +151,11 @@ module Coolio
       @chunk_header = HttpChunkHeader.new
     end
 
-    # Send an HTTP request and consume the response.  
+    # Send an HTTP request and consume the response.
     # Supports the following options:
     #
     #   head: {Key: Value}
-    #     Specify an HTTP header, e.g. {'Connection': 'close'} 
+    #     Specify an HTTP header, e.g. {'Connection': 'close'}
     #
     #   query: {Key: Value}
     #     Specify query string parameters (auto-escaped)
@@ -176,7 +176,7 @@ module Coolio
       return unless @connected
       send_request
     end
-    
+
     # Enable the HttpClient if it has been disabled
     def enable
       super
@@ -211,7 +211,7 @@ module Coolio
     #
     # Coolio callbacks
     #
-        
+
     def on_connect
       @connected = true
       send_request if @method and @path
@@ -260,8 +260,8 @@ module Coolio
 
     def send_request_body
       write @options[:body] if @options[:body]
-    end  
- 
+    end
+
     #
     # Response processing
     #
@@ -289,21 +289,21 @@ module Coolio
 
     def parse_header(header)
       return false if @data.empty?
-      
+
       begin
         @parser_nbytes = @parser.execute(header, @data.to_str, @parser_nbytes)
       rescue Coolio::HttpClientParserError
         on_error "invalid HTTP format, parsing fails"
         @state = :invalid
       end
-      
+
       return false unless @parser.finished?
 
       # Clear parsed data from the buffer
       @data.read(@parser_nbytes)
       @parser.reset
       @parser_nbytes = 0
-      
+
       true
     end
 
@@ -324,7 +324,7 @@ module Coolio
         @state = :body
         @bytes_remaining = @response_header.content_length
       end
-      
+
       true
     end
 
@@ -334,7 +334,7 @@ module Coolio
       @bytes_remaining = @chunk_header.chunk_size
       @chunk_header = HttpChunkHeader.new
 
-      @state = @bytes_remaining > 0 ? :chunk_body : :response_footer      
+      @state = @bytes_remaining > 0 ? :chunk_body : :response_footer
       true
     end
 
@@ -347,8 +347,8 @@ module Coolio
 
       on_body_data @data.read(@bytes_remaining)
       @bytes_remaining = 0
-      
-      @state = :chunk_footer      
+
+      @state = :chunk_footer
       true
     end
 
@@ -361,13 +361,13 @@ module Coolio
         on_error "non-CRLF chunk footer"
         @state = :invalid
       end
-      
+
       true
     end
 
     def process_response_footer
       return false if @data.size < 2
-      
+
       if @data.read(2) == CRLF
         if @data.empty?
           on_request_complete
@@ -380,7 +380,7 @@ module Coolio
         on_error "non-CRLF response footer"
         @state = :invalid
       end
-      
+
       false
     end
 
@@ -389,7 +389,7 @@ module Coolio
         on_body_data @data.read
         return false
       end
-      
+
       if @bytes_remaining.zero?
         on_request_complete
         @state = :finished

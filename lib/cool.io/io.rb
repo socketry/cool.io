@@ -15,7 +15,7 @@ module Coolio
   # Socket class and its associated subclasses.
   class IO
     extend Meta
-    
+
     # Maximum number of bytes to consume at once
     INPUT_SIZE = 16384
 
@@ -29,32 +29,32 @@ module Coolio
     #
     # Watcher methods, delegated to @_read_watcher
     #
-    
+
     # Attach to the event loop
     def attach(loop); @_read_watcher.attach loop; schedule_write if !@_write_buffer.empty?; self; end
-    
+
     # Detach from the event loop
     def detach; @_read_watcher.detach; self; end # TODO should these detect write buffers, as well?
-    
+
     # Enable the watcher
     def enable; @_read_watcher.enable; self; end
-    
+
     # Disable the watcher
     def disable; @_read_watcher.disable; self; end
-    
+
     # Is the watcher attached?
     def attached?; @_read_watcher.attached?; end
-    
+
     # Is the watcher enabled?
     def enabled?; @_read_watcher.enabled?; end
-    
+
     # Obtain the event loop associated with this object
     def evloop; @_read_watcher.evloop; end
-    
+
     #
     # Callbacks for asynchronous events
     #
-      
+
     # Called whenever the IO object receives data
     def on_read(data); end
     event_callback :on_read
@@ -114,7 +114,7 @@ module Coolio
         close
       end
     end
-    
+
     # Write the contents of the output buffer
     def on_writable
       begin
@@ -126,23 +126,23 @@ module Coolio
       rescue SystemCallError, IOError, SocketError
         return close
       end
-      
+
       if @_write_buffer.empty?
         disable_write_watcher
         on_write_complete
       end
     end
 
-    # Schedule a write to be performed when the IO object becomes writable 
+    # Schedule a write to be performed when the IO object becomes writable
     def schedule_write
       return unless @_io # this would mean 'we are still pre DNS here'
       return unless attached? # this would mean 'currently unattached' -- ie still pre DNS, or just plain not attached, which is ok
       begin
-        enable_write_watcher      
+        enable_write_watcher
       rescue IOError
       end
     end
-    
+
     def enable_write_watcher
       if @_write_watcher.attached?
         @_write_watcher.enable unless @_write_watcher.enabled?
@@ -150,15 +150,15 @@ module Coolio
         @_write_watcher.attach(evloop)
       end
     end
-    
+
     def disable_write_watcher
       @_write_watcher.disable if @_write_watcher and @_write_watcher.enabled?
     end
-    
+
     def detach_write_watcher
       @_write_watcher.detach if @_write_watcher and @_write_watcher.attached?
     end
-    
+
     # Internal class implementing watchers used by Coolio::IO
     class Watcher < IOWatcher
       def initialize(ruby_io, coolio_io, flags)

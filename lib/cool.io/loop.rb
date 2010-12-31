@@ -35,7 +35,7 @@ module Coolio
     # :skip_environment (boolean)
     #   Ignore the $LIBEV_FLAGS environment variable
     #
-    # :fork_check (boolean)      
+    # :fork_check (boolean)
     #   Enable autodetection of forks
     #
     # :backend
@@ -49,7 +49,7 @@ module Coolio
     def initialize(options = {})
       @watchers = {}
       @active_watchers = 0
-      
+
       flags = 0
 
       options.each do |option, value|
@@ -76,7 +76,7 @@ module Coolio
 
       @loop = ev_loop_new(flags)
     end
-    
+
     # Attach a watcher to the loop
     def attach(watcher)
       watcher.attach self
@@ -86,7 +86,7 @@ module Coolio
     # are no watchers associated with the event loop it will return
     # immediately.  Otherwise, run will continue blocking and making
     # event callbacks to watchers until all watchers associated with
-    # the loop have been disabled or detached.  The loop may be 
+    # the loop have been disabled or detached.  The loop may be
     # explicitly stopped by calling the stop method on the loop object.
     def run
       raise RuntimeError, "no watchers for this loop" if @watchers.empty?
@@ -103,28 +103,28 @@ module Coolio
       raise RuntimeError, "loop not running" unless @running
       @running = false
     end
-    
+
     # Does the loop have any active watchers?
     def has_active_watchers?
       @active_watchers > 0
     end
-    
+
     # All watchers attached to the current loop
     def watchers
       @watchers.keys
     end
-    
+
     #######
     private
     #######
-    
+
     EVFLAG_NOENV     = 0x1000000  # do NOT consult environment
     EVFLAG_FORKCHECK = 0x2000000  # check for a fork in each iteration
 
-    EVBACKEND_SELECT = 0x00000001 # supported about anywhere 
-    EVBACKEND_POLL   = 0x00000002 # !win 
-    EVBACKEND_EPOLL  = 0x00000004 # linux 
-    EVBACKEND_KQUEUE = 0x00000008 # bsd 
+    EVBACKEND_SELECT = 0x00000001 # supported about anywhere
+    EVBACKEND_POLL   = 0x00000002 # !win
+    EVBACKEND_EPOLL  = 0x00000004 # linux
+    EVBACKEND_KQUEUE = 0x00000008 # bsd
     EVBACKEND_PORT   = 0x00000020 # solaris 10
   end
 end

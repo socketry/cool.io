@@ -20,9 +20,9 @@ module Coolio
       expected = arity >= 0 ? arity : -(arity + 1)
 
       if (arity >= 0 and args.size + 1 != expected) or (arity < 0 and args.size + 1 < expected)
-        raise ArgumentError, "wrong number of arguments for #{klass}#initialize (#{args.size+1} for #{expected})" 
+        raise ArgumentError, "wrong number of arguments for #{klass}#initialize (#{args.size+1} for #{expected})"
       end
-     
+
       @klass, @args, @block = klass, args, block
       super(listen_socket)
     end
@@ -35,7 +35,7 @@ module Coolio
     #########
     protected
     #########
-    
+
     def on_connection(socket)
       connection = @klass.new(socket, *@args).attach(evloop)
       connection.__send__(:on_connect)

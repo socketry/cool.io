@@ -19,7 +19,7 @@ module Coolio
       # merely signals an event has occurred for each byte written.
       @writer.write "\0"
     end
-    
+
     # Called whenever a signal is received
     def on_signal; end
     event_callback :on_signal
