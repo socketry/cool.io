@@ -148,7 +148,7 @@ module Coolio
 
     class TCPConnectSocket < ::Socket
       def initialize(family, addr, port, host = addr)
-        @host,  addr, @port = host, addr, port
+        @host, @addr, @port = host, addr, port
         @address_family = nil
 
         super(family, ::Socket::SOCK_STREAM, 0)
