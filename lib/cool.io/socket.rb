@@ -17,6 +17,14 @@ module Coolio
       end
     end
 
+    # Just initializes some instance variables to avoid
+    # warnings and calls super().
+    def initialize *args
+      @_failed = nil
+      @_connector = nil
+      super
+    end
+
     watcher_delegate :@_connector
 
     def attach(evloop)

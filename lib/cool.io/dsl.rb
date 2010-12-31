@@ -25,7 +25,7 @@ module Coolio
 
         klass = Class.new Cool.io::TCPSocket
         connection_builder = ConnectionBuilder.new klass
-        connection_builder.instance_eval &block
+        connection_builder.instance_eval(&block)
       else
         raise ArgumentError, "no connection name or block given" unless connection_name
         klass = self[connection_name]
@@ -43,7 +43,7 @@ module Coolio
 
         klass = Class.new Cool.io::TCPSocket
         connection_builder = ConnectionBuilder.new klass
-        connection_builder.instance_eval &block
+        connection_builder.instance_eval(&block)
       else
         raise ArgumentError, "no connection name or block given" unless connection_name
         klass = self[connection_name]
@@ -61,7 +61,7 @@ module Coolio
 
       connection = Class.new Cool.io::TCPSocket
       connection_builder = ConnectionBuilder.new connection
-      connection_builder.instance_eval &block
+      connection_builder.instance_eval(&block)
 
       Coolio::Connections.const_set class_name, connection
     end

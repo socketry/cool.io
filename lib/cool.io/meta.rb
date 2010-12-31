@@ -14,7 +14,7 @@ module Coolio
       %w{attach detach enable disable}.each do |method|
         module_eval <<-EOD
           def #{method}(*args)
-            if #{proxy_var}
+            if defined? #{proxy_var} and #{proxy_var}
               #{proxy_var}.#{method}(*args)
               return self
             end
@@ -38,7 +38,7 @@ module Coolio
               return
             end
 
-            if @#{method}_callback
+            if defined? @#{method}_callback and @#{method}_callback
               instance_exec(*args, &@#{method}_callback)
             end
           end
