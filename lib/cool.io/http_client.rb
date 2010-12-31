@@ -34,7 +34,7 @@ module Coolio
     def chunked_encoding?
       /chunked/i === self[HttpClient::TRANSFER_ENCODING]
     end
- end
+  end
 
   class HttpChunkHeader < Hash
     # When parsing chunked encodings this is set
