@@ -66,21 +66,22 @@ task :http11_parser do
   end
 end
 
-def test_suite_cmdline
-  require 'find'
+# adapted from http://flavoriffic.blogspot.com/2009/06/easily-valgrind-gdb-your-ruby-c.html
+def specs_command
+  require "find"
   files = []
-  Find.find("test") do |f|
+  Find.find("spec") do |f|
     files << f if File.basename(f) =~ /.*spec.*\.rb$/
   end
-  cmdline = "#{RUBY} -w -I.:lib:ext:test \
-               -e '%w[#{files.join(' ')}].each {|f| require f}'"
+  cmdline = "#{RUBY} -w -I.:lib:ext:spec \
+               -e '%w[#{files.join(' ')}].each { |f| require f }'"
 end
 
 namespace :test do
-  desc "run test suite under valgrind with basic ruby options"
+  desc "run specs under valgrind with basic ruby options"
   task :valgrind => :compile do
     system "valgrind --num-callers=50 --error-limit=no \
-                         --partial-loads-ok=yes --undef-value-errors=no #{test_suite_cmdline}"
+                         --partial-loads-ok=yes --undef-value-errors=no #{specs_command}"
   end
 end
 
