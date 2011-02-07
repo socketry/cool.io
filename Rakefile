@@ -15,7 +15,7 @@ begin
     gem.add_development_dependency "rspec", ">= 2.1.0"
     gem.add_development_dependency "rake-compiler", "~> 0.7.5"
     gem.extensions = FileList["ext/**/extconf.rb"].to_a
-    
+
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
   end
   Jeweler::GemcutterTasks.new
@@ -65,3 +65,22 @@ task :http11_parser do
     raise "Failed to build C source" unless File.exist? target
   end
 end
+
+def test_suite_cmdline
+  require 'find'
+  files = []
+  Find.find("test") do |f|
+    files << f if File.basename(f) =~ /.*spec.*\.rb$/
+  end
+  cmdline = "#{RUBY} -w -I.:lib:ext:test \
+               -e '%w[#{files.join(' ')}].each {|f| require f}'"
+end
+
+namespace :test do
+  desc "run test suite under valgrind with basic ruby options"
+  task :valgrind => :compile do
+    system "valgrind --num-callers=50 --error-limit=no \
+                         --partial-loads-ok=yes --undef-value-errors=no #{test_suite_cmdline}"
+  end
+end
+
