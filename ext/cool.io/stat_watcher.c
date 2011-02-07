@@ -213,9 +213,6 @@ static void Coolio_StatWatcher_dispatch_callback(VALUE self, int revents)
   struct Coolio_Watcher *watcher_data;
   Data_Get_Struct(self, struct Coolio_Watcher, watcher_data);
 
-  if(watcher_data->event_types.ev_stat.attr.st_nlink != 0) {
-  }
-
   VALUE previous_statdata = Coolio_StatInfo_build(&watcher_data->event_types.ev_stat.prev);
   VALUE current_statdata = Coolio_StatInfo_build(&watcher_data->event_types.ev_stat.attr);
   rb_funcall(self, rb_intern("on_change"), 2, previous_statdata, current_statdata);
