@@ -17,10 +17,11 @@ class MyStatWatcher < Cool.io::StatWatcher
 end
 
 def run_with_file_change(path)
+  reactor = Cool.io::Loop.default
   sw = MyStatWatcher.new(path)
-  sw.attach(Cool.io::Loop.default)
+  sw.attach(reactor)
   File.open(path, "a+") { |f| f.write(rand.to_s) }
-  Cool.io::Loop.default.run_once
+  reactor.run_once
   sw
 end
 
@@ -40,7 +41,7 @@ describe Cool.io::StatWatcher do
     sw.accessed.should eql(true)
   end
 
-  it "should pass previos and current file stat info given a stat watcher" do
+  it "should pass previous and current file stat info given a stat watcher" do
     sw = run_with_file_change(TEMP_FILE_PATH)
 
     sw.previous.ino.should eql(sw.current.ino)
