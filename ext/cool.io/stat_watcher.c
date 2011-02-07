@@ -222,7 +222,7 @@ static void Coolio_StatWatcher_dispatch_callback(VALUE self, int revents)
 }
 
 /**
- * Convience method to build StatInfo structs
+ * Convience method to build StatInfo structs given an ev_statdata
  * */
 static VALUE Coolio_StatInfo_build(ev_statdata *statdata_struct)
 {
