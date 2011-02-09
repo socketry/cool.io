@@ -73,15 +73,17 @@ def specs_command
   Find.find("spec") do |f|
     files << f if File.basename(f) =~ /.*spec.*\.rb$/
   end
-  cmdline = "#{RUBY} -w -I.:lib:ext:spec \
+  cmdline = "#{RUBY} -I.:lib:ext:spec \
                -e '%w[#{files.join(' ')}].each { |f| require f }'"
 end
 
 namespace :test do
-  desc "run specs under valgrind with basic ruby options"
+  desc "run specs with valgrind"
   task :valgrind => :compile do
-    system "valgrind --num-callers=50 --error-limit=no \
-                         --partial-loads-ok=yes --undef-value-errors=no #{specs_command}"
+    system "valgrind --num-callers=15 \
+      --partial-loads-ok=yes --undef-value-errors=no \
+      --tool=memcheck --leak-check=yes --track-fds=yes \
+      --show-reachable=yes #{specs_command}"
   end
 end
 

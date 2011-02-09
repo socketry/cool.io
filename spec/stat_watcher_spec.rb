@@ -27,7 +27,7 @@ def run_with_file_change(path)
   tw = Cool.io::TimerWatcher.new(INTERVAL, true)
   tw.on_timer do
     reactor.stop if sw.accessed
-    File.open(path, "w+") { |f| f.write(rand.to_s) }
+    write_file(path)
   end
   tw.attach(reactor)
 
@@ -39,26 +39,34 @@ def run_with_file_change(path)
   sw
 end
 
+def write_file(path)
+  File.open(path, "w+") { |f| f.write(rand.to_s) }
+end
+
+def delete_file(path)
+  File.delete(TEMP_FILE_PATH)
+end
+
 describe Cool.io::StatWatcher do
 
-  let :sw do
+  let :watcher do
     run_with_file_change(TEMP_FILE_PATH)
   end
 
   before :each do
-    `touch #{TEMP_FILE_PATH}`
+    write_file(TEMP_FILE_PATH)
   end
 
   after :each do
-    `rm #{TEMP_FILE_PATH}`
+    delete_file(TEMP_FILE_PATH)
   end
 
   it "fire on_change when the file it is watching is modified" do
-    sw.accessed.should eql(true)
+    watcher.accessed.should eql(true)
   end
 
   it "should pass previous and current file stat info given a stat watcher" do
-    sw.previous.ino.should eql(sw.current.ino)
+    watcher.previous.ino.should eql(watcher.current.ino)
   end
 
 end
