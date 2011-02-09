@@ -23,10 +23,8 @@ static VALUE Coolio_StatWatcher_enable(VALUE self);
 static VALUE Coolio_StatWatcher_disable(VALUE self);
 static VALUE Coolio_StatWatcher_on_change(VALUE self);
 static VALUE Coolio_StatWatcher_path(VALUE self);
-static VALUE Coolio_StatInfo_build(ev_statdata *statdata_struct);
 
-static VALUE at_method;
-static VALUE cTime;
+static VALUE Coolio_StatInfo_build(ev_statdata *statdata_struct);
 
 static void Coolio_StatWatcher_libev_callback(struct ev_loop *ev_loop, struct ev_stat *stat, int revents);
 static void Coolio_StatWatcher_dispatch_callback(VALUE self, int revents);
@@ -57,9 +55,6 @@ void Init_coolio_stat_watcher()
       "blocks",
       NULL);
   cCoolio_Loop = rb_define_class_under(mCoolio, "Loop", rb_cObject);
-
-  at_method = rb_intern("at");
-  cTime = rb_const_get(rb_cObject, rb_intern("Time"));
 
   rb_define_method(cCoolio_StatWatcher, "initialize", Coolio_StatWatcher_initialize, -1);
   rb_define_method(cCoolio_StatWatcher, "attach", Coolio_StatWatcher_attach, 1);
@@ -223,19 +218,22 @@ static void Coolio_StatWatcher_dispatch_callback(VALUE self, int revents)
  * */
 static VALUE Coolio_StatInfo_build(ev_statdata *statdata_struct)
 {
-  VALUE mtime   = Qnil;
-  VALUE ctime   = Qnil;
-  VALUE atime   = Qnil;
-  VALUE dev     = Qnil;
-  VALUE ino     = Qnil;
-  VALUE mode    = Qnil;
-  VALUE nlink   = Qnil;
-  VALUE uid     = Qnil;
-  VALUE gid     = Qnil;
-  VALUE rdev    = Qnil;
-  VALUE size    = Qnil;
-  VALUE blksize = Qnil;
-  VALUE blocks  = Qnil;
+  VALUE at_method = rb_intern("at");
+  VALUE cTime     = rb_const_get(rb_cObject, rb_intern("Time"));
+
+  VALUE mtime     = Qnil;
+  VALUE ctime     = Qnil;
+  VALUE atime     = Qnil;
+  VALUE dev       = Qnil;
+  VALUE ino       = Qnil;
+  VALUE mode      = Qnil;
+  VALUE nlink     = Qnil;
+  VALUE uid       = Qnil;
+  VALUE gid       = Qnil;
+  VALUE rdev      = Qnil;
+  VALUE size      = Qnil;
+  VALUE blksize   = Qnil;
+  VALUE blocks    = Qnil;
 
   mtime   = rb_funcall(cTime, at_method, 1, INT2NUM(statdata_struct->st_mtime));
   ctime   = rb_funcall(cTime, at_method, 1, INT2NUM(statdata_struct->st_ctime));
