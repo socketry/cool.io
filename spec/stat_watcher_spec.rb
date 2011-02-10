@@ -19,7 +19,7 @@ class MyStatWatcher < Cool.io::StatWatcher
 end
 
 def run_with_file_change(path)
-  reactor = Cool.io::Loop.default
+  reactor = Cool.io::Loop.new
 
   sw = MyStatWatcher.new(path)
   sw.attach(reactor)
@@ -67,6 +67,11 @@ describe Cool.io::StatWatcher do
 
   it "should pass previous and current file stat info given a stat watcher" do
     watcher.previous.ino.should eql(watcher.current.ino)
+  end
+
+  it "should raise when the handler does not take 2 parameters" do
+    class MyStatWatcher < Cool.io::StatWatcher; def on_change; end; end
+    lambda { watcher.accessed }.should raise_error(ArgumentError)
   end
 
 end
