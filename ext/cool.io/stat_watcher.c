@@ -21,7 +21,7 @@ static VALUE Coolio_StatWatcher_attach(VALUE self, VALUE loop);
 static VALUE Coolio_StatWatcher_detach(VALUE self);
 static VALUE Coolio_StatWatcher_enable(VALUE self);
 static VALUE Coolio_StatWatcher_disable(VALUE self);
-static VALUE Coolio_StatWatcher_on_change(VALUE self);
+static VALUE Coolio_StatWatcher_on_change(VALUE self, VALUE previous, VALUE current);
 static VALUE Coolio_StatWatcher_path(VALUE self);
 
 static VALUE Coolio_StatInfo_build(ev_statdata *statdata_struct);
@@ -61,7 +61,7 @@ void Init_coolio_stat_watcher()
   rb_define_method(cCoolio_StatWatcher, "detach", Coolio_StatWatcher_detach, 0);
   rb_define_method(cCoolio_StatWatcher, "enable", Coolio_StatWatcher_enable, 0);
   rb_define_method(cCoolio_StatWatcher, "disable", Coolio_StatWatcher_disable, 0);
-  rb_define_method(cCoolio_StatWatcher, "on_change", Coolio_StatWatcher_on_change, 0);
+  rb_define_method(cCoolio_StatWatcher, "on_change", Coolio_StatWatcher_on_change, 2);
   rb_define_method(cCoolio_StatWatcher, "path", Coolio_StatWatcher_path, 0);
 }
 
@@ -180,7 +180,7 @@ static VALUE Coolio_StatWatcher_disable(VALUE self)
  *
  * Called whenever the status of the given path changes
  */
-static VALUE Coolio_StatWatcher_on_change(VALUE self)
+static VALUE Coolio_StatWatcher_on_change(VALUE self, VALUE previous, VALUE current)
 {
   return Qnil;
 }
