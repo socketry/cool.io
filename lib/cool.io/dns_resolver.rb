@@ -44,10 +44,12 @@ module Coolio
     # Query /etc/hosts (or the specified hostfile) for the given host
     def self.hosts(host, hostfile = HOSTS)
       hosts = {}
-      File.open(hostfile).each_line do |host_entry|
-        entries = host_entry.gsub(/#.*$/, '').gsub(/\s+/, ' ').split(' ')
-        addr = entries.shift
-        entries.each { |e| hosts[e] ||= addr }
+      File.open(hostfile) do |f|
+        f.each_line do |host_entry|
+          entries = host_entry.gsub(/#.*$/, '').gsub(/\s+/, ' ').split(' ')
+          addr = entries.shift
+          entries.each { |e| hosts[e] ||= addr }
+        end
       end
 
       hosts[host]
