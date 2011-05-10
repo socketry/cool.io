@@ -63,6 +63,9 @@ create_makefile('cool.io_ext')
 if RUBY_PLATFORM =~ /mingw|win32/
   makefile_contents = File.read 'Makefile'
 
+  # "Init_cool could not be found" when loading cool.io.so.
+  makefile_contents.gsub! 'DLDFLAGS = ', 'DLDFLAGS = -export-all '
+
   makefile_contents.gsub! 'LIBS = $(LIBRUBYARG_SHARED)', 'LIBS = -lws2_32 $(LIBRUBYARG_SHARED)'
   File.open('Makefile', 'w') { |f| f.write makefile_contents }
 end
