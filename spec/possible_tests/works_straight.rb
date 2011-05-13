@@ -35,13 +35,13 @@ describe Rev::TCPSocket do
 	stopped = false;
   	@server.attach(loop)
   	Thread.new {
-                loop.run_nonblock_over_and_over_again 
+                loop.run_nonblock_over_and_over_again
 		stopped = true
         }
 	sleep 0
         stopped.should == false
         loop.stop
-	
+
         sleep_until { stopped == true }
         stopped.should == true
   end
