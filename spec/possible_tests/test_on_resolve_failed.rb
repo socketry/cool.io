@@ -1,4 +1,4 @@
-require '../rev'
+require "rev"
 class Tester < Rev::TCPSocket
   def on_resolve_failed
     print "resolved failed! that's good!"

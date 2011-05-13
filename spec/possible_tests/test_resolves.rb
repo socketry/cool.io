@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/../rev'
+require "rev"
 
 ADDR = 'wilkboardonline.com'
 PORT = 80

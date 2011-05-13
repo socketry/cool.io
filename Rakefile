@@ -15,7 +15,7 @@ begin
     gem.add_development_dependency "rspec", ">= 2.1.0"
     gem.add_development_dependency "rake-compiler", "~> 0.7.5"
     gem.extensions = FileList["ext/**/extconf.rb"].to_a
-    
+
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
   end
   Jeweler::GemcutterTasks.new
@@ -65,3 +65,25 @@ task :http11_parser do
     raise "Failed to build C source" unless File.exist? target
   end
 end
+
+# adapted from http://flavoriffic.blogspot.com/2009/06/easily-valgrind-gdb-your-ruby-c.html
+def specs_command
+  require "find"
+  files = []
+  Find.find("spec") do |f|
+    files << f if File.basename(f) =~ /.*spec.*\.rb$/
+  end
+  cmdline = "#{RUBY} -I.:lib:ext:spec \
+               -e '%w[#{files.join(' ')}].each { |f| require f }'"
+end
+
+namespace :test do
+  desc "run specs with valgrind"
+  task :valgrind => :compile do
+    system "valgrind --num-callers=15 \
+      --partial-loads-ok=yes --undef-value-errors=no \
+      --tool=memcheck --leak-check=yes --track-fds=yes \
+      --show-reachable=yes #{specs_command}"
+  end
+end
+
