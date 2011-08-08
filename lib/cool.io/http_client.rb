@@ -195,7 +195,14 @@ module Coolio
 
     # Called when the request has completed
     def on_request_complete
-      close
+      @state == :finished ? close : @state = :finished
+    end
+
+    # called by close
+    def on_close
+      if @state != :finished and @state == :body
+        on_request_complete
+      end
     end
 
     # Called when an error occurs dispatching the request
