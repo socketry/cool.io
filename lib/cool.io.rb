@@ -6,7 +6,9 @@
 
 require 'iobuffer'
 
+require "cool.io/version"
 require "cool.io_ext"
+
 require "cool.io/loop"
 require "cool.io/meta"
 require "cool.io/io"
