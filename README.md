@@ -19,10 +19,6 @@ You can include Cool.io in your programs with:
 
 Questions? Sign up for the mailing list by emailing: [cool.io@librelist.com](mailto:cool.io@librelist.com)
 
-The latest development code is available via github at:
-
-[git://github.com/tarcieri/cool.io.git](git://github.com/tarcieri/cool.io.git)
-
 Anatomy
 -------
 
