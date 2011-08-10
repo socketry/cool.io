@@ -1,3 +1,14 @@
+1.1.0
+-----
+
+* Switch from Jeweler to Bundler for the gem boilerplate
+* Fix firing of Coolio::HttpClient#on_request_complete (#15)
+* Fix failure to resolve Init_cool symbol on win32 mingw (#14)
+* Fix closing /etc/hosts in the DNS resolver (#12)
+* Refactor StatWatcher to pass pervious and current path state ala Node.js
+* spec:valgrind Rake task to run specs under valgrind
+* Use rake-compiler to build cool.io
+
 1.0.0
 -----
 
