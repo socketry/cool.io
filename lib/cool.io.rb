@@ -1,5 +1,5 @@
 #--
-# Copyright (C)2007-10 Tony Arcieri
+# Copyright (C)2011 Tony Arcieri
 # You can redistribute this under the terms of the Ruby license
 # See file LICENSE for details
 #++
@@ -21,8 +21,6 @@ require "cool.io/http_client"
 require "cool.io/dsl"
 
 module Coolio
-  VERSION = File.read(File.expand_path('../../VERSION', __FILE__)).strip
-  def self.version; VERSION; end
   def self.inspect; "Cool.io"; end
 end
 

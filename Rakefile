@@ -1,42 +1,14 @@
-require 'rubygems'
-require 'rake'
+require 'bundler/gem_tasks'
 require 'rake/clean'
 
-begin
-  require 'jeweler'
-  Jeweler::Tasks.new do |gem|
-    gem.name = "cool.io"
-    gem.summary = "The cool event framework for Ruby"
-    gem.description = "A Ruby wrapper around the libev high performance event library"
-    gem.email = "tony@medioh.com"
-    gem.homepage = "http://github.com/tarcieri/cool.io"
-    gem.authors = ["Tony Arcieri"]
-    gem.add_dependency "iobuffer", ">= 0.1.3"
-    gem.add_development_dependency "rspec", ">= 2.1.0"
-    gem.add_development_dependency "rake-compiler", "~> 0.7.5"
-    gem.extensions = FileList["ext/**/extconf.rb"].to_a
-
-    # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
-  end
-  Jeweler::GemcutterTasks.new
-rescue LoadError
-  puts "Jeweler (or a dependency) not available. Install it with: gem install jeweler"
-end
-
 require 'rspec/core/rake_task'
-RSpec::Core::RakeTask.new(:spec) do |spec|
-  spec.pattern = 'spec/**/*_spec.rb'
-  spec.rspec_opts = %w[-fs -c -b]
-end
+RSpec::Core::RakeTask.new
 
-RSpec::Core::RakeTask.new(:rcov) do |spec|
-  spec.pattern = 'spec/**/*_spec.rb'
-  spec.rcov = true
-  spec.rspec_opts = %w[-fs -c -b]
+RSpec::Core::RakeTask.new(:rcov) do |task|
+  task.rcov = true
 end
 
 task :default => %w(compile spec)
-task :spec => :check_dependencies
 
 require 'rake/rdoctask'
 Rake::RDocTask.new do |rdoc|
@@ -77,7 +49,7 @@ def specs_command
                -e '%w[#{files.join(' ')}].each { |f| require f }'"
 end
 
-namespace :test do
+namespace :spec do
   desc "run specs with valgrind"
   task :valgrind => :compile do
     system "valgrind --num-callers=15 \
@@ -86,4 +58,3 @@ namespace :test do
       --show-reachable=yes #{specs_command}"
   end
 end
-
