@@ -1,6 +1,5 @@
 Cool.io
 =======
-[![Build Status](http://travis-ci.org/tarcieri/cool.io.png)](http://travis-ci.org/tarcieri/cool.io)
 
 [http://coolio.github.com](http://coolio.github.com)
 
