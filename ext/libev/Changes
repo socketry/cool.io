@@ -1,5 +1,29 @@
 Revision history for libev, a high-performance and full-featured event loop.
 
+4.04 Wed Feb 16 09:01:51 CET 2011
+	- fix two problems in the native win32 backend, where reuse of fd's
+          with different underlying handles caused handles not to be removed
+          or added to the select set (analyzed and tested by Bert Belder).
+	- do no rely on ceil() in ev_e?poll.c.
+        - backport libev to HP-UX versions before 11 v3.
+        - configure did not detect nanosleep and clock_gettime properly when
+          they are available in the libc (as opposed to -lrt).
+
+4.03 Tue Jan 11 14:37:25 CET 2011
+	- officially support polling files with all backends.
+	- support files, /dev/zero etc. the same way as select in the epoll
+          backend, by generating events on our own.
+        - ports backend: work around solaris bug 6874410 and many related ones
+          (EINTR, maybe more), with no performance loss (note that the solaris
+          bug report is actually wrong, reality is far more bizarre and broken
+          than that).
+	- define EV_READ/EV_WRITE as macros in event.h, as some programs use
+          #ifdef to test for them.
+        - new (experimental) function: ev_feed_signal.
+        - new (to become default) EVFLAG_NOSIGMASK flag.
+        - new EVBACKEND_MASK symbol.
+        - updated COMMON IDIOMS SECTION.
+
 4.01 Fri Nov  5 21:51:29 CET 2010
         - automake fucked it up, apparently, --add-missing -f is not quite enough
           to make it update its files, so 4.00 didn't install ev++.h and

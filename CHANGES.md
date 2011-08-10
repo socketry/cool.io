@@ -8,6 +8,7 @@
 * Refactor StatWatcher to pass pervious and current path state ala Node.js
 * spec:valgrind Rake task to run specs under valgrind
 * Use rake-compiler to build cool.io
+* Upgrade to libev 4.04
 
 1.0.0
 -----

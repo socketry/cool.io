@@ -40,6 +40,9 @@
 #define pollidxmax ((loop)->pollidxmax)
 #define epoll_events ((loop)->epoll_events)
 #define epoll_eventmax ((loop)->epoll_eventmax)
+#define epoll_eperms ((loop)->epoll_eperms)
+#define epoll_epermcnt ((loop)->epoll_epermcnt)
+#define epoll_epermmax ((loop)->epoll_epermmax)
 #define kqueue_changes ((loop)->kqueue_changes)
 #define kqueue_changemax ((loop)->kqueue_changemax)
 #define kqueue_changecnt ((loop)->kqueue_changecnt)
@@ -82,9 +85,11 @@
 #define fs_2625 ((loop)->fs_2625)
 #define fs_hash ((loop)->fs_hash)
 #define sig_pending ((loop)->sig_pending)
+#define nosigmask ((loop)->nosigmask)
 #define sigfd ((loop)->sigfd)
 #define sigfd_w ((loop)->sigfd_w)
 #define sigfd_set ((loop)->sigfd_set)
+#define origflags ((loop)->origflags)
 #define loop_count ((loop)->loop_count)
 #define loop_depth ((loop)->loop_depth)
 #define userdata ((loop)->userdata)
@@ -132,6 +137,9 @@
 #undef pollidxmax
 #undef epoll_events
 #undef epoll_eventmax
+#undef epoll_eperms
+#undef epoll_epermcnt
+#undef epoll_epermmax
 #undef kqueue_changes
 #undef kqueue_changemax
 #undef kqueue_changecnt
@@ -174,9 +182,11 @@
 #undef fs_2625
 #undef fs_hash
 #undef sig_pending
+#undef nosigmask
 #undef sigfd
 #undef sigfd_w
 #undef sigfd_set
+#undef origflags
 #undef loop_count
 #undef loop_depth
 #undef userdata
