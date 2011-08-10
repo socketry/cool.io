@@ -58,3 +58,5 @@ namespace :spec do
       --show-reachable=yes #{specs_command}"
   end
 end
+
+CLEAN.include "**/*.rbc", "**/*.o", "**/*.so", "**/*.bundle"
