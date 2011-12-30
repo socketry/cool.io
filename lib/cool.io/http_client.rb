@@ -118,8 +118,8 @@ module Coolio
   # == Example
   #
   #   loop = Coolio::Loop.default
-  #   client = Coolio::HttpClient.connect("www.google.com").attach
-  #   client.get('/search', query: {q: 'foobar'})
+  #   client = Coolio::HttpClient.connect("www.google.com").attach(loop)
+  #   client.request('GET', '/search', query: {q: 'foobar'})
   #   loop.run
   #
   class HttpClient < TCPSocket
