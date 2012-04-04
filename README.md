@@ -1,7 +1,8 @@
 Cool.io
 =======
 
-[http://coolio.github.com](http://coolio.github.com)
+## NOTE: cool.io is in maintenance mode only and is not being actively developed
+## Please check out [Celluloid::IO](http://github.com/celluloid/celluloid-io) instead!
 
 Cool.io is an event library for Ruby, built on the libev event library which 
 provides a cross-platform interface to high performance system calls .  This 
