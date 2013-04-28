@@ -60,3 +60,5 @@ namespace :spec do
 end
 
 CLEAN.include "**/*.rbc", "**/*.o", "**/*.so", "**/*.bundle"
+CLEAN.exclude "vendor/**/*.rbc", "vendor/**/*.o", "vendor/**/*.so", "vendor/**/*.bundle"
+
