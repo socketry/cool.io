@@ -21,6 +21,7 @@ Rake::RDocTask.new do |rdoc|
 end
 
 require 'rake/extensiontask'
+
 Rake::ExtensionTask.new('http11_client') do |ext|
 end
 
@@ -60,3 +61,5 @@ namespace :spec do
 end
 
 CLEAN.include "**/*.rbc", "**/*.o", "**/*.so", "**/*.bundle"
+CLEAN.exclude "vendor/**/*.rbc", "vendor/**/*.o", "vendor/**/*.so", "vendor/**/*.bundle"
+

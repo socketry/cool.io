@@ -246,8 +246,10 @@ static VALUE Coolio_StatInfo_build(ev_statdata *statdata_struct)
   gid     = INT2NUM(statdata_struct->st_gid);
   rdev    = INT2NUM(statdata_struct->st_rdev);
   size    = INT2NUM(statdata_struct->st_size);
+#ifdef HAVE_ST_BLKSIZE
   blksize = INT2NUM(statdata_struct->st_blksize);
   blocks  = INT2NUM(statdata_struct->st_blocks);
+#endif
 
   return rb_struct_new(cCoolio_StatInfo,
       mtime,

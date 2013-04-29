@@ -32,15 +32,17 @@ module Coolio
   class DNSResolver < IOWatcher
     #--
     # TODO check if it's caching right
-    RESOLV_CONF = '/etc/resolv.conf'
-    HOSTS = '/etc/hosts'
+    if RUBY_PLATFORM =~ /mingw|win32/
+      HOSTS = 'c:\WINDOWS\system32\drivers\etc\hosts'
+    else
+      HOSTS = '/etc/hosts'
+    end
     DNS_PORT = 53
     DATAGRAM_SIZE = 512
     TIMEOUT = 3 # Retry timeout for each datagram sent
     RETRIES = 4 # Number of retries to attempt
     # so currently total is 12s before it will err due to timeouts
     # if it errs due to inability to reach the DNS server [Errno::EHOSTUNREACH], same
-
     # Query /etc/hosts (or the specified hostfile) for the given host
     def self.hosts(host, hostfile = HOSTS)
       hosts = {}
@@ -61,8 +63,9 @@ module Coolio
     # use nameservers listed in /etc/resolv.conf
     def initialize(hostname, *nameservers)
       if nameservers.empty?
-        nameservers = File.read(RESOLV_CONF).scan(/^\s*nameserver\s+([0-9.:]+)/).flatten # TODO could optimize this to just read once
-        raise RuntimeError, "no nameservers found in #{RESOLV_CONF}" if nameservers.empty? # TODO just call resolve_failed, not raise [also handle Errno::ENOENT)]
+        require 'resolv'
+        nameservers = Resolv::DNS::Config.default_config_hash[:nameserver]
+        raise RuntimeError, "no nameservers found" if nameservers.empty? # TODO just call resolve_failed, not raise [also handle Errno::ENOENT)]
       end
 
       @nameservers = nameservers
