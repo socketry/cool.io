@@ -21,6 +21,7 @@ Rake::RDocTask.new do |rdoc|
 end
 
 require 'rake/extensiontask'
+
 Rake::ExtensionTask.new('http11_client') do |ext|
 end
 
