@@ -2,7 +2,7 @@ require File.expand_path('../spec_helper', __FILE__)
 require 'tempfile'
 require 'fcntl'
 
-describe Cool.io::AsyncWatcher do
+describe Cool.io::AsyncWatcher, :env => :win do
 
   it "does not signal on spurious wakeups" do
     aw = Cool.io::AsyncWatcher.new

@@ -1,7 +1,7 @@
 require File.expand_path('../spec_helper', __FILE__)
 require 'tempfile'
 
-describe Cool.io::UNIXListener do
+describe Cool.io::UNIXListener, :env => :win do
 
   before :each do
     @tmp = Tempfile.new('coolio_unix_listener_spec')
