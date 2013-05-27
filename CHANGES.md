@@ -4,6 +4,7 @@
 * Support Windows environment via cross compilation
 * Include iobuffer library
 * Update to libev 4.15
+* Remove Ruby 1.8 support
 
 1.1.0
 -----
