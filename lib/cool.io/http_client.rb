@@ -5,7 +5,8 @@
 # See file LICENSE for details
 #++
 
-require 'http11_client'
+require "cool.io/custom_require"
+cool_require 'http11_client'
 
 module Coolio
   # A simple hash is returned for each request made by HttpClient with
