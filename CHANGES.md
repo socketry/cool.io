@@ -1,3 +1,10 @@
+1.2.0
+-----
+
+* Support Windows environment via cross compilation
+* Include iobuffer library
+* Update to libev 4.15
+
 1.1.0
 -----
 

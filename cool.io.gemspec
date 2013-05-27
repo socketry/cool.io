@@ -10,8 +10,8 @@ end
 Gem::Specification.new do |s|
   s.name        = "cool.io"
   s.version     = Coolio::VERSION
-  s.authors     = ["Tony Arcieri"]
-  s.email       = ["tony.arcieri@gmail.com"]
+  s.authors     = ["Tony Arcieri", "Masahiro Nakagawa"]
+  s.email       = ["tony.arcieri@gmail.com", "repeatedly@gmail.com"]
   s.homepage    = "http://coolio.github.com"
   s.summary     = "A cool framework for doing high performance I/O in Ruby"
   s.description = "Cool.io provides a high performance event framework for Ruby which uses the libev C library"
