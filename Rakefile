@@ -22,11 +22,28 @@ end
 
 require 'rake/extensiontask'
 
-Rake::ExtensionTask.new('http11_client') do |ext|
+spec = eval(File.read("cool.io.gemspec"))
+
+def configure_cross_compilation(ext)
+  unless RUBY_PLATFORM =~ /mswin|mingw/
+    ext.cross_compile = true
+    ext.cross_platform = 'i386-mingw32'#['i386-mswin32-60', 'i386-mingw32']
+  end
 end
 
-Rake::ExtensionTask.new('cool.io_ext') do |ext|
+Rake::ExtensionTask.new('iobuffer_ext', spec) do |ext|
+  ext.ext_dir = 'ext/iobuffer'
+  configure_cross_compilation(ext)
+end
+
+Rake::ExtensionTask.new('http11_client', spec) do |ext|
+  ext.ext_dir = 'ext/http11_client'
+  configure_cross_compilation(ext)
+end
+
+Rake::ExtensionTask.new('cool.io_ext', spec) do |ext|
   ext.ext_dir = 'ext/cool.io'
+  configure_cross_compilation(ext)
 end
 
 # Rebuild parser Ragel
@@ -62,4 +79,3 @@ end
 
 CLEAN.include "**/*.rbc", "**/*.o", "**/*.so", "**/*.bundle"
 CLEAN.exclude "vendor/**/*.rbc", "vendor/**/*.o", "vendor/**/*.so", "vendor/**/*.bundle"
-

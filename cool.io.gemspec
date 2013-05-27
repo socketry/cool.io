@@ -15,16 +15,14 @@ Gem::Specification.new do |s|
   s.homepage    = "http://coolio.github.com"
   s.summary     = "A cool framework for doing high performance I/O in Ruby"
   s.description = "Cool.io provides a high performance event framework for Ruby which uses the libev C library"
-  s.extensions = ["ext/cool.io/extconf.rb", "ext/http11_client/extconf.rb"]
+  s.extensions = ["ext/cool.io/extconf.rb", "ext/http11_client/extconf.rb", "ext/iobuffer/extconf.rb"]
 
   s.files         = `git ls-files`.split("\n")
   s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
   s.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
   s.require_paths = ["lib"]
   
-  s.add_dependency "iobuffer", "~> 1.1.0"
-
-  s.add_development_dependency "rake-compiler", "~> 0.7.9"
-  s.add_development_dependency "rspec", ">= 2.6.0"
+  s.add_development_dependency "rake-compiler", "~> 0.8.3"
+  s.add_development_dependency "rspec", ">= 2.13.0"
   s.add_development_dependency "rdoc", ">= 3.6.0"
 end
