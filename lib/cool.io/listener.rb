@@ -21,6 +21,10 @@ module Coolio
       @listen_socket.fileno
     end
 
+    def listen(backlog)
+      @listen_socket.listen(backlog)
+    end
+
     # Close the listener
     def close
       detach if attached?
@@ -53,9 +57,9 @@ module Coolio
     end
   end
 
-  class TCPListener < Listener
-    DEFAULT_BACKLOG = 1024
+  DEFAULT_BACKLOG = 1024
 
+  class TCPListener < Listener
     # Create a new Coolio::TCPListener on the specified address and port.
     # Accepts the following options:
     #
@@ -87,7 +91,9 @@ module Coolio
     # Optionally, it can also take anyn existing UNIXServer object
     # and create a Coolio::UNIXListener out of it.
     def initialize(*args)
-      super(::UNIXServer === args.first ? args.first : ::UNIXServer.new(*args))
+      s = ::UNIXServer === args.first ? args.first : ::UNIXServer.new(*args)
+      s.instance_eval { listen(DEFAULT_BACKLOG) }
+      super(s)
     end
   end
 end

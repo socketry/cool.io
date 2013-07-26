@@ -56,7 +56,7 @@ module Coolio
         raise ArgumentError, "port must be an integer" if nil == port
         ::TCPServer.new(host, port)
       end
-      listen_socket.instance_eval { listen(1024) } # Change listen backlog to 1024
+      listen_socket.instance_eval { listen(DEFAULT_BACKLOG) } # Change listen backlog to 1024
       super(listen_socket, klass, *args, &block)
     end
   end
@@ -68,6 +68,7 @@ module Coolio
   class UNIXServer < Server
     def initialize(path, klass = UNIXSocket, *args, &block)
       s = ::UNIXServer === path ? path : ::UNIXServer.new(path)
+      s.instance_eval { listen(DEFAULT_BACKLOG) }
       super(s, klass, *args, &block)
     end
   end
