@@ -1,3 +1,8 @@
+1.1.1
+-----
+
+* Add Listener#listen method to change backlog size
+
 1.1.0
 -----
 
