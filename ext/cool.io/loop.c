@@ -205,23 +205,14 @@ static VALUE Coolio_Loop_run_once(VALUE self)
   return nevents;
 }
 
-/* Ruby 1.9 supports blocking system calls through rb_thread_blocking_region() */
 #ifdef HAVE_RB_THREAD_BLOCKING_REGION
 #define HAVE_EV_LOOP_ONESHOT
-static VALUE Coolio_Loop_ev_loop_oneshot_blocking(void *ptr) 
-{
-  /* The libev loop has now escaped through the Global VM Lock unscathed! */
-  struct Coolio_Loop *loop_data = (struct Coolio_Loop *)ptr;
-
-  RUN_LOOP(loop_data, EVLOOP_ONESHOT);
-  
-  return Qnil;
-}
 
 static void Coolio_Loop_ev_loop_oneshot(struct Coolio_Loop *loop_data)
 {
-  /* Use Ruby 1.9's rb_thread_blocking_region call to make a blocking system call */
-  rb_thread_blocking_region(Coolio_Loop_ev_loop_oneshot_blocking, loop_data, RUBY_UBF_IO, 0);
+  RUN_LOOP(loop_data, EVLOOP_ONESHOT);
+  
+  return Qnil;
 }
 #endif
 
