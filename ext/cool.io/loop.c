@@ -211,8 +211,6 @@ static VALUE Coolio_Loop_run_once(VALUE self)
 static void Coolio_Loop_ev_loop_oneshot(struct Coolio_Loop *loop_data)
 {
   RUN_LOOP(loop_data, EVLOOP_ONESHOT);
-  
-  return Qnil;
 }
 #endif
 
