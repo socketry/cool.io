@@ -1,3 +1,9 @@
+1.2.1
+-----
+
+* Release the GIL when libev polls (#24)
+* Add Listener#listen method to change backlog size
+
 1.2.0
 -----
 
