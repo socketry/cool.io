@@ -11,7 +11,7 @@
 
 #include "cool.io.h"
 
-#if defined(HAVE_RB_THREAD_BLOCKING_REGION)
+#if defined(HAVE_RB_THREAD_BLOCKING_REGION) || defined(HAVE_RB_THREAD_CALL_WITHOUT_GVL)
 #  define Coolio_Loop_may_block_safely() (1)
 #elif defined(HAVE_RB_THREAD_ALONE)
 #  define Coolio_Loop_may_block_safely() (rb_thread_alone())

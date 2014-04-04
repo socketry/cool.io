@@ -3242,7 +3242,7 @@ time_update (EV_P_ ev_tstamp max_block)
 }
 
 /* ########## COOLIO PATCHERY HO! ########## */
-#if defined(HAVE_RB_THREAD_BLOCKING_REGION)
+#if defined(HAVE_RB_THREAD_BLOCKING_REGION) || defined(HAVE_RB_THREAD_CALL_WITHOUT_GVL)
 static
 VALUE ev_backend_poll(void **args)
 {
@@ -3257,7 +3257,7 @@ int
 ev_run (EV_P_ int flags)
 {
 /* ########## COOLIO PATCHERY HO! ########## */
-#if defined(HAVE_RB_THREAD_BLOCKING_REGION)
+#if defined(HAVE_RB_THREAD_BLOCKING_REGION) || defined(HAVE_RB_THREAD_CALL_WITHOUT_GVL)
     void *poll_args[2];
 #endif
 /* ######################################## */
@@ -3415,10 +3415,24 @@ Let this be a lesson to the all: CALLBACKS FUCKING BLOW
 #######################################################################
 */
 
-#if defined(HAVE_RB_THREAD_BLOCKING_REGION)
+/*
+  simulate to rb_thread_call_without_gvl using rb_theread_blocking_region.
+  https://github.com/brianmario/mysql2/blob/master/ext/mysql2/client.h#L8
+*/
+
+#ifndef HAVE_RB_THREAD_CALL_WITHOUT_GVL
+#ifdef HAVE_RB_THREAD_BLOCKING_REGION
+
+#define rb_thread_call_without_gvl(func, data1, ubf, data2) \
+  rb_thread_blocking_region((rb_blocking_function_t *)func, data1, ubf, data2)
+
+#endif
+#endif
+
+#if defined(HAVE_RB_THREAD_BLOCKING_REGION) || defined(HAVE_RB_THREAD_CALL_WITHOUT_GVL)
         poll_args[0] = (void *)loop;
         poll_args[1] = (void *)&waittime;
-        rb_thread_blocking_region(ev_backend_poll, (void *)&poll_args, RUBY_UBF_IO, 0);
+        rb_thread_call_without_gvl(ev_backend_poll, (void *)&poll_args, RUBY_UBF_IO, 0);
 #else
         backend_poll (EV_A_ waittime);
 #endif
