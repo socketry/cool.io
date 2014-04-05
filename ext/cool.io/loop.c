@@ -205,7 +205,7 @@ static VALUE Coolio_Loop_run_once(VALUE self)
   return nevents;
 }
 
-#ifdef HAVE_RB_THREAD_BLOCKING_REGION
+#if defined(HAVE_RB_THREAD_BLOCKING_REGION) || defined(HAVE_RB_THREAD_CALL_WITHOUT_GVL)
 #define HAVE_EV_LOOP_ONESHOT
 
 static void Coolio_Loop_ev_loop_oneshot(struct Coolio_Loop *loop_data)
