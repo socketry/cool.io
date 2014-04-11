@@ -32,6 +32,7 @@ struct Coolio_Event
 struct Coolio_Loop 
 {
   struct ev_loop *ev_loop;
+  struct ev_timer timer; /* for timeouts */
 
   int running;
   int events_received;
