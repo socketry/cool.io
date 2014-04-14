@@ -191,7 +191,7 @@ static VALUE Coolio_Loop_run_once(int argc, VALUE *argv, VALUE self)
 
   rb_scan_args(argc, argv, "01", &timeout);
 
-  if(timeout != Qnil && NUM2DBL(timeout) < 0) {
+  if (timeout != Qnil && NUM2DBL(timeout) < 0) {
     rb_raise(rb_eArgError, "time interval must be positive");
   }
 
@@ -201,7 +201,7 @@ static VALUE Coolio_Loop_run_once(int argc, VALUE *argv, VALUE self)
 
 #if defined(HAVE_RB_THREAD_BLOCKING_REGION) || defined(HAVE_RB_THREAD_CALL_WITHOUT_GVL) || defined(HAVE_RB_THREAD_ALONE)
   /* Implement the optional timeout (if any) as a ev_timer */
-  if(timeout != Qnil) {
+  if (timeout != Qnil) {
     /* It seems libev is not a fan of timers being zero, so fudge a little */
     loop_data->timer.repeat = NUM2DBL(timeout) + 0.0001;
     ev_timer_again(loop_data->ev_loop, &loop_data->timer);
@@ -219,10 +219,10 @@ static VALUE Coolio_Loop_run_once(int argc, VALUE *argv, VALUE self)
   RUN_LOOP(loop_data, EVLOOP_ONESHOT);
 #elif defined(HAVE_RB_THREAD_ALONE)
   /* If we're the only thread we can make a blocking system call */
-  if(rb_thread_alone()) {
+  if (rb_thread_alone()) {
 #else
   /* If we don't have rb_thread_alone() we can't block */
-  if(0) {
+  if (0) {
 #endif /* defined(HAVE_RB_THREAD_BLOCKING_REGION) || defined(HAVE_RB_THREAD_CALL_WITHOUT_GVL) */
 
 #if !defined(HAVE_RB_THREAD_BLOCKING_REGION) && !defined(HAVE_RB_THREAD_CALL_WITHOUT_GVL)
@@ -236,7 +236,7 @@ static VALUE Coolio_Loop_run_once(int argc, VALUE *argv, VALUE self)
     ev_timer_start(loop_data->ev_loop, &loop_data->timer);
 
     /* Loop until we receive events */
-    while(!loop_data->events_received) {
+    while (!loop_data->events_received) {
       TRAP_BEG;
       RUN_LOOP(loop_data, EVLOOP_ONESHOT);
       TRAP_END;
@@ -245,7 +245,7 @@ static VALUE Coolio_Loop_run_once(int argc, VALUE *argv, VALUE self)
       rb_thread_schedule();
 
       /* Break if the timeout has elapsed */
-      if(timeout != Qnil && ev_now(loop_data->ev_loop) - started_at >= NUM2DBL(timeout))
+      if (timeout != Qnil && ev_now(loop_data->ev_loop) - started_at >= NUM2DBL(timeout))
         break;
     }
 
