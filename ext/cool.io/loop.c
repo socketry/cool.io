@@ -26,9 +26,6 @@ static VALUE Coolio_Loop_run_nonblock(VALUE self);
 static void Coolio_Loop_timeout_callback(struct ev_loop *ev_loop, struct ev_timer *timer, int revents);
 static void Coolio_Loop_dispatch_events(struct Coolio_Loop *loop_data);
 
-/* Ruby 1.8 needs us to busy wait and run the green threads scheduler every 10ms */
-#define BUSYWAIT_INTERVAL 0.01
-
 #define DEFAULT_EVENTBUF_SIZE 32
 #define RUN_LOOP(loop_data, options) \
   loop_data->running = 1; \
@@ -199,7 +196,6 @@ static VALUE Coolio_Loop_run_once(int argc, VALUE *argv, VALUE self)
 
   assert(loop_data->ev_loop && !loop_data->events_received);
 
-#if defined(HAVE_RB_THREAD_BLOCKING_REGION) || defined(HAVE_RB_THREAD_CALL_WITHOUT_GVL) || defined(HAVE_RB_THREAD_ALONE)
   /* Implement the optional timeout (if any) as a ev_timer */
   if (timeout != Qnil) {
     /* It seems libev is not a fan of timers being zero, so fudge a little */
@@ -208,50 +204,9 @@ static VALUE Coolio_Loop_run_once(int argc, VALUE *argv, VALUE self)
   } else {
     ev_timer_stop(loop_data->ev_loop, &loop_data->timer);
   }
-#endif
-#if !defined(HAVE_RB_THREAD_BLOCKING_REGION) && !defined(HAVE_RB_THREAD_CALL_WITHOUT_GVL)
-  /* Store when we started the loop so we can calculate the timeout */
-  ev_tstamp started_at = ev_now(loop_data->ev_loop);
-#endif
 
-#if defined(HAVE_RB_THREAD_BLOCKING_REGION) || defined(HAVE_RB_THREAD_CALL_WITHOUT_GVL)
   /* libev is patched to release the GIL when it makes its system call */
   RUN_LOOP(loop_data, EVLOOP_ONESHOT);
-#elif defined(HAVE_RB_THREAD_ALONE)
-  /* If we're the only thread we can make a blocking system call */
-  if (rb_thread_alone()) {
-#else
-  /* If we don't have rb_thread_alone() we can't block */
-  if (0) {
-#endif /* defined(HAVE_RB_THREAD_BLOCKING_REGION) || defined(HAVE_RB_THREAD_CALL_WITHOUT_GVL) */
-
-#if !defined(HAVE_RB_THREAD_BLOCKING_REGION) && !defined(HAVE_RB_THREAD_CALL_WITHOUT_GVL)
-    TRAP_BEG;
-    RUN_LOOP(loop_data, EVLOOP_ONESHOT);
-    TRAP_END;
-  } else {
-    /* We need to busy wait as not to stall the green thread scheduler
-       Ruby 1.8: just say no! :( */
-    ev_timer_init(&loop_data->timer, Coolio_Loop_timeout_callback, BUSYWAIT_INTERVAL, BUSYWAIT_INTERVAL);
-    ev_timer_start(loop_data->ev_loop, &loop_data->timer);
-
-    /* Loop until we receive events */
-    while (!loop_data->events_received) {
-      TRAP_BEG;
-      RUN_LOOP(loop_data, EVLOOP_ONESHOT);
-      TRAP_END;
-
-      /* Run the next green thread */
-      rb_thread_schedule();
-
-      /* Break if the timeout has elapsed */
-      if (timeout != Qnil && ev_now(loop_data->ev_loop) - started_at >= NUM2DBL(timeout))
-        break;
-    }
-
-    ev_timer_stop(loop_data->ev_loop, &loop_data->timer);
-  }
-#endif /* !defined(HAVE_RB_THREAD_BLOCKING_REGION) && !defined(HAVE_RB_THREAD_CALL_WITHOUT_GVL) */
 
   Coolio_Loop_dispatch_events(loop_data);
   nevents = INT2NUM(loop_data->events_received);
