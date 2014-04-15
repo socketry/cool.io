@@ -1,12 +1,5 @@
 require File.expand_path('../spec_helper', __FILE__)
 
-def unused_port
-  s = TCPServer.open(0)
-  port = s.addr[1]
-  s.close
-  port
-end
-
 TIMEOUT = 0.010
 HOST = '127.0.0.1'
 PORT = unused_port
