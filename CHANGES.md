@@ -1,3 +1,9 @@
+1.2.2
+-----
+
+* Add timeout option to Loop#run and Loop#run_once. Default by nil
+* Support Ruby 2.2.0
+
 1.2.1
 -----
 
