@@ -88,12 +88,12 @@ module Coolio
     # event callbacks to watchers until all watchers associated with
     # the loop have been disabled or detached.  The loop may be
     # explicitly stopped by calling the stop method on the loop object.
-    def run
+    def run(timeout = nil)
       raise RuntimeError, "no watchers for this loop" if @watchers.empty?
 
       @running = true
       while @running and not @active_watchers.zero?
-        run_once
+        run_once(timeout)
       end
       @running = false
     end
