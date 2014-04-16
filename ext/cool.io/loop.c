@@ -197,6 +197,10 @@ static VALUE Coolio_Loop_run_once(int argc, VALUE *argv, VALUE self)
   assert(loop_data->ev_loop && !loop_data->events_received);
 
   /* Implement the optional timeout (if any) as a ev_timer */
+  /* Using the technique written at
+     http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#code_ev_timer_code_relative_and_opti,
+     the timer is not stopped/started everytime when timeout is specified, instead,
+     the timer is stopped when timeout is not specified. */
   if (timeout != Qnil) {
     /* It seems libev is not a fan of timers being zero, so fudge a little */
     loop_data->timer.repeat = NUM2DBL(timeout) + 0.0001;
