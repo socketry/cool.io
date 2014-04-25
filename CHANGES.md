@@ -1,3 +1,8 @@
+1.2.3
+-----
+
+* Fix CPU consuming issue on Windows.
+
 1.2.2
 -----
 
