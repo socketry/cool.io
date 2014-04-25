@@ -105,7 +105,8 @@ ensure
   server.close
 end
 
-describe Coolio::TCPServer do
+# This test should work on Windows
+describe Coolio::TCPServer, :env => :win do
 
   it '#run' do
     test_run("hello").should == "hello"
@@ -128,3 +129,4 @@ describe Coolio::TCPServer do
   end
 
 end
+
