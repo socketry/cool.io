@@ -136,7 +136,7 @@ module Coolio
     # Schedule a write to be performed when the IO object becomes writable
     def schedule_write
       return unless @_io # this would mean 'we are still pre DNS here'
-      return unless attached? # this would mean 'currently unattached' -- ie still pre DNS, or just plain not attached, which is ok
+      return unless @_read_watcher.attached? # this would mean 'currently unattached' -- ie still pre DNS, or just plain not attached, which is ok
       begin
         enable_write_watcher
       rescue IOError
