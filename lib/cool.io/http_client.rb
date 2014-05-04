@@ -111,6 +111,9 @@ module Coolio
     end
   end
 
+  # HttpClient is tested on only CRuby.  AFAIK, there is no HttpClient users.
+  # So HttpClient will not be maintained in the future.
+
   # HTTP client class implemented as a subclass of Coolio::TCPSocket.  Encodes
   # requests and allows streaming consumption of the response.  Response is
   # parsed with a Ragel-generated whitelist parser which supports chunked

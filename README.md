@@ -86,9 +86,6 @@ core socket classes are also provided.  Among these are:
   Cool.io::TCPSocket (or any subclass you wish to provide) whenever an incoming
   connection is received.
 
-* Cool.io::HttpClient - An HTTP/1.1 client with support for chunked encoding
-  and streaming response processing through asynchronous callbacks.
-
 Example Program
 ---------------
 
