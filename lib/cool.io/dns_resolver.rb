@@ -17,6 +17,8 @@
 #
 #++
 
+require 'resolv'
+
 module Coolio
   # A non-blocking DNS resolver.  It provides interfaces for querying both
   # /etc/hosts and nameserves listed in /etc/resolv.conf, or nameservers of
@@ -31,12 +33,6 @@ module Coolio
   # again.
   class DNSResolver < IOWatcher
     #--
-    # TODO check if it's caching right
-    if RUBY_PLATFORM =~ /mingw|win32/
-      HOSTS = 'c:\WINDOWS\system32\drivers\etc\hosts'
-    else
-      HOSTS = '/etc/hosts'
-    end
     DNS_PORT = 53
     DATAGRAM_SIZE = 512
     TIMEOUT = 3 # Retry timeout for each datagram sent
@@ -44,7 +40,7 @@ module Coolio
     # so currently total is 12s before it will err due to timeouts
     # if it errs due to inability to reach the DNS server [Errno::EHOSTUNREACH], same
     # Query /etc/hosts (or the specified hostfile) for the given host
-    def self.hosts(host, hostfile = HOSTS)
+    def self.hosts(host, hostfile = Resolv::Hosts::DefaultFileName)
       hosts = {}
       File.open(hostfile) do |f|
         f.each_line do |host_entry|
@@ -63,7 +59,6 @@ module Coolio
     # use nameservers listed in /etc/resolv.conf
     def initialize(hostname, *nameservers)
       if nameservers.empty?
-        require 'resolv'
         nameservers = Resolv::DNS::Config.default_config_hash[:nameserver]
         raise RuntimeError, "no nameservers found" if nameservers.empty? # TODO just call resolve_failed, not raise [also handle Errno::ENOENT)]
       end
