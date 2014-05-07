@@ -11,7 +11,7 @@ module Coolio
     # an event to occur before the current watcher can be used in earnest,
     # such as making an outgoing TCP connection.
     def watcher_delegate(proxy_var)
-      %w{attach detach enable disable}.each do |method|
+      %w{attach attached? detach enable disable}.each do |method|
         module_eval <<-EOD
           def #{method}(*args)
             if defined? #{proxy_var} and #{proxy_var}
