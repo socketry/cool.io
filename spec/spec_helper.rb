@@ -14,6 +14,6 @@ end
 RSpec.configure do |c|
   if RUBY_PLATFORM =~ /mingw|win32/
     $stderr.puts "Skip some specs on Windows"
-    c.filter_run_excluding :env => :win
+    c.filter_run_excluding :env => :exclude_win
   end
 end
