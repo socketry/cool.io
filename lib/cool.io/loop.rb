@@ -15,17 +15,9 @@ end
 
 module Coolio
   class Loop
-    # In Ruby 1.9 we want a Coolio::Loop per thread, but Ruby 1.8 is unithreaded
-    if RUBY_VERSION >= "1.9.0"
-      # Retrieve the default event loop for the current thread
-      def self.default
-        Thread.current._coolio_loop
-      end
-    else
-      # Retrieve the default event loop
-      def self.default
-        @@_coolio_loop ||= Coolio::Loop.new
-      end
+    # Retrieve the default event loop for the current thread
+    def self.default
+      Thread.current._coolio_loop
     end
 
     # Create a new Coolio::Loop
