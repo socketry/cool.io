@@ -1,6 +1,6 @@
 require File.expand_path('../spec_helper', __FILE__)
 
-describe Coolio::TCPSocket, :env => :win do
+describe Coolio::TCPSocket do
 
   before :each do
     @server = TCPServer.new('127.0.0.1', 0)
