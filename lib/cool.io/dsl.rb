@@ -124,11 +124,15 @@ end
 # The Cool module containing all our coolness
 module Cool
   module Coolness
-    def cool; Cool::IOThunk; end
+    def cool
+      Cool::IOThunk
+    end
   end
 
   module IOThunk
-    def self.io; Coolio::DSL; end
+    def self.io
+      Coolio::DSL
+    end
   end
 end
 

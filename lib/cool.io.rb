@@ -23,10 +23,14 @@ require "cool.io/http_client"
 require "cool.io/dsl"
 
 module Coolio
-  def self.inspect; "Cool.io"; end
+  def self.inspect
+    "Cool.io"
+  end
 end
 
 module Cool
   # Allow Coolio module to be referenced as Cool.io
-  def self.io; Coolio; end
+  def self.io
+    Coolio
+  end
 end
