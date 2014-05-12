@@ -1,3 +1,10 @@
+1.2.4
+-----
+
+* Fix a bug that #close for unconnected Socket doesn't detach all watchers (#33)
+* Remove 1.8 support code
+* Use standard library instead of own hosts list (#34)
+
 1.2.3
 -----
 
