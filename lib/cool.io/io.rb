@@ -98,11 +98,6 @@ module Coolio
       data.size
     end
 
-    # Number of bytes are currently in the output buffer
-    def output_buffer_size
-      @_write_buffer.size
-    end
-
     # Close the IO stream
     def close
       detach if attached?
