@@ -39,7 +39,7 @@ module Coolio
             end
 
             if defined? @#{method}_callback and @#{method}_callback
-              instance_exec(*args, &@#{method}_callback)
+              @#{method}_callback.call(*args)
             end
           end
         EOD
