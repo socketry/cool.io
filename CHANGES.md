@@ -1,3 +1,12 @@
+1.3.0
+-----
+
+* Block evaluation doesn't change self for keeping consistency with Ruby block
+* Remove EventMachine emulation module
+* Remove HttpClient
+* DSL syntax is no longer available by default. Need to require 'cool.io/dsl' in user code
+* Update libev to 4.19
+
 1.2.4
 -----
 
