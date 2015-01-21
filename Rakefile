@@ -36,24 +36,9 @@ Rake::ExtensionTask.new('iobuffer_ext', spec) do |ext|
   configure_cross_compilation(ext)
 end
 
-Rake::ExtensionTask.new('http11_client', spec) do |ext|
-  ext.ext_dir = 'ext/http11_client'
-  configure_cross_compilation(ext)
-end
-
 Rake::ExtensionTask.new('cool.io_ext', spec) do |ext|
   ext.ext_dir = 'ext/cool.io'
   configure_cross_compilation(ext)
-end
-
-# Rebuild parser Ragel
-task :http11_parser do
-  Dir.chdir "ext/http11_client" do
-    target = "http11_parser.c"
-    File.unlink target if File.exist? target
-    sh "ragel http11_parser.rl | rlgen-cd -G2 -o #{target}"
-    raise "Failed to build C source" unless File.exist? target
-  end
 end
 
 # adapted from http://flavoriffic.blogspot.com/2009/06/easily-valgrind-gdb-your-ruby-c.html
