@@ -19,7 +19,6 @@ require "cool.io/listener"
 require "cool.io/dns_resolver"
 require "cool.io/socket"
 require "cool.io/server"
-require "cool.io/dsl"
 
 module Coolio
   def self.inspect
