@@ -102,7 +102,7 @@ module Coolio
     def close
       detach if attached?
       detach_write_watcher
-      @_io.close unless @_io.closed?
+      @_io.close unless closed?
 
       on_close
       nil
