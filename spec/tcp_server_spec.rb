@@ -128,5 +128,98 @@ describe Coolio::TCPServer do
     test_run_timeout("hello").should == "hello"
   end
 
+  describe "functionaltest" do
+    let :loop do
+      Coolio::Loop.new
+    end
+    
+    let :port do
+      unused_port
+    end
+    
+    context "#on_connect" do
+      class ServerOnConnect < Coolio::Socket
+        def initialize(io, cb)
+          super(io)
+          @cb = cb
+        end
+        def on_connect
+          @cb.call
+        end
+      end
+      
+      it "connected socket called on_connect" do
+        begin
+          connected = false
+          server = Cool.io::TCPServer.new("localhost", port, ServerOnConnect, proc { connected = true })
+          loop.attach server
+          s = TCPSocket.open("localhost", port)
+          loop.run_once
+          s.close
+          expect(connected).to eq true
+        ensure
+          server.detach
+        end
+      end
+    end
+    
+    context "#on_close" do
+      class ServerOnClose < Coolio::Socket
+        def initialize(io, cb)
+          super(io)
+          @cb = cb
+        end
+        def on_close
+          @cb.call
+        end
+      end
+      
+      it "closed socket called on_close" do
+        begin
+          closed = false
+          server = Cool.io::TCPServer.new("localhost", port, ServerOnConnect, proc { closed = true })
+          loop.attach server
+          s = TCPSocket.open("localhost", port)
+          loop.run_once
+          s.close
+          loop.run_once
+          expect(closed).to eq true
+        ensure
+          server.detach
+        end
+      end
+    end
+    
+    context "#on_read" do
+      class Echo < Coolio::Socket
+        def initialize(io, cb)
+          super(io)
+          @cb = cb
+        end
+        def on_read(data)
+          @cb.call data
+          size = write(data + "fff")
+        end
+      end
+      
+      it "server socket received data" do
+        begin
+          data = "aaa"
+          server = Cool.io::TCPServer.new("localhost", port, Echo, proc { |d| data = d })
+          loop.attach server
+          thread = Thread.new { loop.run }
+          s = TCPSocket.open("localhost", port)
+          s.write "zzz"
+          sleep 0.1
+          expect(data).to eq "zzz"
+          expect(s.read 6).to eq "zzzfff"
+        ensure
+          s.close
+          loop.stop
+          server.detach
+          thread.join
+        end
+      end
+    end
+  end
 end
-
