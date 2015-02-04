@@ -24,3 +24,5 @@ tmp
 
 ## PROJECT::SPECIFIC
 conftest.dSYM
+
+*.lock
