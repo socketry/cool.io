@@ -162,4 +162,24 @@ describe Coolio::TCPSocket do
       expect(c.read_data).to eq "01234"
     end
   end
+  
+  context "#on_write_complete" do
+    class WriteComplete < StandardError; end
+    class OnWriteComplete < Cool.io::TCPSocket
+      attr :called
+      def on_write_complete
+        @called = true
+        close
+        raise WriteComplete
+      end
+    end
+    
+    it "on_write_complete is called" do
+      c = OnWriteComplete.connect(@host, @port)
+      loop.attach c
+      loop.run_once # on_connect
+      c.write "aaa"
+      expect { loop.run }.to raise_error(WriteComplete)
+    end
+  end
 end
