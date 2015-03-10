@@ -24,3 +24,6 @@ tmp
 
 ## PROJECT::SPECIFIC
 conftest.dSYM
+
+*.lock
+.ruby-version
