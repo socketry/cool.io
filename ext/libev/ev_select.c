@@ -246,7 +246,7 @@ select_poll (EV_P_ ev_tstamp timeout)
         {
           if (timeout)
             {
-              unsigned long ms = timeout * 1e3;
+              unsigned long ms = (unsigned long)(timeout * 1e3);
               Sleep (ms ? ms : 1);
             }
 
