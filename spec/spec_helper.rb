@@ -12,7 +12,7 @@ def unused_port
 end
 
 RSpec.configure do |c|
-  if RUBY_PLATFORM =~ /mingw|win32/
+  if RUBY_PLATFORM =~ /mingw|mswin/
     $stderr.puts "Skip some specs on Windows"
     c.filter_run_excluding :env => :exclude_win
   end
