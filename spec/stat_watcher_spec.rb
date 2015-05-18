@@ -62,16 +62,16 @@ describe Cool.io::StatWatcher do
   end
 
   it "fire on_change when the file it is watching is modified" do
-    watcher.accessed.should eql(true)
+    expect(watcher.accessed).to eq(true)
   end
 
   it "should pass previous and current file stat info given a stat watcher" do
-    watcher.previous.ino.should eql(watcher.current.ino)
+    expect(watcher.previous.ino).to eq(watcher.current.ino)
   end
 
   it "should raise when the handler does not take 2 parameters" do
     class MyStatWatcher < Cool.io::StatWatcher; def on_change; end; end
-    lambda { watcher.accessed }.should raise_error(ArgumentError)
+    expect { watcher.accessed }.to raise_error(ArgumentError)
   end
 
 end
