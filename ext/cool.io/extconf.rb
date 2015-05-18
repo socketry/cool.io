@@ -55,7 +55,7 @@ if RUBY_PLATFORM =~ /mingw|mswin/
   # I'm not sure why this is needed. But this line causes "1114 A dynamic link library (DLL) initialization routine failed." So I commented out this line.
   #makefile_contents.gsub! 'DLDFLAGS = ', 'DLDFLAGS = -export-all '
 
-  makefile_contents.gsub! 'LIBS = $(LIBRUBYARG_SHARED)', 'LIBS = -lws2_32 $(LIBRUBYARG_SHARED)'
+  makefile_contents.gsub! /LIBS = (.*) (\S*ws2_32\S*)/i, 'LIBS = \\2 \\1'
   File.open('Makefile', 'w') { |f| f.write makefile_contents }
 end
 
