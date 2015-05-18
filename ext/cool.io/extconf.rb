@@ -4,25 +4,11 @@ libs = []
 
 $defs << "-DRUBY_VERSION_CODE=#{RUBY_VERSION.gsub(/\D/, '')}"
 
-if have_func('rb_thread_blocking_region')
-  $defs << '-DHAVE_RB_THREAD_BLOCKING_REGION'
-end
-
-if have_func('rb_thread_call_without_gvl')
-  $defs << '-DHAVE_RB_THEREAD_CALL_WITHOUT_GVL'
-end
-
-if have_func('rb_thread_alone')
-  $defs << '-DHAVE_RB_THREAD_ALONE'
-end
-
-if have_func('rb_str_set_len')
-  $defs << '-DHAVE_RB_STR_SET_LEN'
-end
-
-if have_library('rt', 'clock_gettime')
-  libs << "-lrt"
-end
+have_func('rb_thread_blocking_region')
+have_func('rb_thread_call_without_gvl')
+have_func('rb_thread_alone')
+have_func('rb_str_set_len')
+have_library('rt', 'clock_gettime')
 
 if have_header('sys/select.h')
   $defs << '-DEV_USE_SELECT'
@@ -44,9 +30,7 @@ if have_header('port.h')
   $defs << '-DEV_USE_PORT'
 end
 
-if have_header('sys/resource.h')
-  $defs << '-DHAVE_SYS_RESOURCE_H'
-end
+have_header('sys/resource.h')
 
 # ncpu detection specifics
 case RUBY_PLATFORM
