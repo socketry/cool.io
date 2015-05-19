@@ -37,7 +37,7 @@ describe IO::Buffer do
     require "tempfile"
     
     context "#read_from" do
-      context "using local file" do
+      context "using local file", :env => :exclude_win do
         let :tmp do
           t = Tempfile.open "read_from"
           t << "foobar"
@@ -81,7 +81,7 @@ describe IO::Buffer do
     end
     
     context "#write_to" do
-      context "using local file" do
+      context "using local file", :env => :exclude_win do
         let :tmp do
           Tempfile.open "write_to"
         end
