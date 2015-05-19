@@ -5,21 +5,21 @@ describe Cool.io::UNIXListener, :env => :exclude_win do
 
   before :each do
     @tmp = Tempfile.new('coolio_unix_listener_spec')
-    File.unlink(@tmp.path).should == 1
-    File.exist?(@tmp.path).should == false
+    expect(File.unlink(@tmp.path)).to eq(1)
+    expect(File.exist?(@tmp.path)).to eq(false)
   end
 
   it "creates a new UNIXListener" do
     listener = Cool.io::UNIXListener.new(@tmp.path)
-    File.socket?(@tmp.path).should == true
+    expect(File.socket?(@tmp.path)).to eq(true)
   end
 
   it "builds off an existing UNIXServer" do
     unix_server = UNIXServer.new(@tmp.path)
-    File.socket?(@tmp.path).should == true
+    expect(File.socket?(@tmp.path)).to eq(true)
     listener = Cool.io::UNIXListener.new(unix_server)
-    File.socket?(@tmp.path).should == true
-    listener.fileno.should == unix_server.fileno
+    expect(File.socket?(@tmp.path)).to eq(true)
+    expect(listener.fileno).to eq(unix_server.fileno)
   end
 
 end

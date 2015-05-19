@@ -1153,8 +1153,8 @@ ecb_inline ecb_bool ecb_little_endian (void) { return ecb_byteorder_helper () ==
     int m = x & 0x3ff;
     float r;
 
-    if      (!e     ) r = ldexpf (m        ,    -24);
-    else if (e != 31) r = ldexpf (m + 0x400, e - 25);
+    if      (!e     ) r = ldexpf ((float)m        ,    -24);
+    else if (e != 31) r = ldexpf ((float)m + 0x400, e - 25);
     else if (m      ) r = ECB_NAN;
     else              r = ECB_INFINITY;
 
@@ -2263,7 +2263,7 @@ evpipe_write (EV_P_ EV_ATOMIC_T *flag)
 #ifdef _WIN32
           WSABUF buf;
           DWORD sent;
-          buf.buf = &buf;
+          buf.buf = (CHAR*)&buf;
           buf.len = 1;
           WSASend (EV_FD_TO_WIN32_HANDLE (evpipe [1]), &buf, 1, &sent, 0, 0, 0);
 #else
@@ -3343,6 +3343,7 @@ VALUE ev_backend_poll(void **args)
   struct ev_loop *loop = (struct ev_loop *)args[0];
   ev_tstamp waittime = *(ev_tstamp *)args[1];
   backend_poll (EV_A_ waittime);
+  return Qnil;
 }
 #endif
 /* ######################################## */

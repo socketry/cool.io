@@ -11,7 +11,9 @@
 
 #include <string.h>
 #include <time.h>
+#ifndef _MSC_VER
 #include <unistd.h>
+#endif
 #include <errno.h>
 
 /* 1 GiB maximum buffer size */

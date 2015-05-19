@@ -11,12 +11,12 @@ describe Cool.io::TimerWatcher do
   it "can have the on_timer callback defined after creation" do
     @watcher = Cool.io::TimerWatcher.new(interval, true)
     nr = '0'
-    @watcher.on_timer { nr.succ! }.should == nil
-    @watcher.attach(loop).should == @watcher
-    nr.should == '0'
+    expect(@watcher.on_timer { nr.succ! }).to be_nil
+    expect(@watcher.attach(loop)).to eq(@watcher)
+    expect(nr).to eq('0')
     sleep interval
     loop.run_once
-    nr.should == '1'
+    expect(nr).to eq('1')
   end
 
   it "can be subclassed" do
@@ -28,29 +28,29 @@ describe Cool.io::TimerWatcher do
       end
     end
     @watcher = MyTimerWatcher.new(interval, true)
-    @watcher.attach(loop).should == @watcher
-    MyTimerWatcher::TMP.should == '0'
+    expect(@watcher.attach(loop)).to eq(@watcher)
+    expect(MyTimerWatcher::TMP).to eq('0')
     sleep interval
     loop.run_once
-    MyTimerWatcher::TMP.should == '1'
+    expect(MyTimerWatcher::TMP).to eq('1')
   end
 
   it "can have the on_timer callback redefined between runs" do
     @watcher = Cool.io::TimerWatcher.new(interval, true)
     nr = '0'
-    @watcher.on_timer { nr.succ! }.should == nil
-    @watcher.attach(loop).should == @watcher
-    nr.should == '0'
+    expect(@watcher.on_timer { nr.succ! }).to be_nil
+    expect(@watcher.attach(loop)).to eq(@watcher)
+    expect(nr).to eq('0')
     sleep interval
     loop.run_once
-    nr.should == '1'
+    expect(nr).to eq('1')
     @watcher.detach
-    @watcher.on_timer { nr = :foo }.should == nil
-    @watcher.attach(loop).should == @watcher
-    nr.should == '1'
+    expect(@watcher.on_timer { nr = :foo }).to be_nil
+    expect(@watcher.attach(loop)).to eq(@watcher)
+    expect(nr).to eq('1')
     sleep interval
     loop.run_once
-    nr.should == :foo
+    expect(nr).to eq(:foo)
   end
 
   after :each do

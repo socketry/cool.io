@@ -106,6 +106,7 @@ if (__i == ((fd_set *)(set))->fd_count) {\
 } while(0)
 #define EV_WIN_FD_ZERO(set) (((fd_set *)(set))->fd_count=0)
 #define EV_WIN_FD_ISSET(fd, set) __WSAFDIsSet((SOCKET)(fd), (fd_set *)(set))
+#define EV_WIN_FD_COUNT(set) (((fd_set *)(set))->fd_count)
 /* ######################################## */
 #else
 #define EV_WIN_FD_CLR FD_CLR
@@ -192,6 +193,23 @@ select_poll (EV_P_ ev_tstamp timeout)
   int res;
   int fd_setsize;
 
+#ifdef _WIN32
+  /* POSIX defines the case when the readfds, writefds, and errorfds arguments
+   * are all null pointers.
+   * http://pubs.opengroup.org/onlinepubs/9699919799/functions/select.html
+   *
+   * But Windows doesn't define such case; simply say don't so that
+   * https://msdn.microsoft.com/en-us/library/windows/desktop/ms740141(v=vs.85).aspx
+   * "Any two of the parameters, readfds, writefds, or exceptfds, can be given
+   * as null. At least one must be non-null, and any non-null descriptor set
+   * must contain at least one handle to a socket."
+   * At least on Windows Server 2012 R2 Datacenter with Visual Studio 2013
+   * (Visual C++ 12), it cause WaitForMultipleObjects stuck.
+   */
+  if (EV_WIN_FD_COUNT(vec_ri) == 0 && EV_WIN_FD_COUNT(vec_wi) == 0)
+    return;
+#endif
+
   EV_RELEASE_CB;
   EV_TV_SET (tv, timeout);
 
@@ -246,7 +264,7 @@ select_poll (EV_P_ ev_tstamp timeout)
         {
           if (timeout)
             {
-              unsigned long ms = timeout * 1e3;
+              unsigned long ms = (unsigned long)(timeout * 1e3);
               Sleep (ms ? ms : 1);
             }
 

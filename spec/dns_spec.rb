@@ -25,9 +25,9 @@ describe "DNS" do
     begin
       c = ConnectorThingy.connect(VALID_DOMAIN, 80).attach(@loop)
       
-      proc do
+      expect do
         @loop.run
-      end.should raise_error(ItWorked)
+      end.to raise_error(ItWorked)
     ensure
       c.close
     end
@@ -36,8 +36,8 @@ describe "DNS" do
   it "fires on_resolve_failed for invalid domains" do
     ConnectorThingy.connect(INVALID_DOMAIN, 80).attach(@loop)
     
-    proc do
+    expect do
       @loop.run
-    end.should raise_error(WontResolve)
+    end.to raise_error(WontResolve)
   end
 end

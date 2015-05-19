@@ -109,11 +109,11 @@ end
 describe Coolio::TCPServer do
 
   it '#run' do
-    test_run("hello").should == "hello"
+    expect(test_run("hello")).to eq("hello")
   end
 
   it '#run_once' do
-    test_run_once("hello").should == "hello"
+    expect(test_run_once("hello")).to eq("hello")
   end
 
   it '#run_once(timeout)' do
@@ -125,7 +125,7 @@ describe Coolio::TCPServer do
   end
 
   it '#run(timeout)' do
-    test_run_timeout("hello").should == "hello"
+    expect(test_run_timeout("hello")).to eq("hello")
   end
 
   describe "functionaltest" do

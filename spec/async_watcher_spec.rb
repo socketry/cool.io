@@ -30,7 +30,7 @@ describe Cool.io::AsyncWatcher, :env => :exclude_win do
     end
 
     # ensure children are ready
-    nr_fork.times { rd.sysread(1).should == '.' }
+    nr_fork.times { expect(rd.sysread(1)).to eq('.') }
 
     # send our signals
     nr_signal.times { aw.signal }
@@ -41,15 +41,15 @@ describe Cool.io::AsyncWatcher, :env => :exclude_win do
     children.each do |pid|
       Process.kill(:TERM, pid)
       _, status = Process.waitpid2(pid)
-      status.exitstatus.should == 0
+      expect(status.exitstatus).to eq(0)
     end
 
     # we should've written a line for every signal we sent
     lines = tmp.readlines
-    lines.size.should == nr_signal
+    expect(lines.size).to eq(nr_signal)
 
     # theoretically a bad kernel scheduler could give us fewer...
-    lines.sort.uniq.size.should == nr_fork
+    expect(lines.sort.uniq.size).to eq(nr_fork)
 
     tmp.close!
   end
