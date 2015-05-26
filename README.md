@@ -92,6 +92,7 @@ Example Program
 Cool.io provides a Sinatra-like DSL for authoring event-driven programs:
 
     require 'cool.io'
+    require 'cool.io/dsl'
 
     ADDR = '127.0.0.1'
     PORT = 4321
