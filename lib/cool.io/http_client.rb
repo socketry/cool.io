@@ -248,7 +248,7 @@ module Coolio
       head['host'] ||= encode_host
 
       # Set the Content-Length if it hasn't been specified already and a body was given
-      head['content-length'] ||= body ? body.length : 0
+      head['content-length'] ||= body ? body.bytesize : 0
 
       # Set the User-Agent if it hasn't been specified
       head['user-agent'] ||= "Coolio #{Coolio::VERSION}"
