@@ -207,7 +207,10 @@ select_poll (EV_P_ ev_tstamp timeout)
    * (Visual C++ 12), it cause WaitForMultipleObjects stuck.
    */
   if (EV_WIN_FD_COUNT(vec_ri) == 0 && EV_WIN_FD_COUNT(vec_wi) == 0)
-    return;
+    {
+      ev_sleep (timeout);
+      return;
+    }
 #endif
 
   EV_RELEASE_CB;
