@@ -37,7 +37,7 @@
  * either the BSD or the GPL.
  */
 
-/* ########## NIO4R PATCHERY HO! ########## */
+/* ########## COOLIO PATCHERY HO! ########## */
 #include "ruby.h"
 /* ######################################## */
 
