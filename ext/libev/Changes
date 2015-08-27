@@ -15,6 +15,12 @@ TODO: document portability requirements for atomic pointer access
 TODO: possible cb aliasing?
 TODO: document requirements for function pointers and calling conventions.
 
+4.20 Sat Jun 20 13:01:43 CEST 2015
+	- prefer noexcept over throw () with C++ 11.
+        - update ecb.h due to incompatibilities with c11.
+        - fix a potential aliasing issue when reading and writing
+          watcher callbacks.
+
 4.19 Thu Sep 25 08:18:25 CEST 2014
 	- ev.h wasn't valid C++ anymore, which tripped compilers other than
           clang, msvc or gcc (analyzed by Raphael 'kena' Poss). Unfortunately,
@@ -499,4 +505,3 @@ TODO: document requirements for function pointers and calling conventions.
 
 0.1  Wed Oct 31 21:31:48 CET 2007
 	- original version; hacked together in <24h.
-
