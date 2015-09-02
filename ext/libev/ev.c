@@ -3402,7 +3402,7 @@ time_update (EV_P_ ev_tstamp max_block)
     }
 }
 
-/* ########## NIO4R PATCHERY HO! ########## */
+/* ########## COOLIO PATCHERY HO! ########## */
 #if defined(HAVE_RB_THREAD_BLOCKING_REGION) || defined(HAVE_RB_THREAD_CALL_WITHOUT_GVL)
 struct ev_poll_args {
   struct ev_loop *loop;
@@ -3415,6 +3415,7 @@ VALUE ev_backend_poll(void *ptr)
   struct ev_poll_args *args = (struct ev_poll_args *)ptr;
   struct ev_loop *loop = args->loop;
   backend_poll (EV_A_ args->waittime);
+  return Qnil;
 }
 #endif
 /* ######################################## */
@@ -3422,7 +3423,7 @@ VALUE ev_backend_poll(void *ptr)
 int
 ev_run (EV_P_ int flags)
 {
-/* ########## NIO4R PATCHERY HO! ########## */
+/* ########## COOLIO PATCHERY HO! ########## */
 #if defined(HAVE_RB_THREAD_BLOCKING_REGION) || defined(HAVE_RB_THREAD_CALL_WITHOUT_GVL)
     struct ev_poll_args poll_args;
 #endif
@@ -3547,7 +3548,7 @@ ev_run (EV_P_ int flags)
         assert ((loop_done = EVBREAK_RECURSE, 1)); /* assert for side effect */
 
 /*
-########################## NIO4R PATCHERY HO! ##########################
+########################## COOLIO PATCHERY HO! ##########################
 
 According to the grandwizards of Ruby, locking and unlocking of the global
 interpreter lock are apparently too powerful a concept for a mere mortal to
