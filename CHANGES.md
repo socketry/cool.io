@@ -1,3 +1,9 @@
+1.4.0
+-----
+
+* Update libev to 4.20
+* Sleep in timeout instead of select on Windows
+
 1.3.1
 -----
 
