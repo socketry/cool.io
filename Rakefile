@@ -41,6 +41,17 @@ Rake::ExtensionTask.new('cool.io_ext', spec) do |ext|
   configure_cross_compilation(ext)
 end
 
+namespace :build do
+  desc 'Build gems for Windows per rake-compiler-dock'
+  task :windows do
+    require 'rake_compiler_dock'
+    RakeCompilerDock.sh <<-CROSS
+      bundle
+      rake cross native gem RUBY_CC_VERSION='2.0.0:2.1.6:2.2.2'
+    CROSS
+  end
+end
+
 # adapted from http://flavoriffic.blogspot.com/2009/06/easily-valgrind-gdb-your-ruby-c.html
 def specs_command
   require "find"
