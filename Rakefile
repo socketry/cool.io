@@ -27,7 +27,7 @@ spec = eval(File.read("cool.io.gemspec"))
 def configure_cross_compilation(ext)
   unless RUBY_PLATFORM =~ /mswin|mingw/
     ext.cross_compile = true
-    ext.cross_platform = 'i386-mingw32'#['i386-mswin32-60', 'i386-mingw32']
+    ext.cross_platform = ['x86-mingw32', 'x64-mingw32']
   end
 end
 
