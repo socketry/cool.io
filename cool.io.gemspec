@@ -22,7 +22,7 @@ Gem::Specification.new do |s|
   s.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
   s.require_paths = ["lib"]
   
-  s.add_development_dependency "rake-compiler", "~> 0.8.3"
+  s.add_development_dependency "rake-compiler", "~> 0.9.5"
   s.add_development_dependency "rake-compiler-dock", "~> 0.4.3"
   s.add_development_dependency "rspec", ">= 2.13.0"
   s.add_development_dependency "rdoc", ">= 3.6.0"
