@@ -41,6 +41,8 @@ Rake::ExtensionTask.new('cool.io_ext', spec) do |ext|
   configure_cross_compilation(ext)
 end
 
+# Note that this rake-compiler-dock rake task dose not support bundle install(1) --path option.
+# Please use bundle install instead when you execute this rake task.
 namespace :build do
   desc 'Build gems for Windows per rake-compiler-dock'
   task :windows do
