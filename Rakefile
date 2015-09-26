@@ -27,7 +27,7 @@ spec = eval(File.read("cool.io.gemspec"))
 def configure_cross_compilation(ext)
   unless RUBY_PLATFORM =~ /mswin|mingw/
     ext.cross_compile = true
-    ext.cross_platform = 'i386-mingw32'#['i386-mswin32-60', 'i386-mingw32']
+    ext.cross_platform = ['x86-mingw32', 'x64-mingw32']
   end
 end
 
@@ -39,6 +39,19 @@ end
 Rake::ExtensionTask.new('cool.io_ext', spec) do |ext|
   ext.ext_dir = 'ext/cool.io'
   configure_cross_compilation(ext)
+end
+
+# Note that this rake-compiler-dock rake task dose not support bundle install(1) --path option.
+# Please use bundle install instead when you execute this rake task.
+namespace :build do
+  desc 'Build gems for Windows per rake-compiler-dock'
+  task :windows do
+    require 'rake_compiler_dock'
+    RakeCompilerDock.sh <<-CROSS
+      bundle
+      rake cross native gem RUBY_CC_VERSION='2.0.0:2.1.6:2.2.2'
+    CROSS
+  end
 end
 
 # adapted from http://flavoriffic.blogspot.com/2009/06/easily-valgrind-gdb-your-ruby-c.html
