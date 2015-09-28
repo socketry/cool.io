@@ -1,3 +1,9 @@
+1.4.1
+-----
+
+* Use SleepEx instead of Sleep for better fix of process hung problem on windows environment
+* Use rake-compiler-dock for cross compilation
+
 1.4.0
 -----
 
