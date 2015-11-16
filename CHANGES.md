@@ -1,3 +1,8 @@
+1.4.2
+-----
+
+* Add unexpected object info to attach exception message
+
 1.4.1
 -----
 
