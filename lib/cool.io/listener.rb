@@ -59,6 +59,9 @@ module Coolio
     else
       def on_readable
         begin
+          # In Windows, accept_nonblock() with multiple processes
+          # causes thundering herd problem.
+          # To avoid this, we need to use accept().
           on_connection @listen_socket.accept
         rescue Errno::EAGAIN, Errno::ECONNABORTED
         end
