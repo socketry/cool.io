@@ -40,19 +40,31 @@ module Coolio
     #########
 
     # Coolio callback for handling new connections
-    def on_readable
-      begin
-        on_connection @listen_socket.accept_nonblock
-      rescue Errno::EAGAIN, Errno::ECONNABORTED
-        # EAGAIN can be triggered here if the socket is shared between
-        # multiple processes and a thundering herd is woken up to accept
-        # one connection, only one process will get the connection and
-        # the others will be awoken.
-        # ECONNABORTED is documented in accept() manpages but modern TCP
-        # stacks with syncookies and/or accept()-filtering for DoS
-        # protection do not see it.  In any case this error is harmless
-        # and we should instead spend our time with clients that follow
-        # through on connection attempts.
+    unless RUBY_PLATFORM =~ /mingw|mswin/
+      def on_readable
+        begin
+          on_connection @listen_socket.accept_nonblock
+        rescue Errno::EAGAIN, Errno::ECONNABORTED
+          # EAGAIN can be triggered here if the socket is shared between
+          # multiple processes and a thundering herd is woken up to accept
+          # one connection, only one process will get the connection and
+          # the others will be awoken.
+          # ECONNABORTED is documented in accept() manpages but modern TCP
+          # stacks with syncookies and/or accept()-filtering for DoS
+          # protection do not see it.  In any case this error is harmless
+          # and we should instead spend our time with clients that follow
+          # through on connection attempts.
+        end
+      end
+    else
+      def on_readable
+        begin
+          # In Windows, accept_nonblock() with multiple processes
+          # causes thundering herd problem.
+          # To avoid this, we need to use accept().
+          on_connection @listen_socket.accept
+        rescue Errno::EAGAIN, Errno::ECONNABORTED
+        end
       end
     end
   end
