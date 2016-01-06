@@ -1,3 +1,9 @@
+1.4.3
+-----
+
+* Use accept instead of accept_nonblock on Windows to avoid thundering held problem
+* Fix compilation error on Solaris and Ruby 2.3.0
+
 1.4.2
 -----
 
