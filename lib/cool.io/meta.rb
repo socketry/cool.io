@@ -32,6 +32,7 @@ module Coolio
     def event_callback(*methods)
       methods.each do |method|
         module_eval <<-EOD
+          remove_method "#{method}"
           def #{method}(*args, &block)
             if block
               @#{method}_callback = block
