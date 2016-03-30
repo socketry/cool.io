@@ -72,6 +72,7 @@ ensure
 end
 
 def test_run_once_timeout(timeout = TIMEOUT)
+  @data = ""
   reactor = Coolio::Loop.new
   server = Cool.io::TCPServer.new(HOST, PORT, MyConnection, method(:on_message))
   reactor.attach(server)
