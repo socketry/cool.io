@@ -197,7 +197,7 @@ describe Coolio::TCPServer do
         end
         def on_read(data)
           @cb.call data
-          size = write(data + "fff")
+          _size = write(data + "fff")
         end
       end
       
