@@ -27,6 +27,7 @@ module Coolio
 
     watcher_delegate :@_connector
 
+    remove_method :attach
     def attach(evloop)
       raise RuntimeError, "connection failed" if @_failed
 
