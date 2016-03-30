@@ -2,11 +2,6 @@
 $:.push File.expand_path("../lib", __FILE__)
 require "cool.io/version"
 
-module Cool
-  # Allow Coolio module to be referenced as Cool.io
-  def self.io; Coolio; end
-end
-
 Gem::Specification.new do |s|
   s.name        = "cool.io"
   s.version     = Coolio::VERSION
