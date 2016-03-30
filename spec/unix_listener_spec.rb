@@ -10,7 +10,7 @@ describe Cool.io::UNIXListener, :env => :exclude_win do
   end
 
   it "creates a new UNIXListener" do
-    listener = Cool.io::UNIXListener.new(@tmp.path)
+    _listener = Cool.io::UNIXListener.new(@tmp.path)
     expect(File.socket?(@tmp.path)).to eq(true)
   end
 
