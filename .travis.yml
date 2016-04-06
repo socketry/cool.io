@@ -8,9 +8,9 @@ rvm:
   - 2.1
   - 2.2
   - 2.3.0
-  - ruby-head
   - rbx
 
 matrix:
   allow_failures:
+    - rvm: ruby-head
     - rvm: rbx
