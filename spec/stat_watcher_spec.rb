@@ -70,7 +70,11 @@ describe Cool.io::StatWatcher do
   end
 
   it "should raise when the handler does not take 2 parameters" do
-    class MyStatWatcher < Cool.io::StatWatcher; def on_change; end; end
+    class MyStatWatcher < Cool.io::StatWatcher
+      remove_method :on_change
+      def on_change
+      end
+    end
     expect { watcher.accessed }.to raise_error(ArgumentError)
   end
 
