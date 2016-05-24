@@ -1,3 +1,8 @@
+1.4.4
+-----
+
+* Suppress lots of warnings
+
 1.4.3
 -----
 
