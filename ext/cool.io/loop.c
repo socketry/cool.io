@@ -18,7 +18,6 @@ static VALUE Coolio_Loop_allocate(VALUE klass);
 static void Coolio_Loop_mark(struct Coolio_Loop *loop);
 static void Coolio_Loop_free(struct Coolio_Loop *loop);
 
-static VALUE Coolio_Loop_initialize(VALUE self);
 static VALUE Coolio_Loop_ev_loop_new(VALUE self, VALUE flags);
 static VALUE Coolio_Loop_run_once(int argc, VALUE *argv, VALUE self);
 static VALUE Coolio_Loop_run_nonblock(VALUE self);
@@ -43,8 +42,7 @@ void Init_coolio_loop()
   mCoolio = rb_define_module("Coolio");
   cCoolio_Loop = rb_define_class_under(mCoolio, "Loop", rb_cObject);
   rb_define_alloc_func(cCoolio_Loop, Coolio_Loop_allocate);
- 
-  rb_define_method(cCoolio_Loop, "initialize", Coolio_Loop_initialize, 0);
+
   rb_define_private_method(cCoolio_Loop, "ev_loop_new", Coolio_Loop_ev_loop_new, 1);
   rb_define_method(cCoolio_Loop, "run_once", Coolio_Loop_run_once, -1);
   rb_define_method(cCoolio_Loop, "run_nonblock", Coolio_Loop_run_nonblock, 0);
@@ -77,11 +75,6 @@ static void Coolio_Loop_free(struct Coolio_Loop *loop)
 
   xfree(loop->eventbuf);
   xfree(loop);
-}
-
-static VALUE Coolio_Loop_initialize(VALUE self)
-{
-  return Coolio_Loop_ev_loop_new(self, INT2NUM(0));
 }
 
 /* Wrapper for populating a Coolio_Loop struct with a new event loop */
