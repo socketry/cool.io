@@ -32,7 +32,7 @@
    }
 
    
-   
+   #define FD_SETSIZE 1024
    #include <winsock.h>
 
 #include <stdlib.h>
