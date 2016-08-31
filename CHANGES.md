@@ -1,3 +1,8 @@
+1.4.5
+-----
+
+* Increase FD_SETSIZE to 1024 on Windows
+
 1.4.4
 -----
 
