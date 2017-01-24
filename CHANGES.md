@@ -1,4 +1,9 @@
-1.4.5
+1.4.6
+-----
+
+* Add ruby 2.4.0 to windows binary gem
+
+ 1.4.5
 -----
 
 * Increase FD_SETSIZE to 1024 on Windows
