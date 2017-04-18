@@ -1,8 +1,20 @@
+diff --git a/ext/libev/ev.c b/ext/libev/ev.c
+index dae87f1..d15f6bd 100644
+--- a/ext/libev/ev.c
++++ b/ext/libev/ev.c
+@@ -207,6 +207,7 @@
+ #else
+ # include <io.h>
+ # define WIN32_LEAN_AND_MEAN
++# define FD_SETSIZE 1024
+ # include <winsock2.h>
+ # include <windows.h>
+ # ifndef EV_SELECT_IS_WINSOCKET
 diff --git a/ext/libev/ev_select.c b/ext/libev/ev_select.c
-index f38d6ca..3a32642 100644
+index f38d6ca..7050778 100644
 --- a/ext/libev/ev_select.c
 +++ b/ext/libev/ev_select.c
-@@ -67,6 +67,53 @@
+@@ -67,6 +67,54 @@
  
  #include <string.h>
  
@@ -45,6 +57,7 @@ index f38d6ca..3a32642 100644
 +} while(0)
 +#define EV_WIN_FD_ZERO(set) (((fd_set *)(set))->fd_count=0)
 +#define EV_WIN_FD_ISSET(fd, set) __WSAFDIsSet((SOCKET)(fd), (fd_set *)(set))
++#define EV_WIN_FD_COUNT(set) (((fd_set *)(set))->fd_count)
 +/* ######################################## */
 +#else
 +#define EV_WIN_FD_CLR FD_CLR
@@ -56,7 +69,7 @@ index f38d6ca..3a32642 100644
  static void
  select_modify (EV_P_ int fd, int oev, int nev)
  {
-@@ -91,17 +138,17 @@ select_modify (EV_P_ int fd, int oev, int nev)
+@@ -91,17 +139,17 @@ select_modify (EV_P_ int fd, int oev, int nev)
      if ((oev ^ nev) & EV_READ)
      #endif
        if (nev & EV_READ)
@@ -78,16 +91,18 @@ index f38d6ca..3a32642 100644
  
  #else
  
-@@ -136,6 +183,8 @@ select_modify (EV_P_ int fd, int oev, int nev)
-   }
- }
+@@ -197,8 +245,8 @@ select_poll (EV_P_ ev_tstamp timeout)
+         {
+           if (timeout)
+             {
+-              unsigned long ms = timeout * 1e3;
+-              Sleep (ms ? ms : 1);
++              unsigned long ms = (unsigned long)(timeout * 1e3);
++              SleepEx (ms ? ms : 1, TRUE);
+             }
  
-+#undef socket
-+
- static void
- select_poll (EV_P_ ev_tstamp timeout)
- {
-@@ -230,10 +279,10 @@ select_poll (EV_P_ ev_tstamp timeout)
+           return;
+@@ -230,10 +278,10 @@ select_poll (EV_P_ ev_tstamp timeout)
            int handle = fd;
            #endif
  
@@ -101,7 +116,7 @@ index f38d6ca..3a32642 100644
            #endif
  
            if (expect_true (events))
-@@ -279,9 +328,9 @@ select_init (EV_P_ int flags)
+@@ -279,9 +327,9 @@ select_init (EV_P_ int flags)
    backend_poll    = select_poll;
  
  #if EV_SELECT_USE_FD_SET
