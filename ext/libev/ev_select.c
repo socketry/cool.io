@@ -67,6 +67,54 @@
 
 #include <string.h>
 
+#ifdef _WIN32
+/*
+########## COOLIO PATCHERY HO! ##########
+
+Ruby undefs FD_* utilities for own implementation.
+It converts fd argument into socket handle internally on Windows,
+so libev should not use Ruby's FD_* utilities.
+
+Following FD_* utilities come from MinGW.
+RubyInstaller is built by MinGW so this should work.
+*/
+int PASCAL __WSAFDIsSet(SOCKET,fd_set*);
+#define EV_WIN_FD_CLR(fd,set) do { u_int __i;\
+for (__i = 0; __i < ((fd_set *)(set))->fd_count ; __i++) {\
+	if (((fd_set *)(set))->fd_array[__i] == (fd)) {\
+	while (__i < ((fd_set *)(set))->fd_count-1) {\
+		((fd_set*)(set))->fd_array[__i] = ((fd_set*)(set))->fd_array[__i+1];\
+		__i++;\
+	}\
+	((fd_set*)(set))->fd_count--;\
+	break;\
+	}\
+}\
+} while (0)
+#define EV_WIN_FD_SET(fd, set) do { u_int __i;\
+for (__i = 0; __i < ((fd_set *)(set))->fd_count ; __i++) {\
+	if (((fd_set *)(set))->fd_array[__i] == (fd)) {\
+		break;\
+	}\
+}\
+if (__i == ((fd_set *)(set))->fd_count) {\
+	if (((fd_set *)(set))->fd_count < FD_SETSIZE) {\
+		((fd_set *)(set))->fd_array[__i] = (fd);\
+		((fd_set *)(set))->fd_count++;\
+	}\
+}\
+} while(0)
+#define EV_WIN_FD_ZERO(set) (((fd_set *)(set))->fd_count=0)
+#define EV_WIN_FD_ISSET(fd, set) __WSAFDIsSet((SOCKET)(fd), (fd_set *)(set))
+#define EV_WIN_FD_COUNT(set) (((fd_set *)(set))->fd_count)
+/* ######################################## */
+#else
+#define EV_WIN_FD_CLR FD_CLR
+#define EV_WIN_FD_SET FD_SET
+#define EV_WIN_FD_ZERO FD_ZERO
+#define EV_WIN_FD_ISSET FD_ISSET
+#endif
+
 static void
 select_modify (EV_P_ int fd, int oev, int nev)
 {
@@ -91,17 +139,17 @@ select_modify (EV_P_ int fd, int oev, int nev)
     if ((oev ^ nev) & EV_READ)
     #endif
       if (nev & EV_READ)
-        FD_SET (handle, (fd_set *)vec_ri);
+        EV_WIN_FD_SET (handle, (fd_set *)vec_ri);
       else
-        FD_CLR (handle, (fd_set *)vec_ri);
+        EV_WIN_FD_CLR (handle, (fd_set *)vec_ri);
 
     #if EV_SELECT_IS_WINSOCKET
     if ((oev ^ nev) & EV_WRITE)
     #endif
       if (nev & EV_WRITE)
-        FD_SET (handle, (fd_set *)vec_wi);
+        EV_WIN_FD_SET (handle, (fd_set *)vec_wi);
       else
-        FD_CLR (handle, (fd_set *)vec_wi);
+        EV_WIN_FD_CLR (handle, (fd_set *)vec_wi);
 
 #else
 
@@ -197,8 +245,8 @@ select_poll (EV_P_ ev_tstamp timeout)
         {
           if (timeout)
             {
-              unsigned long ms = timeout * 1e3;
-              Sleep (ms ? ms : 1);
+              unsigned long ms = (unsigned long)(timeout * 1e3);
+              SleepEx (ms ? ms : 1, TRUE);
             }
 
           return;
@@ -230,10 +278,10 @@ select_poll (EV_P_ ev_tstamp timeout)
           int handle = fd;
           #endif
 
-          if (FD_ISSET (handle, (fd_set *)vec_ro)) events |= EV_READ;
-          if (FD_ISSET (handle, (fd_set *)vec_wo)) events |= EV_WRITE;
+          if (EV_WIN_FD_ISSET (handle, (fd_set *)vec_ro)) events |= EV_READ;
+          if (EV_WIN_FD_ISSET (handle, (fd_set *)vec_wo)) events |= EV_WRITE;
           #ifdef _WIN32
-          if (FD_ISSET (handle, (fd_set *)vec_eo)) events |= EV_WRITE;
+          if (EV_WIN_FD_ISSET (handle, (fd_set *)vec_eo)) events |= EV_WRITE;
           #endif
 
           if (expect_true (events))
@@ -280,9 +328,9 @@ select_init (EV_P_ int flags)
   backend_poll    = select_poll;
 
 #if EV_SELECT_USE_FD_SET
-  vec_ri  = ev_malloc (sizeof (fd_set)); FD_ZERO ((fd_set *)vec_ri);
+  vec_ri  = ev_malloc (sizeof (fd_set)); EV_WIN_FD_ZERO ((fd_set *)vec_ri);
   vec_ro  = ev_malloc (sizeof (fd_set));
-  vec_wi  = ev_malloc (sizeof (fd_set)); FD_ZERO ((fd_set *)vec_wi);
+  vec_wi  = ev_malloc (sizeof (fd_set)); EV_WIN_FD_ZERO ((fd_set *)vec_wi);
   vec_wo  = ev_malloc (sizeof (fd_set));
   #ifdef _WIN32
   vec_eo  = ev_malloc (sizeof (fd_set));
