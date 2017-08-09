@@ -137,6 +137,8 @@ module Coolio
 
     private :preinitialize
 
+    PEERADDR_FAILED = ["?", 0, "name resolusion failed", "?"]
+
     def initialize(socket)
       unless socket.is_a?(::TCPSocket) or socket.is_a?(TCPConnectSocket)
         raise TypeError, "socket must be a TCPSocket"
@@ -144,7 +146,7 @@ module Coolio
 
       super
 
-      @address_family, @remote_port, @remote_host, @remote_addr = socket.peeraddr
+      @address_family, @remote_port, @remote_host, @remote_addr = (socket.peeraddr rescue PEERADDR_FAILED)
     end
 
     def peeraddr
