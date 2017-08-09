@@ -1,4 +1,9 @@
-1.5.0
+1.5.1
+-----
+
+* Don't raise an exception when peername failed
+
+ 1.5.0
 -----
 
 * Update libev to 4.24
