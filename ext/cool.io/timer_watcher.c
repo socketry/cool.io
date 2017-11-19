@@ -213,7 +213,7 @@ static void Coolio_TimerWatcher_libev_callback(struct ev_loop *ev_loop, struct e
 static void Coolio_TimerWatcher_dispatch_callback(VALUE self, int revents)
 { 
   if(revents & EV_TIMEOUT)
-    rb_funcall(self, rb_intern("on_timer"), 0, 0);
+    rb_funcall(self, rb_intern("on_timer"), 0);
   else
     rb_raise(rb_eRuntimeError, "unknown revents value for ev_timer: %d", revents);
 }
