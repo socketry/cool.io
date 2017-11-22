@@ -181,9 +181,9 @@ static void Coolio_IOWatcher_libev_callback(struct ev_loop *ev_loop, struct ev_i
 static void Coolio_IOWatcher_dispatch_callback(VALUE self, int revents)
 {   
   if(revents & EV_READ)
-    rb_funcall(self, rb_intern("on_readable"), 0, 0);
+    rb_funcall(self, rb_intern("on_readable"), 0);
   else if(revents & EV_WRITE)
-    rb_funcall(self, rb_intern("on_writable"), 0, 0);
+    rb_funcall(self, rb_intern("on_writable"), 0);
   else
     rb_raise(rb_eRuntimeError, "unknown revents value for ev_io: %d", revents);
 }
