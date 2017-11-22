@@ -1,7 +1,12 @@
+1.5.3
+-----
+
+* Fix invalid IOWatcher's rb_funcall that causes ArgumentError with ruby 2.5 and clang
+
 1.5.2
 -----
 
-* Fix invalid rb_funcall that causes ArgumentError with ruby 2.5 and clang
+* Fix invalid TimerWatcher's rb_funcall that causes ArgumentError with ruby 2.5 and clang
 
 1.5.1
 -----
