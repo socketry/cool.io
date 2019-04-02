@@ -1,3 +1,8 @@
+1.5.4
+-----
+
+* Add ruby 2.5 to windows gem
+
 1.5.3
 -----
 
