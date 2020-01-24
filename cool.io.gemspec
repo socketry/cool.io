@@ -18,7 +18,7 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
 
   s.add_development_dependency "rake-compiler", "~> 1.0"
-  s.add_development_dependency "rake-compiler-dock", "~> 0.6.0"
+  s.add_development_dependency "rake-compiler-dock", "~> 1.0"
   s.add_development_dependency "rspec", ">= 2.13.0"
   s.add_development_dependency "rdoc", ">= 3.6.0"
 end
