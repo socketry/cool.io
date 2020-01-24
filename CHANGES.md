@@ -1,3 +1,9 @@
+1.6.0
+-----
+
+* Add ruby 2.6/2.7 to windows gem
+* Drop ruby 2.1/2.2/2.3 from windows gem
+
 1.5.4
 -----
 
