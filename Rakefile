@@ -48,7 +48,7 @@ namespace :build do
   task :windows do
     require 'rake_compiler_dock'
     RakeCompilerDock.sh <<-CROSS
-      bundle && bundle exec rake cross native gem RUBY_CC_VERSION='2.0.0:2.1.6:2.2.2:2.3.0:2.4.0:2.5.0'
+      bundle && bundle exec rake cross native gem RUBY_CC_VERSION='2.7.0:2.6.0:2.5.0:2.4.0'
     CROSS
   end
 end
