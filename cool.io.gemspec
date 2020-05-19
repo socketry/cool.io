@@ -11,6 +11,7 @@ Gem::Specification.new do |s|
   s.summary     = "A cool framework for doing high performance I/O in Ruby"
   s.description = "Cool.io provides a high performance event framework for Ruby which uses the libev C library"
   s.extensions = ["ext/cool.io/extconf.rb", "ext/iobuffer/extconf.rb"]
+  s.licenses   = ["MIT"]
 
   s.files         = `git ls-files`.split("\n")
   s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
