@@ -10,6 +10,14 @@ have_func('rb_thread_alone')
 have_func('rb_str_set_len')
 have_library('rt', 'clock_gettime')
 
+if have_header('ruby/io.h')
+  $defs << '-DHAVE_RUBY_IO_H'
+end
+
+if have_header('ruby/thread.h')
+  $defs << '-DHAVE_RUBY_THREAD_H'
+end
+
 if have_header('sys/select.h')
   $defs << '-DEV_USE_SELECT'
 end

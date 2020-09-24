@@ -8,7 +8,11 @@
 #define COOLIO_H
 
 #include "ruby.h"
+#if defined(HAVE_RUBY_IO_H)
+#include "ruby/io.h"
+#else
 #include "rubyio.h"
+#endif
 
 #ifdef GetReadFile
 #define FPTR_TO_FD(fptr) (fileno(GetReadFile(fptr)))
@@ -55,5 +59,12 @@ struct Coolio_Watcher
 };
 
 void Coolio_Loop_process_event(VALUE watcher, int revents);
+
+void Init_coolio_loop();
+void Init_coolio_watcher();
+void Init_coolio_iowatcher();
+void Init_coolio_timer_watcher();
+void Init_coolio_stat_watcher();
+void Init_coolio_utils();
 
 #endif

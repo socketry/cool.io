@@ -15,6 +15,11 @@
 #include <sys/sysctl.h>
 #endif
 
+#ifdef HAVE_SYSCTLBYNAME
+#include <sys/sysctl.h>
+#include <sys/types.h>
+#endif
+
 static VALUE mCoolio = Qnil;
 static VALUE cCoolio_Utils = Qnil;
 

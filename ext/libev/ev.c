@@ -39,6 +39,9 @@
 
 /* ########## COOLIO PATCHERY HO! ########## */
 #include "ruby.h"
+#if defined(HAVE_RUBY_THREAD_H)
+#include "ruby/thread.h"
+#endif
 /* ######################################## */
 
 /* this big block deduces configuration from config.h */
