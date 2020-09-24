@@ -1,3 +1,8 @@
+1.6.1
+-----
+
+* Fix warning for recent compilers
+
 1.6.0
 -----
 
