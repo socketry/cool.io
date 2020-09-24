@@ -14,6 +14,10 @@ if have_header('ruby/io.h')
   $defs << '-DHAVE_RUBY_IO_H'
 end
 
+if have_header('ruby/thread.h')
+  $defs << '-DHAVE_RUBY_THREAD_H'
+end
+
 if have_header('sys/select.h')
   $defs << '-DEV_USE_SELECT'
 end
