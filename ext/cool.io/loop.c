@@ -6,7 +6,6 @@
 
 #include <assert.h>
 #include "ruby.h"
-#include "rubysig.h"
 #include "ev_wrap.h"
 
 #include "cool.io.h"
