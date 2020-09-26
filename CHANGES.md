@@ -1,3 +1,8 @@
+1.7.0
+-----
+
+* Fix extension build failure for ruby3
+
 1.6.1
 -----
 
