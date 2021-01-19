@@ -19,6 +19,7 @@ end
 describe "DNS" do
   before :each do
     @loop = Cool.io::Loop.new
+    @preferred_localhost_address = ::Socket.getaddrinfo("localhost", nil).first[3]
   end
   
   it "connects to valid domains" do
@@ -39,5 +40,11 @@ describe "DNS" do
     expect do
       @loop.run
     end.to raise_error(WontResolve)
+  end
+
+  it "resolve localhost even though hosts is empty" do
+    Tempfile.open("empty") do |file|
+      expect( Coolio::DNSResolver.hosts("localhost", file.path)).to eq @preferred_localhost_address
+    end
   end
 end
