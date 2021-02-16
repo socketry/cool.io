@@ -1,3 +1,8 @@
+1.7.1
+-----
+
+* Set fallback local loopback address by default for Windows environment
+
 1.7.0
 -----
 
