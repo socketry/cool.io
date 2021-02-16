@@ -49,6 +49,15 @@ module Coolio
           entries.each { |e| hosts[e] ||= addr }
         end
       end
+      if hosts.empty?
+        # On Windows, there is a case that hosts file doesn't have entry by default
+        # and preferred IPv4/IPv6 behavior may be changed by registry key [1], so
+        # "localhost" should be resolved by getaddrinfo.
+        # (first[3] means preferred resolved IP address ::1 or 127.0.0.1)
+        # [1] https://docs.microsoft.com/en-us/troubleshoot/windows-server/networking/configure-ipv6-in-windows
+        require "socket"
+        hosts["localhost"] = ::Socket.getaddrinfo("localhost", nil).first[3]
+      end
 
       hosts[host]
     end
