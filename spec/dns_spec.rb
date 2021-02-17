@@ -47,4 +47,12 @@ describe "DNS" do
       expect( Coolio::DNSResolver.hosts("localhost", file.path)).to eq @preferred_localhost_address
     end
   end
+
+  it "resolve missing localhost even though hosts entries exist" do
+    Tempfile.open("empty") do |file|
+      file.puts("127.0.0.1 example.internal")
+      file.flush
+      expect( Coolio::DNSResolver.hosts("localhost", file.path)).to eq @preferred_localhost_address
+    end
+  end
 end
