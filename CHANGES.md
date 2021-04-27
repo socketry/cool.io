@@ -1,3 +1,8 @@
+1.7.2
+-----
+
+* Add ruby 3.0 to windows gem
+
 1.7.1
 -----
 
