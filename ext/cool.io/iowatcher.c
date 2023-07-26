@@ -5,7 +5,7 @@
  */
 
 #include "ruby.h"
-#if defined(HAVE_RUBY_IO_H)
+#if defined(HAVE_RUBY_IO_H) || defined(HAVE_RB_IO_DESCRIPTOR)
 #include "ruby/io.h"
 #else
 #include "rubyio.h"
@@ -65,7 +65,7 @@ static VALUE Coolio_IOWatcher_initialize(int argc, VALUE *argv, VALUE self)
   char *flags_str;
   int events;
   struct Coolio_Watcher *watcher_data;
-#if HAVE_RB_IO_T
+#if defined(HAVE_RB_IO_T) || defined(HAVE_RB_IO_DESCRIPTOR)
   rb_io_t *fptr;
 #else
   OpenFile *fptr;
@@ -88,10 +88,15 @@ static VALUE Coolio_IOWatcher_initialize(int argc, VALUE *argv, VALUE self)
     rb_raise(rb_eArgError, "invalid event type: '%s' (must be 'r', 'w', or 'rw')", flags_str);
 
   Data_Get_Struct(self, struct Coolio_Watcher, watcher_data);
-  GetOpenFile(rb_convert_type(io, T_FILE, "IO", "to_io"), fptr);
+  io = rb_convert_type(io, T_FILE, "IO", "to_io");
+  GetOpenFile(io, fptr);
 
   watcher_data->dispatch_callback = Coolio_IOWatcher_dispatch_callback;
+#ifdef HAVE_RB_IO_DESCRIPTOR
+  ev_io_init(&watcher_data->event_types.ev_io, Coolio_IOWatcher_libev_callback, rb_io_descriptor(io), events);
+#else
   ev_io_init(&watcher_data->event_types.ev_io, Coolio_IOWatcher_libev_callback, FPTR_TO_FD(fptr), events);
+#endif
   watcher_data->event_types.ev_io.data = (void *)self;
 
   return Qnil;
