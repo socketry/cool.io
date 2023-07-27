@@ -14,8 +14,9 @@ applications.
 
 You can include Cool.io in your programs with:
 
-	require 'cool.io'
-
+```ruby
+require 'cool.io'
+```
 
 Anatomy
 -------
@@ -91,29 +92,31 @@ Example Program
 
 Cool.io provides a Sinatra-like DSL for authoring event-driven programs:
 
-    require 'cool.io'
-    require 'cool.io/dsl'
+```ruby
+require 'cool.io'
+require 'cool.io/dsl'
 
-    ADDR = '127.0.0.1'
-    PORT = 4321
+ADDR = '127.0.0.1'
+PORT = 4321
 
-    cool.io.connection :echo_server_connection do
-      on_connect do
-        puts "#{remote_addr}:#{remote_port} connected"
-      end
+cool.io.connection :echo_server_connection do
+  on_connect do
+    puts "#{remote_addr}:#{remote_port} connected"
+  end
 
-      on_close do
-        puts "#{remote_addr}:#{remote_port} disconnected"
-      end
+  on_close do
+    puts "#{remote_addr}:#{remote_port} disconnected"
+  end
 
-      on_read do |data|
-        write data
-      end
-    end
+  on_read do |data|
+    write data
+  end
+end
 
-    puts "Echo server listening on #{ADDR}:#{PORT}"
-    cool.io.server ADDR, PORT, :echo_server_connection
-    cool.io.run
+puts "Echo server listening on #{ADDR}:#{PORT}"
+cool.io.server ADDR, PORT, :echo_server_connection
+cool.io.run
+```
     
 This creates a new connection class called :echo_server_connection and defines
 a set of callbacks for when various events occur.
@@ -131,29 +134,31 @@ Using Cool.io subclasses directly
 Below is an example of how to write an echo server using a subclass instead of
 the DSL:
 
-	require 'cool.io'
-	HOST = 'localhost'
-	PORT = 4321
+```ruby
+require 'cool.io'
+HOST = 'localhost'
+PORT = 4321
 
-	class EchoServerConnection < Cool.io::TCPSocket
-	  def on_connect
-	    puts "#{remote_addr}:#{remote_port} connected"
-	  end
+class EchoServerConnection < Cool.io::TCPSocket
+  def on_connect
+    puts "#{remote_addr}:#{remote_port} connected"
+  end
 
-	  def on_close
-	    puts "#{remote_addr}:#{remote_port} disconnected"
-	  end
+  def on_close
+    puts "#{remote_addr}:#{remote_port} disconnected"
+  end
 
-	  def on_read(data)
-	    write data
-	  end
-	end
+  def on_read(data)
+    write data
+  end
+end
 
-	server = Cool.io::TCPServer.new(HOST, PORT, EchoServerConnection)
-	server.attach(Cool.io::Loop.default)
+server = Cool.io::TCPServer.new(HOST, PORT, EchoServerConnection)
+server.attach(Cool.io::Loop.default)
 
-	puts "Echo server listening on #{HOST}:#{PORT}"
-	Cool.io::Loop.default.run
+puts "Echo server listening on #{HOST}:#{PORT}"
+Cool.io::Loop.default.run
+```
 
 Here a new observer type (EchoServerConnection) is made by subclassing an
 existing one and adding new implementations to existing event handlers.
