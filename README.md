@@ -1,8 +1,6 @@
 Cool.io
 =======
 
-### If you are interested in Celluloid based IO framework, please check out [Celluloid::IO](http://github.com/celluloid/celluloid-io)
-
 Cool.io is an event library for Ruby, built on the libev event library which 
 provides a cross-platform interface to high performance system calls .  This 
 includes the epoll system call for Linux, the kqueue system call for BSDs and 
