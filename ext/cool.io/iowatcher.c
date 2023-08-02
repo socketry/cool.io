@@ -5,7 +5,7 @@
  */
 
 #include "ruby.h"
-#if defined(HAVE_RUBY_IO_H) || defined(HAVE_RB_IO_DESCRIPTOR)
+#if defined(HAVE_RUBY_IO_H)
 #include "ruby/io.h"
 #else
 #include "rubyio.h"
