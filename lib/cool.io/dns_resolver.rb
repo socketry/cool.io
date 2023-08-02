@@ -49,7 +49,7 @@ module Coolio
           entries.each { |e| hosts[e] ||= addr }
         end
       end
-      if hosts.empty?
+      unless hosts.key?("localhost")
         # On Windows, there is a case that hosts file doesn't have entry by default
         # and preferred IPv4/IPv6 behavior may be changed by registry key [1], so
         # "localhost" should be resolved by getaddrinfo.
