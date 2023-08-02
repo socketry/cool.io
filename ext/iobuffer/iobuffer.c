@@ -390,7 +390,7 @@ IO_Buffer_read_from(VALUE self, VALUE io)
     rb_io_set_nonblock(fptr);
 
 #ifdef HAVE_RB_IO_DESCRIPTOR
-    ret = rb_io_descriptor(io);
+    ret = buffer_read_from(buf, rb_io_descriptor(io));
 #else
     ret = buffer_read_from(buf, FPTR_TO_FD(fptr));
 #endif
@@ -421,7 +421,7 @@ IO_Buffer_write_to(VALUE self, VALUE io)
     rb_io_set_nonblock(fptr);
 
 #ifdef HAVE_RB_IO_DESCRIPTOR
-    return INT2NUM(rb_io_descriptor(io));
+    return INT2NUM(buffer_write_to(buf, rb_io_descriptor(io)));
 #else
     return INT2NUM(buffer_write_to(buf, FPTR_TO_FD(fptr)));
 #endif
