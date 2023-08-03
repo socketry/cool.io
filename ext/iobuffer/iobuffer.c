@@ -378,17 +378,22 @@ IO_Buffer_read_from(VALUE self, VALUE io)
 {
     struct buffer  *buf;
     int             ret;
-#if HAVE_RB_IO_T
+#if defined(HAVE_RB_IO_T) || defined(HAVE_RB_IO_DESCRIPTOR)
     rb_io_t        *fptr;
 #else
     OpenFile       *fptr;
 #endif
 
     Data_Get_Struct(self, struct buffer, buf);
-    GetOpenFile(rb_convert_type(io, T_FILE, "IO", "to_io"), fptr);
+    io = rb_convert_type(io, T_FILE, "IO", "to_io");
+    GetOpenFile(io, fptr);
     rb_io_set_nonblock(fptr);
 
+#ifdef HAVE_RB_IO_DESCRIPTOR
+    ret = buffer_read_from(buf, rb_io_descriptor(io));
+#else
     ret = buffer_read_from(buf, FPTR_TO_FD(fptr));
+#endif
     return ret == -1 ? Qnil : INT2NUM(ret);
 }
 
@@ -404,17 +409,22 @@ static VALUE
 IO_Buffer_write_to(VALUE self, VALUE io)
 {
     struct buffer  *buf;
-#if HAVE_RB_IO_T
+#if defined(HAVE_RB_IO_T) || defined(HAVE_RB_IO_DESCRIPTOR)
     rb_io_t        *fptr;
 #else
     OpenFile       *fptr;
 #endif
 
     Data_Get_Struct(self, struct buffer, buf);
-    GetOpenFile(rb_convert_type(io, T_FILE, "IO", "to_io"), fptr);
+    io = rb_convert_type(io, T_FILE, "IO", "to_io");
+    GetOpenFile(io, fptr);
     rb_io_set_nonblock(fptr);
 
+#ifdef HAVE_RB_IO_DESCRIPTOR
+    return INT2NUM(buffer_write_to(buf, rb_io_descriptor(io)));
+#else
     return INT2NUM(buffer_write_to(buf, FPTR_TO_FD(fptr)));
+#endif
 }
 
 /*

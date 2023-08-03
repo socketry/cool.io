@@ -4,6 +4,7 @@ libs = []
 
 $defs << "-DRUBY_VERSION_CODE=#{RUBY_VERSION.gsub(/\D/, '')}"
 
+have_func('rb_io_descriptor')
 have_func('rb_thread_blocking_region')
 have_func('rb_thread_call_without_gvl')
 have_func('rb_thread_alone')
