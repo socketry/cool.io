@@ -15,10 +15,12 @@ jobs:
     continue-on-error: ${{matrix.experimental}}
     
     strategy:
+      fail-fast: false
       matrix:
         os:
           - ubuntu
           - macos
+          - windows
         
         ruby:
           - "3.0"
