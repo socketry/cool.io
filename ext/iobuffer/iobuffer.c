@@ -43,7 +43,9 @@ struct buffer_node {
     unsigned char   data[0];
 };
 
-static VALUE    cIO_Buffer = Qnil;
+static VALUE    mCoolio = Qnil;
+static VALUE    cCoolio_IO = Qnil;
+static VALUE    cCoolio_IO_Buffer = Qnil;
 
 static VALUE    IO_Buffer_allocate(VALUE klass);
 static void     IO_Buffer_mark(struct buffer *);
@@ -85,29 +87,33 @@ static int      buffer_write_to(struct buffer * buf, int fd);
 void
 Init_iobuffer_ext()
 {
-    cIO_Buffer = rb_define_class_under(rb_cIO, "Buffer", rb_cObject);
-    rb_define_alloc_func(cIO_Buffer, IO_Buffer_allocate);
+    VALUE cCoolio_IO;
 
-    rb_define_singleton_method(cIO_Buffer, "default_node_size",
+    mCoolio = rb_define_module("Coolio");
+    cCoolio_IO = rb_define_class_under(mCoolio, "IO", rb_cObject);
+    cCoolio_IO_Buffer = rb_define_class_under(cCoolio_IO, "Buffer", rb_cObject);
+    rb_define_alloc_func(cCoolio_IO_Buffer, IO_Buffer_allocate);
+
+    rb_define_singleton_method(cCoolio_IO_Buffer, "default_node_size",
                    IO_Buffer_default_node_size, 0);
-    rb_define_singleton_method(cIO_Buffer, "default_node_size=",
+    rb_define_singleton_method(cCoolio_IO_Buffer, "default_node_size=",
                    IO_Buffer_set_default_node_size, 1);
 
-    rb_define_method(cIO_Buffer, "initialize", IO_Buffer_initialize, -1);
-    rb_define_method(cIO_Buffer, "clear", IO_Buffer_clear, 0);
-    rb_define_method(cIO_Buffer, "size", IO_Buffer_size, 0);
-    rb_define_method(cIO_Buffer, "empty?", IO_Buffer_empty, 0);
-    rb_define_method(cIO_Buffer, "<<", IO_Buffer_append, 1);
-    rb_define_method(cIO_Buffer, "append", IO_Buffer_append, 1);
-    rb_define_method(cIO_Buffer, "write", IO_Buffer_append, 1);
-    rb_define_method(cIO_Buffer, "prepend", IO_Buffer_prepend, 1);
-    rb_define_method(cIO_Buffer, "read", IO_Buffer_read, -1);
-    rb_define_method(cIO_Buffer, "read_frame", IO_Buffer_read_frame, 2);
-    rb_define_method(cIO_Buffer, "to_str", IO_Buffer_to_str, 0);
-    rb_define_method(cIO_Buffer, "read_from", IO_Buffer_read_from, 1);
-    rb_define_method(cIO_Buffer, "write_to", IO_Buffer_write_to, 1);
+    rb_define_method(cCoolio_IO_Buffer, "initialize", IO_Buffer_initialize, -1);
+    rb_define_method(cCoolio_IO_Buffer, "clear", IO_Buffer_clear, 0);
+    rb_define_method(cCoolio_IO_Buffer, "size", IO_Buffer_size, 0);
+    rb_define_method(cCoolio_IO_Buffer, "empty?", IO_Buffer_empty, 0);
+    rb_define_method(cCoolio_IO_Buffer, "<<", IO_Buffer_append, 1);
+    rb_define_method(cCoolio_IO_Buffer, "append", IO_Buffer_append, 1);
+    rb_define_method(cCoolio_IO_Buffer, "write", IO_Buffer_append, 1);
+    rb_define_method(cCoolio_IO_Buffer, "prepend", IO_Buffer_prepend, 1);
+    rb_define_method(cCoolio_IO_Buffer, "read", IO_Buffer_read, -1);
+    rb_define_method(cCoolio_IO_Buffer, "read_frame", IO_Buffer_read_frame, 2);
+    rb_define_method(cCoolio_IO_Buffer, "to_str", IO_Buffer_to_str, 0);
+    rb_define_method(cCoolio_IO_Buffer, "read_from", IO_Buffer_read_from, 1);
+    rb_define_method(cCoolio_IO_Buffer, "write_to", IO_Buffer_write_to, 1);
 
-    rb_define_const(cIO_Buffer, "MAX_SIZE", INT2NUM(MAX_BUFFER_SIZE));
+    rb_define_const(cCoolio_IO_Buffer, "MAX_SIZE", INT2NUM(MAX_BUFFER_SIZE));
 }
 
 static VALUE
@@ -161,7 +167,7 @@ convert_node_size(VALUE size)
  * call-seq:
  *   IO_Buffer.default_node_size = 16384
  *
- * Sets the default node size for calling IO::Buffer.new with no arguments.
+ * Sets the default node size for calling Coolio::IO::Buffer.new with no arguments.
  */
 static VALUE
 IO_Buffer_set_default_node_size(VALUE klass, VALUE size)
@@ -173,7 +179,7 @@ IO_Buffer_set_default_node_size(VALUE klass, VALUE size)
 
 /**
  *  call-seq:
- *    IO_Buffer.new(size = IO::Buffer.default_node_size) -> IO_Buffer
+ *    IO_Buffer.new(size = Coolio::IO::Buffer.default_node_size) -> IO_Buffer
  *
  * Create a new IO_Buffer with linked segments of the given size
  */
