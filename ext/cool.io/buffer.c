@@ -84,7 +84,7 @@ static int      buffer_write_to(struct buffer * buf, int fd);
  * Ruby IO objects.
  */
 void
-Init_iobuffer_ext()
+Init_coolio_buffer()
 {
     VALUE cCoolio_IO;
 

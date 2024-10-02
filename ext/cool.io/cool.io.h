@@ -60,7 +60,7 @@ struct Coolio_Watcher
 
 void Coolio_Loop_process_event(VALUE watcher, int revents);
 
-void Init_iobuffer_ext();
+void Init_coolio_buffer();
 void Init_coolio_loop();
 void Init_coolio_watcher();
 void Init_coolio_iowatcher();
