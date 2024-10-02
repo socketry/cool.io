@@ -21,7 +21,7 @@ module Coolio
 
     def initialize(io)
       @_io = io
-      @_write_buffer  ||= ::Coolio::IO::Buffer.new
+      @_write_buffer  ||= ::Coolio::Buffer.new
       @_read_watcher  = Watcher.new(io, self, :r)
       @_write_watcher = Watcher.new(io, self, :w)
     end

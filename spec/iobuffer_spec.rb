@@ -1,10 +1,10 @@
 require File.expand_path('../spec_helper', __FILE__)
 
 
-describe Cool.io::IO::Buffer do
+describe Cool.io::Buffer do
 
   let :buffer do
-    Cool.io::IO::Buffer.new
+    Cool.io::Buffer.new
   end
   
   it "provides a subset of the methods available in Strings" do
