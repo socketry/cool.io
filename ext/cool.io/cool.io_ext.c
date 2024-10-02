@@ -16,6 +16,7 @@ static VALUE mCoolio = Qnil;
 void Init_cool() 
 {
   /* Initializers for other modules */
+  Init_iobuffer_ext();
   Init_coolio_loop();
   Init_coolio_watcher();
   Init_coolio_iowatcher();
