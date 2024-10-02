@@ -31,11 +31,6 @@ def configure_cross_compilation(ext)
   end
 end
 
-Rake::ExtensionTask.new('iobuffer_ext', spec) do |ext|
-  ext.ext_dir = 'ext/iobuffer'
-  configure_cross_compilation(ext)
-end
-
 Rake::ExtensionTask.new('cool.io_ext', spec) do |ext|
   ext.ext_dir = 'ext/cool.io'
   configure_cross_compilation(ext)

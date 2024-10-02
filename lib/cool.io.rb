@@ -6,7 +6,6 @@
 
 require "cool.io/version"
 require "cool.io/custom_require"
-cool_require "iobuffer_ext"
 cool_require "cool.io_ext"
 
 require "cool.io/loop"
