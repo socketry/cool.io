@@ -14,8 +14,8 @@
   if(!rb_obj_is_kind_of(loop, cCoolio_Loop)) \
     rb_raise(rb_eArgError, "expected loop to be an instance of Coolio::Loop, not %s", RSTRING_PTR(rb_inspect(loop))); \
   \
-  Data_Get_Struct(watcher, struct Coolio_Watcher, watcher_data); \
-  Data_Get_Struct(loop, struct Coolio_Loop, loop_data); \
+  watcher_data = Coolio_Watcher_ptr(watcher); \
+  loop_data = Coolio_Loop_ptr(loop); \
   \
   if(watcher_data->loop != Qnil) \
     detach_func(watcher); \
@@ -28,12 +28,12 @@
   struct Coolio_Watcher *watcher_data; \
   struct Coolio_Loop *loop_data; \
   \
-  Data_Get_Struct(watcher, struct Coolio_Watcher, watcher_data); \
+  watcher_data = Coolio_Watcher_ptr(watcher); \
   \
   if(watcher_data->loop == Qnil) \
     rb_raise(rb_eRuntimeError, "not attached to a loop"); \
   \
-  Data_Get_Struct(watcher_data->loop, struct Coolio_Loop, loop_data); \
+  loop_data = Coolio_Loop_ptr(watcher_data->loop); \
   \
   ev_##watcher_type##_stop(loop_data->ev_loop, &watcher_data->event_types.ev_##watcher_type); \
   rb_call_super(0, 0)
@@ -42,14 +42,14 @@
   struct Coolio_Watcher *watcher_data; \
   struct Coolio_Loop *loop_data; \
   \
-  Data_Get_Struct(watcher, struct Coolio_Watcher, watcher_data); \
+  watcher_data = Coolio_Watcher_ptr(watcher); \
   \
   if(watcher_data->loop == Qnil) \
     rb_raise(rb_eRuntimeError, "not attached to a loop"); \
   \
   rb_call_super(0, 0); \
   \
-  Data_Get_Struct(watcher_data->loop, struct Coolio_Loop, loop_data); \
+  loop_data = Coolio_Loop_ptr(watcher_data->loop); \
   \
   ev_##watcher_type##_start(loop_data->ev_loop, &watcher_data->event_types.ev_##watcher_type)
 
@@ -57,14 +57,14 @@
   struct Coolio_Watcher *watcher_data; \
   struct Coolio_Loop *loop_data; \
   \
-  Data_Get_Struct(watcher, struct Coolio_Watcher, watcher_data); \
+  watcher_data = Coolio_Watcher_ptr(watcher); \
   \
   if(watcher_data->loop == Qnil) \
     rb_raise(rb_eRuntimeError, "not attached to a loop"); \
   \
   rb_call_super(0, 0); \
   \
-  Data_Get_Struct(watcher_data->loop, struct Coolio_Loop, loop_data); \
+  loop_data = Coolio_Loop_ptr(watcher_data->loop); \
   \
   ev_##watcher_type##_stop(loop_data->ev_loop, &watcher_data->event_types.ev_##watcher_type)
 

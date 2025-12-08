@@ -47,8 +47,8 @@ static VALUE    mCoolio = Qnil;
 static VALUE    cCoolio_Buffer = Qnil;
 
 static VALUE    Coolio_Buffer_allocate(VALUE klass);
-static void     Coolio_Buffer_mark(struct buffer *);
-static void     Coolio_Buffer_free(struct buffer *);
+static void     Coolio_Buffer_mark(void *);
+static void     Coolio_Buffer_free(void *);
 
 static VALUE    Coolio_Buffer_default_node_size(VALUE klass);
 static VALUE    Coolio_Buffer_set_default_node_size(VALUE klass, VALUE size);
@@ -64,7 +64,7 @@ static VALUE    Coolio_Buffer_to_str(VALUE self);
 static VALUE    Coolio_Buffer_read_from(VALUE self, VALUE io);
 static VALUE    Coolio_Buffer_write_to(VALUE self, VALUE io);
 
-static struct buffer *buffer_new(void);
+static struct buffer *buffer_init(struct buffer *);
 static void     buffer_clear(struct buffer * buf);
 static void     buffer_free(struct buffer * buf);
 static void     buffer_free_pool(struct buffer * buf);
@@ -86,8 +86,6 @@ static int      buffer_write_to(struct buffer * buf, int fd);
 void
 Init_coolio_buffer()
 {
-    VALUE cCoolio_IO;
-
     mCoolio = rb_define_module("Coolio");
     cCoolio_Buffer = rb_define_class_under(mCoolio, "Buffer", rb_cObject);
     rb_define_alloc_func(cCoolio_Buffer, Coolio_Buffer_allocate);
@@ -114,21 +112,33 @@ Init_coolio_buffer()
     rb_define_const(cCoolio_Buffer, "MAX_SIZE", INT2NUM(MAX_BUFFER_SIZE));
 }
 
+static const rb_data_type_t Coolio_Buffer_type = {
+    "Coolio::Buffer",
+    {
+        Coolio_Buffer_mark,
+        Coolio_Buffer_free,
+    }
+};
+
 static VALUE
 Coolio_Buffer_allocate(VALUE klass)
 {
-    return Data_Wrap_Struct(klass, Coolio_Buffer_mark, Coolio_Buffer_free, buffer_new());
+    struct buffer *buf;
+    VALUE buffer = TypedData_Make_Struct(klass, struct buffer, &Coolio_Buffer_type, buf);
+
+    buffer_init(buf);
+    return buffer;
 }
 
 static void
-Coolio_Buffer_mark(struct buffer * buf)
+Coolio_Buffer_mark(void *buf)
 {
     /* Naively discard the memory pool whenever Ruby garbage collects */
     buffer_free_pool(buf);
 }
 
 static void
-Coolio_Buffer_free(struct buffer * buf)
+Coolio_Buffer_free(void * buf)
 {
     buffer_free(buf);
 }
@@ -188,7 +198,7 @@ Coolio_Buffer_initialize(int argc, VALUE * argv, VALUE self)
     struct buffer *buf;
 
     if (rb_scan_args(argc, argv, "01", &node_size_obj) == 1) {
-        Data_Get_Struct(self, struct buffer, buf);
+        TypedData_Get_Struct(self, struct buffer, &Coolio_Buffer_type, buf);
 
         /*
          * Make sure we're not changing the buffer size after data
@@ -212,7 +222,7 @@ static VALUE
 Coolio_Buffer_clear(VALUE self)
 {
     struct buffer *buf;
-    Data_Get_Struct(self, struct buffer, buf);
+    TypedData_Get_Struct(self, struct buffer, &Coolio_Buffer_type, buf);
 
     buffer_clear(buf);
 
@@ -229,7 +239,7 @@ static VALUE
 Coolio_Buffer_size(VALUE self)
 {
     struct buffer *buf;
-    Data_Get_Struct(self, struct buffer, buf);
+    TypedData_Get_Struct(self, struct buffer, &Coolio_Buffer_type, buf);
 
     return INT2NUM(buf->size);
 }
@@ -244,7 +254,7 @@ static VALUE
 Coolio_Buffer_empty(VALUE self)
 {
     struct buffer *buf;
-    Data_Get_Struct(self, struct buffer, buf);
+    TypedData_Get_Struct(self, struct buffer, &Coolio_Buffer_type, buf);
 
     return buf->size > 0 ? Qfalse : Qtrue;
 }
@@ -259,7 +269,7 @@ static VALUE
 Coolio_Buffer_append(VALUE self, VALUE data)
 {
     struct buffer *buf;
-    Data_Get_Struct(self, struct buffer, buf);
+    TypedData_Get_Struct(self, struct buffer, &Coolio_Buffer_type, buf);
 
     /* Is this needed?  Never seen anyone else do it... */
     data = rb_convert_type(data, T_STRING, "String", "to_str");
@@ -278,7 +288,7 @@ static VALUE
 Coolio_Buffer_prepend(VALUE self, VALUE data)
 {
     struct buffer *buf;
-    Data_Get_Struct(self, struct buffer, buf);
+    TypedData_Get_Struct(self, struct buffer, &Coolio_Buffer_type, buf);
 
     data = rb_convert_type(data, T_STRING, "String", "to_str");
     buffer_prepend(buf, RSTRING_PTR(data), RSTRING_LEN(data));
@@ -304,7 +314,7 @@ Coolio_Buffer_read(int argc, VALUE * argv, VALUE self)
     int    length;
     struct buffer *buf;
 
-    Data_Get_Struct(self, struct buffer, buf);
+    TypedData_Get_Struct(self, struct buffer, &Coolio_Buffer_type, buf);
 
     if (rb_scan_args(argc, argv, "01", &length_obj) == 1) {
         length = NUM2INT(length_obj);
@@ -340,7 +350,7 @@ Coolio_Buffer_read_frame(VALUE self, VALUE data, VALUE mark)
     char mark_c = (char) NUM2INT(mark);
     struct buffer *buf;
 
-    Data_Get_Struct(self, struct buffer, buf);
+    TypedData_Get_Struct(self, struct buffer, &Coolio_Buffer_type, buf);
 
     if (buffer_read_frame(buf, data, mark_c)) {
         return Qtrue;
@@ -361,7 +371,7 @@ Coolio_Buffer_to_str(VALUE self)
     VALUE          str;
     struct buffer *buf;
 
-    Data_Get_Struct(self, struct buffer, buf);
+    TypedData_Get_Struct(self, struct buffer, &Coolio_Buffer_type, buf);
 
     str = rb_str_new(0, buf->size);
     buffer_copy(buf, RSTRING_PTR(str), buf->size);
@@ -388,7 +398,7 @@ Coolio_Buffer_read_from(VALUE self, VALUE io)
     OpenFile       *fptr;
 #endif
 
-    Data_Get_Struct(self, struct buffer, buf);
+    TypedData_Get_Struct(self, struct buffer, &Coolio_Buffer_type, buf);
     io = rb_convert_type(io, T_FILE, "IO", "to_io");
     GetOpenFile(io, fptr);
     rb_io_set_nonblock(fptr);
@@ -419,7 +429,7 @@ Coolio_Buffer_write_to(VALUE self, VALUE io)
     OpenFile       *fptr;
 #endif
 
-    Data_Get_Struct(self, struct buffer, buf);
+    TypedData_Get_Struct(self, struct buffer, &Coolio_Buffer_type, buf);
     io = rb_convert_type(io, T_FILE, "IO", "to_io");
     GetOpenFile(io, fptr);
     rb_io_set_nonblock(fptr);
@@ -438,11 +448,8 @@ Coolio_Buffer_write_to(VALUE self, VALUE io)
 
 /* Create a new buffer */
 static struct buffer *
-buffer_new(void)
+buffer_init(struct buffer *buf)
 {
-    struct buffer *buf;
-
-    buf = (struct buffer *) xmalloc(sizeof(struct buffer));
     buf->head = buf->tail = buf->pool_head = buf->pool_tail = 0;
     buf->size = 0;
     buf->node_size = default_node_size;

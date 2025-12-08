@@ -68,4 +68,7 @@ void Init_coolio_timer_watcher();
 void Init_coolio_stat_watcher();
 void Init_coolio_utils();
 
+struct Coolio_Loop *Coolio_Loop_ptr(VALUE loop);
+struct Coolio_Watcher *Coolio_Watcher_ptr(VALUE watcher);
+
 #endif
