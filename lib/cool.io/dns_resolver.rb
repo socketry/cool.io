@@ -72,7 +72,7 @@ module Coolio
         raise RuntimeError, "no nameservers found" if nameservers.empty? # TODO just call resolve_failed, not raise [also handle Errno::ENOENT)]
       end
 
-      @nameservers = nameservers
+      @nameservers = nameservers.dup
       @question = request_question hostname
 
       @socket = UDPSocket.new
