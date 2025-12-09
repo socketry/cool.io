@@ -89,7 +89,7 @@ static VALUE Coolio_StatWatcher_initialize(int argc, VALUE *argv, VALUE self)
   path = rb_String(path);
   rb_iv_set(self, "@path", path);
 
-  Data_Get_Struct(self, struct Coolio_Watcher, watcher_data);
+  watcher_data = Coolio_Watcher_ptr(self);
 
   watcher_data->dispatch_callback = Coolio_StatWatcher_dispatch_callback;
   ev_stat_init(
@@ -119,8 +119,8 @@ static VALUE Coolio_StatWatcher_attach(VALUE self, VALUE loop)
   if(!rb_obj_is_kind_of(loop, cCoolio_Loop))
     rb_raise(rb_eArgError, "expected loop to be an instance of Coolio::Loop, not %s", RSTRING_PTR(rb_inspect(loop)));
 
-  Data_Get_Struct(loop, struct Coolio_Loop, loop_data);
-  Data_Get_Struct(self, struct Coolio_Watcher, watcher_data);
+  loop_data = Coolio_Loop_ptr(loop);
+  watcher_data = Coolio_Watcher_ptr(self);
 
   if(watcher_data->loop != Qnil)
     Coolio_StatWatcher_detach(self);
@@ -206,7 +206,7 @@ static void Coolio_StatWatcher_libev_callback(struct ev_loop *ev_loop, struct ev
 static void Coolio_StatWatcher_dispatch_callback(VALUE self, int revents)
 {
   struct Coolio_Watcher *watcher_data;
-  Data_Get_Struct(self, struct Coolio_Watcher, watcher_data);
+  watcher_data = Coolio_Watcher_ptr(self);
 
   VALUE previous_statdata = Coolio_StatInfo_build(&watcher_data->event_types.ev_stat.prev);
   VALUE current_statdata = Coolio_StatInfo_build(&watcher_data->event_types.ev_stat.attr);

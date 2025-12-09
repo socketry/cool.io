@@ -68,7 +68,7 @@ static VALUE Coolio_TimerWatcher_initialize(int argc, VALUE *argv, VALUE self)
   rb_iv_set(self, "@interval", interval);
   rb_iv_set(self, "@repeating", repeating);
 
-  Data_Get_Struct(self, struct Coolio_Watcher, watcher_data);
+  watcher_data = Coolio_Watcher_ptr(self);
 
   watcher_data->dispatch_callback = Coolio_TimerWatcher_dispatch_callback;
   ev_timer_init(
@@ -98,8 +98,8 @@ static VALUE Coolio_TimerWatcher_attach(VALUE self, VALUE loop)
   if(!rb_obj_is_kind_of(loop, cCoolio_Loop))
     rb_raise(rb_eArgError, "expected loop to be an instance of Coolio::Loop, not %s", RSTRING_PTR(rb_inspect(loop)));
 
-  Data_Get_Struct(loop, struct Coolio_Loop, loop_data);
-  Data_Get_Struct(self, struct Coolio_Watcher, watcher_data);
+  loop_data = Coolio_Loop_ptr(loop);
+  watcher_data = Coolio_Watcher_ptr(self);
 
   if(watcher_data->loop != Qnil)
     Coolio_TimerWatcher_detach(self);
@@ -180,12 +180,12 @@ static VALUE Coolio_TimerWatcher_reset(VALUE self)
   struct Coolio_Watcher *watcher_data;
   struct Coolio_Loop *loop_data;
 
-  Data_Get_Struct(self, struct Coolio_Watcher, watcher_data);
+  watcher_data = Coolio_Watcher_ptr(self);
 
   if(watcher_data->loop == Qnil)
     rb_raise(rb_eRuntimeError, "not attached to a loop");
 
-  Data_Get_Struct(watcher_data->loop, struct Coolio_Loop, loop_data);
+  loop_data = Coolio_Loop_ptr(watcher_data->loop);
 
   ev_timer_again(loop_data->ev_loop, &watcher_data->event_types.ev_timer);
 

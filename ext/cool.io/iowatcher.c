@@ -82,7 +82,7 @@ static VALUE Coolio_IOWatcher_initialize(int argc, VALUE *argv, VALUE self)
   else
     rb_raise(rb_eArgError, "invalid event type: '%s' (must be 'r', 'w', or 'rw')", flags_str);
 
-  Data_Get_Struct(self, struct Coolio_Watcher, watcher_data);
+  watcher_data = Coolio_Watcher_ptr(self);
   io = rb_convert_type(io, T_FILE, "IO", "to_io");
 
   watcher_data->dispatch_callback = Coolio_IOWatcher_dispatch_callback;

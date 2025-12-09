@@ -14,8 +14,7 @@ static VALUE mCoolio = Qnil;
 static VALUE cCoolio_Loop = Qnil;
 
 static VALUE Coolio_Loop_allocate(VALUE klass);
-static void Coolio_Loop_mark(struct Coolio_Loop *loop);
-static void Coolio_Loop_free(struct Coolio_Loop *loop);
+static void Coolio_Loop_free(void *data);
 
 static VALUE Coolio_Loop_ev_loop_new(VALUE self, VALUE flags);
 static VALUE Coolio_Loop_run_once(int argc, VALUE *argv, VALUE self);
@@ -47,9 +46,26 @@ void Init_coolio_loop()
   rb_define_method(cCoolio_Loop, "run_nonblock", Coolio_Loop_run_nonblock, 0);
 }
 
+static const rb_data_type_t Coolio_Loop_type = {
+  "Coolio::Loop",
+  {
+    NULL,
+    Coolio_Loop_free,
+  },
+};
+
+struct Coolio_Loop *Coolio_Loop_ptr(VALUE self)
+{
+  struct Coolio_Loop *loop;
+
+  TypedData_Get_Struct(self, struct Coolio_Loop, &Coolio_Loop_type, loop);
+  return loop;
+}
+
 static VALUE Coolio_Loop_allocate(VALUE klass)
 {
-  struct Coolio_Loop *loop = (struct Coolio_Loop *)xmalloc(sizeof(struct Coolio_Loop));
+  struct Coolio_Loop *loop;
+  VALUE obj = TypedData_Make_Struct(klass, struct Coolio_Loop, &Coolio_Loop_type, loop);
 
   loop->ev_loop = 0;
   ev_init(&loop->timer, Coolio_Loop_timeout_callback);
@@ -58,15 +74,13 @@ static VALUE Coolio_Loop_allocate(VALUE klass)
   loop->eventbuf_size = DEFAULT_EVENTBUF_SIZE;
   loop->eventbuf = (struct Coolio_Event *)xmalloc(sizeof(struct Coolio_Event) * DEFAULT_EVENTBUF_SIZE);
 
-  return Data_Wrap_Struct(klass, Coolio_Loop_mark, Coolio_Loop_free, loop);
+  return obj;
 }
 
-static void Coolio_Loop_mark(struct Coolio_Loop *loop)
+static void Coolio_Loop_free(void *data)
 {
-}
+  struct Coolio_Loop *loop = data;
 
-static void Coolio_Loop_free(struct Coolio_Loop *loop)
-{
   if(!loop->ev_loop)
     return;
 
@@ -80,7 +94,7 @@ static void Coolio_Loop_free(struct Coolio_Loop *loop)
 static VALUE Coolio_Loop_ev_loop_new(VALUE self, VALUE flags)
 {
   struct Coolio_Loop *loop_data;
-  Data_Get_Struct(self, struct Coolio_Loop, loop_data);
+  loop_data = Coolio_Loop_ptr(self);
 
   if(loop_data->ev_loop)
     rb_raise(rb_eRuntimeError, "loop already initialized");
@@ -98,8 +112,8 @@ void Coolio_Loop_process_event(VALUE watcher, int revents)
 
   /* The Global VM lock isn't held right now, but hopefully
    * we can still do this safely */
-  Data_Get_Struct(watcher, struct Coolio_Watcher, watcher_data);
-  Data_Get_Struct(watcher_data->loop, struct Coolio_Loop, loop_data);
+  watcher_data = Coolio_Watcher_ptr(watcher);
+  loop_data = Coolio_Loop_ptr(watcher_data->loop);
 
   /*  Well, what better place to explain how this all works than
    *  where the most wonky and convoluted stuff is going on!
@@ -184,7 +198,7 @@ static VALUE Coolio_Loop_run_once(int argc, VALUE *argv, VALUE self)
     rb_raise(rb_eArgError, "time interval must be positive");
   }
 
-  Data_Get_Struct(self, struct Coolio_Loop, loop_data);
+  loop_data = Coolio_Loop_ptr(self);
 
   assert(loop_data->ev_loop && !loop_data->events_received);
 
@@ -222,7 +236,7 @@ static VALUE Coolio_Loop_run_nonblock(VALUE self)
   struct Coolio_Loop *loop_data;
   VALUE nevents;
   
-  Data_Get_Struct(self, struct Coolio_Loop, loop_data);
+  loop_data = Coolio_Loop_ptr(self);
 
   assert(loop_data->ev_loop && !loop_data->events_received);
 
@@ -247,7 +261,7 @@ static void Coolio_Loop_dispatch_events(struct Coolio_Loop *loop_data)
     if(loop_data->eventbuf[i].watcher == Qnil)
       continue;
 
-    Data_Get_Struct(loop_data->eventbuf[i].watcher, struct Coolio_Watcher, watcher_data);
+    watcher_data = Coolio_Watcher_ptr(loop_data->eventbuf[i].watcher);
     watcher_data->dispatch_callback(loop_data->eventbuf[i].watcher, loop_data->eventbuf[i].revents);
   }
 }

@@ -13,8 +13,7 @@ static VALUE mCoolio = Qnil;
 static VALUE cCoolio_Watcher = Qnil;
 
 static VALUE Coolio_Watcher_allocate(VALUE klass);
-static void Coolio_Watcher_mark(struct Coolio_Watcher *watcher);
-static void Coolio_Watcher_free(struct Coolio_Watcher *watcher);
+static void Coolio_Watcher_mark(void *data);
 
 static VALUE Coolio_Watcher_initialize(VALUE self);
 static VALUE Coolio_Watcher_attach(VALUE self, VALUE loop);
@@ -53,25 +52,39 @@ void Init_coolio_watcher()
   rb_define_method(cCoolio_Watcher, "enabled?", Coolio_Watcher_enabled, 0);
 }
 
+static const rb_data_type_t Coolio_Watcher_type = {
+  "Coolio::Watcher",
+  {
+    Coolio_Watcher_mark,
+    RUBY_DEFAULT_FREE,
+  },
+};
+
+struct Coolio_Watcher *Coolio_Watcher_ptr(VALUE watcher)
+{
+  struct Coolio_Watcher *watcher_data;
+
+  TypedData_Get_Struct(watcher, struct Coolio_Watcher, &Coolio_Watcher_type, watcher_data);
+  return watcher_data;
+}
+
 static VALUE Coolio_Watcher_allocate(VALUE klass)
 {
-  struct Coolio_Watcher *watcher_data = (struct Coolio_Watcher *)xmalloc(sizeof(struct Coolio_Watcher));
+  struct Coolio_Watcher *watcher_data;
+  VALUE watcher = TypedData_Make_Struct(klass, struct Coolio_Watcher, &Coolio_Watcher_type, watcher_data);
 
   watcher_data->loop = Qnil;
   watcher_data->enabled = 0;
 
-  return Data_Wrap_Struct(klass, Coolio_Watcher_mark, Coolio_Watcher_free, watcher_data);
+  return watcher;
 }
 
-static void Coolio_Watcher_mark(struct Coolio_Watcher *watcher_data)
+static void Coolio_Watcher_mark(void *data)
 {
+  struct Coolio_Watcher *watcher_data = data;
+
   if(watcher_data->loop != Qnil)
     rb_gc_mark(watcher_data->loop);
-}
-
-static void Coolio_Watcher_free(struct Coolio_Watcher *watcher_data)
-{
-  xfree(watcher_data);
 }
 
 static VALUE Coolio_Watcher_initialize(VALUE self)
@@ -91,7 +104,7 @@ static VALUE Coolio_Watcher_attach(VALUE self, VALUE loop)
   VALUE loop_watchers, active_watchers;
   struct Coolio_Watcher *watcher_data;
 
-  Data_Get_Struct(self, struct Coolio_Watcher, watcher_data);
+  watcher_data = Coolio_Watcher_ptr(self);
   watcher_data->enabled = 1;
     
   loop_watchers = rb_iv_get(loop, "@watchers");
@@ -132,7 +145,7 @@ static VALUE Coolio_Watcher_detach(VALUE self)
   VALUE loop_watchers;
   int i;
 
-  Data_Get_Struct(self, struct Coolio_Watcher, watcher_data);
+  watcher_data = Coolio_Watcher_ptr(self);
 
   if(watcher_data->loop == Qnil)
     rb_raise(rb_eRuntimeError, "not attached to a loop");
@@ -155,7 +168,7 @@ static VALUE Coolio_Watcher_detach(VALUE self)
 
   watcher_data->enabled = 0;
 
-  Data_Get_Struct(watcher_data->loop, struct Coolio_Loop, loop_data);
+  loop_data = Coolio_Loop_ptr(watcher_data->loop);
 
   /* Iterate through the events in the loop's event buffer.  If there
    * are any pending events from this watcher, mark them NULL.  The
@@ -182,7 +195,7 @@ static VALUE Coolio_Watcher_detach(VALUE self)
 static VALUE Coolio_Watcher_enable(VALUE self)
 {
   struct Coolio_Watcher *watcher_data;
-  Data_Get_Struct(self, struct Coolio_Watcher, watcher_data);
+  watcher_data = Coolio_Watcher_ptr(self);
 
   if(watcher_data->enabled)
     rb_raise(rb_eRuntimeError, "already enabled");
@@ -208,7 +221,7 @@ static VALUE Coolio_Watcher_enable(VALUE self)
 static VALUE Coolio_Watcher_disable(VALUE self)
 {
   struct Coolio_Watcher *watcher_data;
-  Data_Get_Struct(self, struct Coolio_Watcher, watcher_data);
+  watcher_data = Coolio_Watcher_ptr(self);
 
   if(!watcher_data->enabled)
     rb_raise(rb_eRuntimeError, "already disabled");
@@ -234,7 +247,7 @@ static VALUE Coolio_Watcher_evloop(VALUE self)
 {
   struct Coolio_Watcher *watcher_data;
 
-  Data_Get_Struct(self, struct Coolio_Watcher, watcher_data);
+  watcher_data = Coolio_Watcher_ptr(self);
   return watcher_data->loop;
 }
 
@@ -258,7 +271,7 @@ static VALUE Coolio_Watcher_attached(VALUE self)
 static VALUE Coolio_Watcher_enabled(VALUE self)
 {
 	struct Coolio_Watcher *watcher_data;
-  Data_Get_Struct(self, struct Coolio_Watcher, watcher_data);
+  watcher_data = Coolio_Watcher_ptr(self);
   
 	return watcher_data->enabled ? Qtrue : Qfalse;
 }
