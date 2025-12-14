@@ -479,7 +479,7 @@ buffer_free(struct buffer * buf)
     buffer_clear(buf);
     buffer_free_pool(buf);
 
-    free(buf);
+    xfree(buf);
 }
 
 /* Free the memory pool */
@@ -491,7 +491,7 @@ buffer_free_pool(struct buffer * buf)
     while (buf->pool_head) {
         tmp = buf->pool_head;
         buf->pool_head = tmp->next;
-        free(tmp);
+        xfree(tmp);
     }
 
     buf->pool_tail = 0;
