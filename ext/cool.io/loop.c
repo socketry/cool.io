@@ -113,6 +113,12 @@ void Coolio_Loop_process_event(VALUE watcher, int revents)
   /* The Global VM lock isn't held right now, but hopefully
    * we can still do this safely */
   watcher_data = Coolio_Watcher_ptr(watcher);
+
+  if (watcher_data->enabled == 0) {
+    /* Ignore event because watcher was already detached. */
+    return;
+  }
+
   loop_data = Coolio_Loop_ptr(watcher_data->loop);
 
   /*  Well, what better place to explain how this all works than
