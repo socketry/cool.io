@@ -61,10 +61,10 @@
   if(watcher_data->loop == Qnil) \
     rb_raise(rb_eRuntimeError, "not attached to a loop"); \
   \
-  rb_call_super(0, 0); \
-  \
-  loop_data = Coolio_Loop_ptr(watcher_data->loop); \
-  \
-  ev_##watcher_type##_stop(loop_data->ev_loop, &watcher_data->event_types.ev_##watcher_type)
+  if (watcher_data->enabled) { \
+    loop_data = Coolio_Loop_ptr(watcher_data->loop); \
+    ev_##watcher_type##_stop(loop_data->ev_loop, &watcher_data->event_types.ev_##watcher_type); \
+  } \
+  rb_call_super(0, 0);
 
 #endif
