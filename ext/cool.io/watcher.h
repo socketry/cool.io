@@ -26,7 +26,6 @@
 
 #define Watcher_Detach(watcher_type, watcher) \
   struct Coolio_Watcher *watcher_data; \
-  struct Coolio_Loop *loop_data; \
   \
   watcher_data = Coolio_Watcher_ptr(watcher); \
   \
@@ -34,9 +33,7 @@
     rb_raise(rb_eRuntimeError, "not attached to a loop"); \
   \
   if (watcher_data->enabled) { \
-    loop_data = Coolio_Loop_ptr(watcher_data->loop); \
-    \
-    ev_##watcher_type##_stop(loop_data->ev_loop, &watcher_data->event_types.ev_##watcher_type); \
+    rb_funcall(watcher, rb_intern("disable"), 0); \
   } \
   rb_call_super(0, 0)
 
