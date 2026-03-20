@@ -47,4 +47,49 @@ describe Cool.io::Loop do
       end
     }.not_to raise_error
   end
+
+  class HttpHandler < Coolio::IO
+    RESPONSE = "HTTP/1.1 200 OK\r\nContent-Length: 1024\r\nConnection: close\r\n\r\n" + ("X" * 1024)
+
+    def on_connect
+    end
+
+    def on_read(data)
+      write(RESPONSE)
+    end
+
+    def on_write_complete
+      close
+    end
+  end
+
+  # https://github.com/socketry/cool.io/issues/89
+  it "does not cause memory leaks" do
+    port = 18989
+    loop = Coolio::Loop.default
+
+    server = Coolio::TCPServer.new('127.0.0.1', port, HttpHandler)
+    server.attach(loop)
+
+    event_thread = Thread.new { loop.run }
+
+    request = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"
+
+    10.times do |iteration|
+      begin
+        sock = TCPSocket.new('127.0.0.1', port)
+        sock.write(request)
+        sock.read
+        sock.close
+      rescue => e
+        sleep 0.01
+        retry
+      end
+    end
+
+    server.close
+    event_thread.join
+
+    expect(loop.watchers).to be_empty
+  end
 end
