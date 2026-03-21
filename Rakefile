@@ -48,24 +48,11 @@ namespace :build do
   end
 end
 
-# adapted from http://flavoriffic.blogspot.com/2009/06/easily-valgrind-gdb-your-ruby-c.html
-def specs_command
-  require "find"
-  files = []
-  Find.find("spec") do |f|
-    files << f if File.basename(f) =~ /.*spec.*\.rb$/
-  end
-  cmdline = "#{RUBY} -I.:lib:ext:spec \
-               -e '%w[#{files.join(' ')}].each { |f| require f }'"
-end
-
-namespace :spec do
-  desc "run specs with valgrind"
-  task :valgrind => :compile do
-    system "valgrind --num-callers=15 \
-      --partial-loads-ok=yes --undef-value-errors=no \
-      --tool=memcheck --leak-check=yes --track-fds=yes \
-      --show-reachable=yes #{specs_command}"
+if RUBY_PLATFORM.include?('linux')
+  require 'ruby_memcheck'
+  require 'ruby_memcheck/rspec/rake_task'
+  namespace :spec do
+    RubyMemcheck::RSpec::RakeTask.new(valgrind: :compile)
   end
 end
 
