@@ -1,6 +1,4 @@
-# -*- encoding: utf-8 -*-
-$:.push File.expand_path("../lib", __FILE__)
-require "cool.io/version"
+require_relative "lib/cool.io/version"
 
 Gem::Specification.new do |s|
   s.name        = "cool.io"
