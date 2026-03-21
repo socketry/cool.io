@@ -22,7 +22,7 @@ end
 
 require 'rake/extensiontask'
 
-spec = eval(File.read("cool.io.gemspec"))
+spec = Gem::Specification.load("cool.io.gemspec")
 
 def configure_cross_compilation(ext)
   unless RUBY_PLATFORM =~ /mswin|mingw/
