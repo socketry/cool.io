@@ -1,4 +1,5 @@
 require File.expand_path('../spec_helper', __FILE__)
+require 'tempfile'
 
 VALID_DOMAIN = "google.com"
 INVALID_DOMAIN = "gibidigibigididibitidibigitibidigitidididi.com"
