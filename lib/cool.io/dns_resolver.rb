@@ -67,8 +67,9 @@ module Coolio
     # list of nameservers to query.  By default the resolver will
     # use nameservers listed in /etc/resolv.conf
     def initialize(hostname, *nameservers)
+      nameservers = reject_ipv6_nameservers(nameservers)
       if nameservers.empty?
-        nameservers = Resolv::DNS::Config.default_config_hash[:nameserver]
+        nameservers = reject_ipv6_nameservers(Resolv::DNS::Config.default_config_hash[:nameserver])
         raise RuntimeError, "no nameservers found" if nameservers.empty? # TODO just call resolve_failed, not raise [also handle Errno::ENOENT)]
       end
 
@@ -201,6 +202,12 @@ module Coolio
       end
 
       nil
+    end
+
+    private
+
+    def reject_ipv6_nameservers(nameservers)
+      nameservers.reject { |ns| ns.include?(':') }
     end
 
     class Timeout < TimerWatcher

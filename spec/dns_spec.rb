@@ -56,4 +56,24 @@ describe "DNS" do
       expect( Coolio::DNSResolver.hosts("localhost", file.path)).to eq @preferred_localhost_address
     end
   end
+
+  describe "IPv6 nameserver filtering" do
+    it "ignores IPv6 nameservers provided in arguments" do
+      resolver = Coolio::DNSResolver.new("example.com", "8.8.8.8", "2001:4860:4860::8888", "1.1.1.1")
+
+      nameservers = resolver.instance_variable_get(:@nameservers)
+      expect(nameservers).to eq(["8.8.8.8", "1.1.1.1"])
+    end
+
+    it "falls back to default IPv4 config if only IPv6 addresses are provided" do
+      allow(Resolv::DNS::Config).to receive(:default_config_hash).and_return({
+        nameserver: ["8.8.4.4", "2001:4860:4860::8844"]
+      })
+
+      resolver = Coolio::DNSResolver.new("example.com", "2001:4860:4860::8888")
+
+      nameservers = resolver.instance_variable_get(:@nameservers)
+      expect(nameservers).to eq(["8.8.4.4"])
+    end
+  end
 end
