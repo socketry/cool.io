@@ -113,8 +113,7 @@ module Coolio
 
     # Send a request to the DNS server
     def send_request
-      nameserver = @nameservers.shift
-      @nameservers << nameserver # rotate them
+      @nameservers.rotate!
       begin
         @socket.send request_message, 0, @nameservers.first, DNS_PORT
       rescue Errno::EHOSTUNREACH # TODO figure out why it has to be wrapper here, when the other wrapper should be wrapping this one!
