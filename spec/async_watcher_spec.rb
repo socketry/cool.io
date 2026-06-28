@@ -30,7 +30,9 @@ describe Cool.io::AsyncWatcher, :env => :exclude_win do
     end
 
     # ensure children are ready
-    nr_fork.times { expect(rd.sysread(1)).to eq('.') }
+    # rd may be O_NONBLOCK on macOS Ruby 3.2+ (IO.pipe sets O_NONBLOCK); use read
+    # instead of sysread so EAGAIN on an empty pipe is retried transparently.
+    nr_fork.times { expect(rd.read(1)).to eq('.') }
 
     # send our signals
     nr_signal.times { aw.signal }
