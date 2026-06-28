@@ -11,7 +11,6 @@ have_func('rb_thread_alone')
 have_func('rb_str_set_len')
 have_library('rt', 'clock_gettime')
 
-have_func("rb_io_descriptor")
 have_library("c", "main")
 if have_macro("HAVE_RB_IO_T", "ruby/io.h")
   have_struct_member("rb_io_t", "fd", "ruby/io.h")
