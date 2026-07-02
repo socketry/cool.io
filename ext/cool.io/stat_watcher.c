@@ -79,7 +79,8 @@ void Init_coolio_stat_watcher()
  */
 static VALUE Coolio_StatWatcher_initialize(int argc, VALUE *argv, VALUE self)
 {
-	VALUE path, interval;
+  VALUE path, interval;
+  long path_len;
   struct Coolio_Watcher *watcher_data;
 
   rb_scan_args(argc, argv, "11", &path, &interval);
@@ -91,11 +92,21 @@ static VALUE Coolio_StatWatcher_initialize(int argc, VALUE *argv, VALUE self)
 
   watcher_data = Coolio_Watcher_ptr(self);
 
+  /* libev keeps the path pointer passed to ev_stat_init() for the lifetime of
+   * the watcher.  RSTRING_PTR(path) points into a Ruby String whose buffer
+   * GC.compact may relocate, leaving libev with a dangling pointer.  Keep an
+   * owned copy instead; it is released in Coolio_Watcher_free(). */
+  path_len = RSTRING_LEN(path);
+  if(watcher_data->stat_path)
+    xfree(watcher_data->stat_path);
+  watcher_data->stat_path = xmalloc(path_len + 1);
+  strlcpy(watcher_data->stat_path, RSTRING_PTR(path), path_len + 1);
+
   watcher_data->dispatch_callback = Coolio_StatWatcher_dispatch_callback;
   ev_stat_init(
       &watcher_data->event_types.ev_stat,
       Coolio_StatWatcher_libev_callback,
-      RSTRING_PTR(path),
+      watcher_data->stat_path,
       interval == Qnil ? 0 : NUM2DBL(interval)
   );
   watcher_data->event_types.ev_stat.data = (void *)self;

@@ -55,6 +55,12 @@ struct Coolio_Watcher
   int enabled;
   VALUE loop;
 
+  /* Stable copy of the watched path for ev_stat watchers.  libev retains the
+   * path pointer passed to ev_stat_init() for the lifetime of the watcher, so
+   * it must not point into a Ruby String whose buffer GC.compact may relocate.
+   * NULL for watcher types that don't use it. */
+  char *stat_path;
+
   void (*dispatch_callback)(VALUE self, int revents);
 };
 

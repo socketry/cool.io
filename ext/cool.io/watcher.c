@@ -14,6 +14,7 @@ static VALUE cCoolio_Watcher = Qnil;
 
 static VALUE Coolio_Watcher_allocate(VALUE klass);
 static void Coolio_Watcher_mark(void *data);
+static void Coolio_Watcher_free(void *data);
 
 static VALUE Coolio_Watcher_initialize(VALUE self);
 static VALUE Coolio_Watcher_attach(VALUE self, VALUE loop);
@@ -56,7 +57,7 @@ static const rb_data_type_t Coolio_Watcher_type = {
   "Coolio::Watcher",
   {
     Coolio_Watcher_mark,
-    RUBY_DEFAULT_FREE,
+    Coolio_Watcher_free,
   },
 };
 
@@ -75,6 +76,7 @@ static VALUE Coolio_Watcher_allocate(VALUE klass)
 
   watcher_data->loop = Qnil;
   watcher_data->enabled = 0;
+  watcher_data->stat_path = NULL;
 
   return watcher;
 }
@@ -85,6 +87,16 @@ static void Coolio_Watcher_mark(void *data)
 
   if(watcher_data->loop != Qnil)
     rb_gc_mark(watcher_data->loop);
+}
+
+static void Coolio_Watcher_free(void *data)
+{
+  struct Coolio_Watcher *watcher_data = data;
+
+  if(watcher_data->stat_path)
+    xfree(watcher_data->stat_path);
+
+  xfree(watcher_data);
 }
 
 static VALUE Coolio_Watcher_initialize(VALUE self)
