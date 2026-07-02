@@ -145,7 +145,7 @@ Coolio_Buffer_free(void * buf)
 
 /**
  * call-seq:
- *   Coolio::Buffer.default_node_size -> 4096
+ *   Coolio::Buffer.default_node_size -> 16384
  *
  * Retrieves the current value of the default node size.
  */
