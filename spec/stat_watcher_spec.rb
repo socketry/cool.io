@@ -95,6 +95,10 @@ describe Cool.io::StatWatcher do
     expect(watcher.accessed).to eq(true)
   end
 
+  it "raises ArgumentError when the path contains a null byte" do
+    expect { MyStatWatcher.new("foo\0bar") }.to raise_error(ArgumentError)
+  end
+
   it "should raise when the handler does not take 2 parameters" do
     class MyStatWatcher < Cool.io::StatWatcher
       remove_method :on_change
