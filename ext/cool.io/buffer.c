@@ -352,6 +352,9 @@ Coolio_Buffer_read_frame(VALUE self, VALUE data, VALUE mark)
 
     TypedData_Get_Struct(self, struct buffer, &Coolio_Buffer_type, buf);
 
+    StringValue(data);
+    rb_str_modify(data);
+
     if (buffer_read_frame(buf, data, mark_c)) {
         return Qtrue;
     } else {

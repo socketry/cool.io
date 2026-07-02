@@ -142,6 +142,25 @@ describe Cool.io::Buffer do
       expect(data).to eq "foo\nbarbaz"
       expect(buffer.to_str).to eq ""
     end
+
+    it "raises TypeError instead of crashing when data is not a String" do
+      buffer << "hello world"
+      expect { buffer.read_frame 12345, " ".ord }.to raise_error(TypeError)
+      expect { buffer.read_frame nil, " ".ord }.to raise_error(TypeError)
+      expect { buffer.read_frame [], " ".ord }.to raise_error(TypeError)
+    end
+
+    it "raises FrozenError when data is a frozen String" do
+      buffer << "hello world"
+      expect { buffer.read_frame "frozen".freeze, " ".ord }.to raise_error(FrozenError)
+    end
+
+    it "coerces objects responding to #to_str" do
+      buffer << "foo\nbar"
+      convertible = Object.new
+      def convertible.to_str; +""; end
+      expect(buffer.read_frame convertible, "\n".ord).to eq true
+    end
   end
 
 end
