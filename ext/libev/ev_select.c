@@ -107,6 +107,16 @@ if (__i == ((fd_set *)(set))->fd_count) {\
 #define EV_WIN_FD_ZERO(set) (((fd_set *)(set))->fd_count=0)
 #define EV_WIN_FD_ISSET(fd, set) __WSAFDIsSet((SOCKET)(fd), (fd_set *)(set))
 #define EV_WIN_FD_COUNT(set) (((fd_set *)(set))->fd_count)
+
+/*
+fd_set is dimensioned by whatever FD_SETSIZE was in effect when winsock2.h was
+first pulled in, but EV_WIN_FD_SET and select_modify bound-check against the
+FD_SETSIZE visible here. The two are decided by separate paths, so if the bound
+ever exceeds the declared array we would write past the end of the allocation in
+select_init. Catch that at build time instead.
+*/
+typedef char coolio_fd_setsize_matches_fd_set[
+	(sizeof (((fd_set *)0)->fd_array) / sizeof (SOCKET) >= (size_t)FD_SETSIZE) ? 1 : -1];
 /* ######################################## */
 #else
 #define EV_WIN_FD_CLR FD_CLR
