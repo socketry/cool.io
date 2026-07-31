@@ -110,8 +110,7 @@ void Coolio_Loop_process_event(VALUE watcher, int revents)
   struct Coolio_Loop *loop_data;
   struct Coolio_Watcher *watcher_data;
 
-  /* The Global VM lock isn't held right now, but hopefully
-   * we can still do this safely */
+  /* The Global VM Lock is held here, see the explanation below */
   watcher_data = Coolio_Watcher_ptr(watcher);
 
   if (watcher_data->enabled == 0) {
@@ -126,13 +125,14 @@ void Coolio_Loop_process_event(VALUE watcher, int revents)
    *
    *  Our call path up to here looks a little something like:
    *
-   *  -> release GVL -> event syscall -> libev callback
-   *  (GVL = Global VM Lock)             ^^^ You are here
+   *  -> release GVL -> event syscall -> reacquire GVL -> libev callback
+   *  (GVL = Global VM Lock)                              ^^^ You are here
    *
-   *  We released the GVL in the Coolio_Loop_run_once() function
-   *  so other Ruby threads can run while we make a blocking 
-   *  system call (one of epoll, kqueue, port, poll, or select,
-   *  depending on the platform).
+   *  libev is patched (see ev.c) to release the GVL around the blocking
+   *  system call (one of epoll, kqueue, port, poll, or select, depending
+   *  on the platform) so other Ruby threads can run while we wait there.
+   *  Only that call runs without the GVL: libev invokes the events it
+   *  collected after the call has returned, so we hold the GVL here.
    *
    *  More specifically, this is a libev callback abstraction
    *  called from a real libev callback in every watcher,
@@ -150,19 +150,19 @@ void Coolio_Loop_process_event(VALUE watcher, int revents)
    *  event fired, why the hell is it telling the loop?  Why
    *  doesn't it just rb_funcall() the appropriate callback?
    *
-   *  Well, the problem is the Global VM Lock isn't held right
-   *  now, so we can't rb_funcall() anything.  In order to get
-   *  it back we have to:
+   *  Because Ruby code doesn't run from inside libev's own event
+   *  invocation.  Instead:
    *
-   *  stash event and return -> acquire GVL -> dispatch to Ruby
+   *  stash event and return -> ev_loop() returns -> dispatch to Ruby
    *
-   *  Which is kinda ugly and confusing, but still gives us 
+   *  Which is kinda ugly and confusing, but still gives us
    *  an O(1) event loop whose heart is in the kernel itself. w00t!
    *
    *  So, stash the event in the loop's data struct.  When we return
    *  the ev_loop() call being made in the Coolio_Loop_run_once_blocking()
-   *  function below will also return, at which point the GVL is
-   *  reacquired and we can call out to Ruby */
+   *  function below will also return, and Coolio_Loop_dispatch_events()
+   *  walks what we stashed and calls out to Ruby.  A watcher detached
+   *  along the way nils its own stashed entries, which that walk skips */
 
   /* Grow the event buffer if it's too small */
   if(loop_data->events_received >= loop_data->eventbuf_size) {
