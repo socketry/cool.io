@@ -18,6 +18,8 @@
 #++
 
 require 'resolv'
+require 'securerandom'
+require 'socket'
 
 module Coolio
   # A non-blocking DNS resolver.  It provides interfaces for querying both
@@ -76,6 +78,13 @@ module Coolio
       @nameservers = nameservers.dup
       @question = request_question hostname
 
+      # A guessable ID would let an off-path attacker forge a response
+      @request_id = SecureRandom.random_number(1 << 16)
+
+      # Numeric addresses this query was sent to, and the lookups behind them
+      @queried_addresses = []
+      @numeric_addresses = {}
+
       @socket = UDPSocket.new
       @timer = Timeout.new(self)
 
@@ -115,23 +124,41 @@ module Coolio
     # Send a request to the DNS server
     def send_request
       @nameservers.rotate!
+
+      # Send to the numeric address, so we know where a response must come from
+      address = numeric_address(@nameservers.first)
+      @queried_addresses << address unless @queried_addresses.include?(address)
+
       begin
-        @socket.send request_message, 0, @nameservers.first, DNS_PORT
+        @socket.send request_message, 0, address, DNS_PORT
       rescue Errno::EHOSTUNREACH # TODO figure out why it has to be wrapper here, when the other wrapper should be wrapping this one!
       end
     end
 
     # Called by the subclass when the DNS response is available
     def on_readable
-      datagram = nil
+      datagram = sender = nil
       begin
-        datagram = @socket.recvfrom_nonblock(DATAGRAM_SIZE).first
+        datagram, sender = @socket.recvfrom_nonblock(DATAGRAM_SIZE)
       rescue Errno::ECONNREFUSED
       end
+
+      # Ignore anything we didn't ask for, rather than resolving or failing on it.
+      # The query stays outstanding, so the retry timer still bounds us.
+      return if datagram and not solicited_response?(datagram, sender)
 
       address = response_address datagram rescue nil
       address ? on_success(address) : on_failure
       detach
+    end
+
+    # Is this a reply to our query, from an address we sent it to?
+    # Retries rotate through @nameservers, so any address already queried counts.
+    def solicited_response?(datagram, sender)
+      return false unless datagram.size >= 12
+      return false unless sender and sender[1] == DNS_PORT and @queried_addresses.include?(sender[3])
+
+      datagram[0..1].unpack('n').first.to_i == @request_id
     end
 
     def request_question(hostname)
@@ -151,7 +178,7 @@ module Coolio
 
     def request_message
       # Standard query header
-      message = [2, 1, 0].pack('nCC')
+      message = [@request_id, 1, 0].pack('nCC')
 
       # One entry
       qdcount = 1
@@ -166,7 +193,7 @@ module Coolio
     def response_address(message)
       # Confirm the ID field
       id = message[0..1].unpack('n').first.to_i
-      return unless id == 2
+      return unless id == @request_id
 
       # Check the QR value and confirm this message is a response
       qr = message[2..2].unpack('B1').first.to_i
@@ -208,6 +235,17 @@ module Coolio
 
     def reject_ipv6_nameservers(nameservers)
       nameservers.reject { |ns| ns.include?(':') }
+    end
+
+    # The address of a nameserver, which may be given as a hostname.
+    # Only successful lookups are cached, so a transient failure is looked up again.
+    def numeric_address(nameserver)
+      @numeric_addresses[nameserver] ||= begin
+        addrinfo = Addrinfo.getaddrinfo(nameserver, nil, ::Socket::AF_INET, ::Socket::SOCK_DGRAM).first
+        raise SocketError, "getaddrinfo: no IPv4 address for #{nameserver}" if addrinfo.nil?
+
+        addrinfo.ip_address
+      end
     end
 
     class Timeout < TimerWatcher
