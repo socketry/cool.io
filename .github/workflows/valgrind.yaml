@@ -36,7 +36,9 @@ jobs:
         ruby-version: ${{matrix.ruby}}
         bundler-cache: true
     - name: Install Valgrind
-      run: sudo apt-get install -y valgrind
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y valgrind
     - name: Run tests
       timeout-minutes: 10
       run: bundle exec rake spec:valgrind
