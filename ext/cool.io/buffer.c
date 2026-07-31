@@ -28,17 +28,22 @@
 
 /* Default number of bytes in each node's buffer.  Should be >= MTU */
 #define DEFAULT_NODE_SIZE 16384
-static unsigned default_node_size = DEFAULT_NODE_SIZE;
+static size_t default_node_size = DEFAULT_NODE_SIZE;
 
+/*
+ * Byte counts are kept in size_t so the accounting cannot wrap while the
+ * buffer itself still holds the data.  node_size is capped at MAX_BUFFER_SIZE,
+ * but size grows with whatever the buffer is asked to hold.
+ */
 struct buffer {
-    unsigned size, node_size;
+    size_t size, node_size;
     struct buffer_node *head, *tail;
     struct buffer_node *pool_head, *pool_tail;
 
 };
 
 struct buffer_node {
-    unsigned start, end;
+    size_t start, end;
     struct buffer_node *next;
     unsigned char   data[0];
 };
@@ -68,13 +73,13 @@ static struct buffer *buffer_init(struct buffer *);
 static void     buffer_clear(struct buffer * buf);
 static void     buffer_free(struct buffer * buf);
 static void     buffer_free_pool(struct buffer * buf);
-static void     buffer_prepend(struct buffer * buf, char *str, unsigned len);
-static void     buffer_append(struct buffer * buf, char *str, unsigned len);
-static void     buffer_read(struct buffer * buf, char *str, unsigned len);
+static void     buffer_prepend(struct buffer * buf, char *str, size_t len);
+static void     buffer_append(struct buffer * buf, char *str, size_t len);
+static void     buffer_read(struct buffer * buf, char *str, size_t len);
 static int      buffer_read_frame(struct buffer * buf, VALUE str, char frame_mark);
-static void     buffer_copy(struct buffer * buf, char *str, unsigned len);
-static int      buffer_read_from(struct buffer * buf, int fd);
-static int      buffer_write_to(struct buffer * buf, int fd);
+static void     buffer_copy(struct buffer * buf, char *str, size_t len);
+static ssize_t  buffer_read_from(struct buffer * buf, int fd);
+static ssize_t  buffer_write_to(struct buffer * buf, int fd);
 
 /*
  * High-performance I/O buffer intended for use in non-blocking programs
@@ -152,14 +157,14 @@ Coolio_Buffer_free(void * buf)
 static VALUE
 Coolio_Buffer_default_node_size(VALUE klass)
 {
-    return UINT2NUM(default_node_size);
+    return SIZET2NUM(default_node_size);
 }
 
 /*
  * safely converts node sizes from Ruby numerics to C and raising
  * ArgumentError or RangeError on invalid sizes
  */
-static unsigned
+static size_t
 convert_node_size(VALUE size)
 {
     if (
@@ -168,7 +173,7 @@ convert_node_size(VALUE size)
     )
         rb_raise(rb_eArgError, "invalid buffer size");
 
-    return (unsigned) NUM2INT(size);
+    return NUM2SIZET(size);
 }
 
 /**
@@ -241,7 +246,7 @@ Coolio_Buffer_size(VALUE self)
     struct buffer *buf;
     TypedData_Get_Struct(self, struct buffer, &Coolio_Buffer_type, buf);
 
-    return INT2NUM(buf->size);
+    return SIZET2NUM(buf->size);
 }
 
 /**
@@ -311,15 +316,18 @@ static VALUE
 Coolio_Buffer_read(int argc, VALUE * argv, VALUE self)
 {
     VALUE  length_obj, str;
-    int    length;
+    size_t length;
     struct buffer *buf;
 
     TypedData_Get_Struct(self, struct buffer, &Coolio_Buffer_type, buf);
 
     if (rb_scan_args(argc, argv, "01", &length_obj) == 1) {
-        length = NUM2INT(length_obj);
-        if(length < 1)
+        /* Read signed so a negative argument still raises ArgumentError here
+         * rather than RangeError out of the conversion */
+        long requested = NUM2LONG(length_obj);
+        if(requested < 1)
           rb_raise(rb_eArgError, "length must be greater than zero");
+        length = (size_t) requested;
         if(length > buf->size)
           length = buf->size;
     } else
@@ -328,7 +336,7 @@ Coolio_Buffer_read(int argc, VALUE * argv, VALUE self)
     if(buf->size == 0)
         return rb_str_new2("");
 
-    str = rb_str_new(0, length);
+    str = rb_str_new(0, (long) length);
     buffer_read(buf, RSTRING_PTR(str), length);
 
     return str;
@@ -376,7 +384,7 @@ Coolio_Buffer_to_str(VALUE self)
 
     TypedData_Get_Struct(self, struct buffer, &Coolio_Buffer_type, buf);
 
-    str = rb_str_new(0, buf->size);
+    str = rb_str_new(0, (long) buf->size);
     buffer_copy(buf, RSTRING_PTR(str), buf->size);
 
     return str;
@@ -394,7 +402,7 @@ static VALUE
 Coolio_Buffer_read_from(VALUE self, VALUE io)
 {
     struct buffer  *buf;
-    int             ret;
+    ssize_t         ret;
 #if defined(HAVE_RB_IO_T) || defined(HAVE_RB_IO_DESCRIPTOR)
     rb_io_t        *fptr;
 #else
@@ -411,7 +419,7 @@ Coolio_Buffer_read_from(VALUE self, VALUE io)
 #else
     ret = buffer_read_from(buf, FPTR_TO_FD(fptr));
 #endif
-    return ret == -1 ? Qnil : INT2NUM(ret);
+    return ret == -1 ? Qnil : SSIZET2NUM(ret);
 }
 
 /**
@@ -438,9 +446,9 @@ Coolio_Buffer_write_to(VALUE self, VALUE io)
     rb_io_set_nonblock(fptr);
 
 #ifdef HAVE_RB_IO_DESCRIPTOR
-    return INT2NUM(buffer_write_to(buf, rb_io_descriptor(io)));
+    return SSIZET2NUM(buffer_write_to(buf, rb_io_descriptor(io)));
 #else
-    return INT2NUM(buffer_write_to(buf, FPTR_TO_FD(fptr)));
+    return SSIZET2NUM(buffer_write_to(buf, FPTR_TO_FD(fptr)));
 #endif
 }
 
@@ -538,7 +546,7 @@ buffer_node_free(struct buffer * buf, struct buffer_node * node)
 
 /* Prepend data to the front of the buffer */
 static void
-buffer_prepend(struct buffer * buf, char *str, unsigned len)
+buffer_prepend(struct buffer * buf, char *str, size_t len)
 {
     struct buffer_node *node, *tmp;
     buf->size += len;
@@ -579,9 +587,9 @@ buffer_prepend(struct buffer * buf, char *str, unsigned len)
 
 /* Append data to the front of the buffer */
 static void
-buffer_append(struct buffer * buf, char *str, unsigned len)
+buffer_append(struct buffer * buf, char *str, size_t len)
 {
-    unsigned nbytes;
+    size_t nbytes;
     buf->size += len;
 
     /* If it fits in the remaining space in the tail */
@@ -616,9 +624,9 @@ buffer_append(struct buffer * buf, char *str, unsigned len)
 
 /* Read data from the buffer (and clear what we've read) */
 static void
-buffer_read(struct buffer * buf, char *str, unsigned len)
+buffer_read(struct buffer * buf, char *str, size_t len)
 {
-    unsigned nbytes;
+    size_t nbytes;
     struct buffer_node *tmp;
 
     while (buf->size > 0 && len > 0) {
@@ -652,7 +660,7 @@ buffer_read(struct buffer * buf, char *str, unsigned len)
 static int
 buffer_read_frame(struct buffer * buf, VALUE str, char frame_mark)
 {
-    unsigned nbytes = 0;
+    size_t nbytes = 0;
     struct buffer_node *tmp;
 
     while (buf->size > 0) {
@@ -667,7 +675,7 @@ buffer_read_frame(struct buffer * buf, VALUE str, char frame_mark)
         }
 
         /* Copy less than everything if we found a frame byte */
-        rb_str_cat(str, s, nbytes);
+        rb_str_cat(str, s, (long) nbytes);
 
         /* Fixup the buffer pointers to indicate the bytes were consumed */
         head->start += nbytes;
@@ -691,9 +699,9 @@ buffer_read_frame(struct buffer * buf, VALUE str, char frame_mark)
 
 /* Copy data from the buffer without clearing it */
 static void
-buffer_copy(struct buffer * buf, char *str, unsigned len)
+buffer_copy(struct buffer * buf, char *str, size_t len)
 {
-    unsigned nbytes;
+    size_t nbytes;
     struct buffer_node *node;
 
     node = buf->head;
@@ -712,10 +720,10 @@ buffer_copy(struct buffer * buf, char *str, unsigned len)
 }
 
 /* Write data from the buffer to a file descriptor */
-static int
+static ssize_t
 buffer_write_to(struct buffer * buf, int fd)
 {
-    int bytes_written, total_bytes_written = 0;
+    ssize_t bytes_written, total_bytes_written = 0;
     struct buffer_node *tmp;
 
     while (buf->head) {
@@ -733,7 +741,7 @@ buffer_write_to(struct buffer * buf, int fd)
         buf->size -= bytes_written;
 
         /* If the write blocked... */
-        if (bytes_written < buf->head->end - buf->head->start) {
+        if ((size_t) bytes_written < buf->head->end - buf->head->start) {
             buf->head->start += bytes_written;
             return total_bytes_written;
         }
@@ -751,11 +759,11 @@ buffer_write_to(struct buffer * buf, int fd)
 
 /* Read data from a file descriptor to a buffer */
 /* Append data to the front of the buffer */
-static int
+static ssize_t
 buffer_read_from(struct buffer * buf, int fd)
 {
-    int      bytes_read, total_bytes_read = 0;
-    unsigned nbytes;
+    ssize_t bytes_read, total_bytes_read = 0;
+    size_t  nbytes;
 
     /* Empty list needs initialized */
     if (!buf->head) {
@@ -785,7 +793,7 @@ buffer_read_from(struct buffer * buf, int fd)
             buf->tail->next = buffer_node_new(buf);
             buf->tail = buf->tail->next;
         }
-    } while (bytes_read == nbytes);
+    } while ((size_t) bytes_read == nbytes);
 
     return total_bytes_read;
 }
