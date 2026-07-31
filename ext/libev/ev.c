@@ -210,7 +210,13 @@
 #else
 # include <io.h>
 # define WIN32_LEAN_AND_MEAN
-# define FD_SETSIZE 1024
+/* ruby.h above already pulled in winsock2.h, so fd_set may be dimensioned
+ * already. Defining FD_SETSIZE unconditionally here would only move the bound
+ * used by EV_WIN_FD_SET, not the array it indexes. Take whatever is in effect
+ * and only supply a default when nothing has been decided yet. */
+# ifndef FD_SETSIZE
+#  define FD_SETSIZE 1024
+# endif
 # include <winsock2.h>
 # include <windows.h>
 # ifndef EV_SELECT_IS_WINSOCKET

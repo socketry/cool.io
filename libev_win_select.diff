@@ -1,20 +1,26 @@
 diff --git a/ext/libev/ev.c b/ext/libev/ev.c
-index dae87f1..d15f6bd 100644
+index a59efb2..5c18fd6 100644
 --- a/ext/libev/ev.c
 +++ b/ext/libev/ev.c
-@@ -207,6 +207,7 @@
+@@ -210,6 +210,13 @@
  #else
  # include <io.h>
  # define WIN32_LEAN_AND_MEAN
-+# define FD_SETSIZE 1024
++/* ruby.h above already pulled in winsock2.h, so fd_set may be dimensioned
++ * already. Defining FD_SETSIZE unconditionally here would only move the bound
++ * used by EV_WIN_FD_SET, not the array it indexes. Take whatever is in effect
++ * and only supply a default when nothing has been decided yet. */
++# ifndef FD_SETSIZE
++#  define FD_SETSIZE 1024
++# endif
  # include <winsock2.h>
  # include <windows.h>
  # ifndef EV_SELECT_IS_WINSOCKET
 diff --git a/ext/libev/ev_select.c b/ext/libev/ev_select.c
-index f38d6ca..7050778 100644
+index ed1fc7a..eccff2b 100644
 --- a/ext/libev/ev_select.c
 +++ b/ext/libev/ev_select.c
-@@ -67,6 +67,54 @@
+@@ -67,6 +67,64 @@
  
  #include <string.h>
  
@@ -58,6 +64,16 @@ index f38d6ca..7050778 100644
 +#define EV_WIN_FD_ZERO(set) (((fd_set *)(set))->fd_count=0)
 +#define EV_WIN_FD_ISSET(fd, set) __WSAFDIsSet((SOCKET)(fd), (fd_set *)(set))
 +#define EV_WIN_FD_COUNT(set) (((fd_set *)(set))->fd_count)
++
++/*
++fd_set is dimensioned by whatever FD_SETSIZE was in effect when winsock2.h was
++first pulled in, but EV_WIN_FD_SET and select_modify bound-check against the
++FD_SETSIZE visible here. The two are decided by separate paths, so if the bound
++ever exceeds the declared array we would write past the end of the allocation in
++select_init. Catch that at build time instead.
++*/
++typedef char coolio_fd_setsize_matches_fd_set[
++	(sizeof (((fd_set *)0)->fd_array) / sizeof (SOCKET) >= (size_t)FD_SETSIZE) ? 1 : -1];
 +/* ######################################## */
 +#else
 +#define EV_WIN_FD_CLR FD_CLR
@@ -69,7 +85,7 @@ index f38d6ca..7050778 100644
  static void
  select_modify (EV_P_ int fd, int oev, int nev)
  {
-@@ -91,17 +139,17 @@ select_modify (EV_P_ int fd, int oev, int nev)
+@@ -91,17 +149,17 @@ select_modify (EV_P_ int fd, int oev, int nev)
      if ((oev ^ nev) & EV_READ)
      #endif
        if (nev & EV_READ)
@@ -91,7 +107,7 @@ index f38d6ca..7050778 100644
  
  #else
  
-@@ -197,8 +245,8 @@ select_poll (EV_P_ ev_tstamp timeout)
+@@ -197,8 +255,8 @@ select_poll (EV_P_ ev_tstamp timeout)
          {
            if (timeout)
              {
@@ -102,7 +118,7 @@ index f38d6ca..7050778 100644
              }
  
            return;
-@@ -230,10 +278,10 @@ select_poll (EV_P_ ev_tstamp timeout)
+@@ -230,10 +288,10 @@ select_poll (EV_P_ ev_tstamp timeout)
            int handle = fd;
            #endif
  
@@ -116,7 +132,7 @@ index f38d6ca..7050778 100644
            #endif
  
            if (expect_true (events))
-@@ -279,9 +327,9 @@ select_init (EV_P_ int flags)
+@@ -280,9 +338,9 @@ select_init (EV_P_ int flags)
    backend_poll    = select_poll;
  
  #if EV_SELECT_USE_FD_SET
