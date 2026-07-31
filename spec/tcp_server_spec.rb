@@ -1,4 +1,5 @@
 require File.expand_path('../spec_helper', __FILE__)
+require 'timeout'
 
 TIMEOUT = 0.010
 HOST = '127.0.0.1'
@@ -39,13 +40,31 @@ def on_message(data)
   @data = data
 end
 
+# The reactor can be an order of magnitude slower under valgrind, so sleeping a
+# fixed interval and assuming the event was processed by then makes these specs
+# fail intermittently. Wait for the result instead. The timeout is generous
+# enough that a slow machine still passes, and a genuine hang raises
+# Timeout::Error here instead of blocking the suite forever.
+WAIT_TIMEOUT = 5.0
+
+def wait_until(timeout = WAIT_TIMEOUT)
+  Timeout.timeout(timeout) do
+    sleep 0.001 until yield
+  end
+end
+
 def test_run(data = nil)
+  @data = ""
   reactor = Coolio::Loop.new
   server = Cool.io::TCPServer.new(HOST, PORT, MyConnection, method(:on_message))
   reactor.attach(server)
   thread = Thread.new { reactor.run }
-  send_data(data) if data
-  sleep TIMEOUT
+  if data
+    send_data(data)
+    wait_until { @data == data }
+  else
+    sleep TIMEOUT
+  end
   reactor.stop
   server.detach
   send_data('') # to leave from blocking loop
@@ -86,6 +105,7 @@ ensure
 end
 
 def test_run_timeout(data = nil, timeout = TIMEOUT)
+  @data = ""
   reactor = Coolio::Loop.new
   server = Cool.io::TCPServer.new(HOST, PORT, MyConnection, method(:on_message))
   reactor.attach(server)
@@ -95,8 +115,12 @@ def test_run_timeout(data = nil, timeout = TIMEOUT)
       reactor.run_once(timeout)
     end
   end
-  send_data(data) if data
-  sleep timeout
+  if data
+    send_data(data)
+    wait_until { @data == data }
+  else
+    sleep timeout
+  end
   server.detach
   running = false # another send is not required
   thread.join
