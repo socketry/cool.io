@@ -31,6 +31,18 @@ describe Cool.io::Buffer do
       expect(buffer << "baz").to eq "baz"
       expect(buffer.read 3).to eq "arb"
     end
+
+    it "raises ArgumentError for a length below one" do
+      buffer << "foo"
+      expect { buffer.read 0 }.to raise_error ArgumentError
+      expect { buffer.read(-1) }.to raise_error ArgumentError
+    end
+
+    it "clamps a length which does not fit in a C int to the buffer size" do
+      buffer << "foobar"
+      expect(buffer.read 2**31).to eq "foobar"
+      expect(buffer.size).to eq 0
+    end
   end
   
   describe "provides methods for performing non-blocking I/O" do
