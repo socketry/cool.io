@@ -218,6 +218,7 @@ module Coolio
       while not message.empty?
         type = message[2..3].unpack('n').first.to_i
         rdlength = message[10..11].unpack('n').first.to_i
+        return if message.bytesize < 12 + rdlength
         rdata = message[12..(12 + rdlength - 1)]
         message.slice!(0, 12 + rdlength)
 

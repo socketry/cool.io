@@ -211,6 +211,17 @@ describe "DNS" do
       resolver.__send__(:on_readable)
     end
 
+    it "fails a response whose A record is shorter than its RDLENGTH instead of resolving a bogus address" do
+      truncated = dns_response_for(resolver, address: "1.2.3.4")[0...-4]
+      allow(resolver.instance_variable_get(:@socket)).to receive(:recvfrom_nonblock).and_return([truncated, sender])
+
+      expect(resolver).to_not receive(:on_success)
+      expect(resolver).to receive(:on_failure)
+      expect(resolver).to receive(:detach)
+
+      resolver.__send__(:on_readable)
+    end
+
     it "ignores a spoofed response instead of resolving or failing it" do
       forged = dns_response_for(resolver, address: "6.6.6.6")
       allow(resolver.instance_variable_get(:@socket)).to receive(:recvfrom_nonblock)
