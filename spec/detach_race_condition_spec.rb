@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 describe Cool.io::Loop do
-  # An IOWatcher that drains its pipe and then runs a user-supplied block,
+  # An IOWatcher that drains its socket and then runs a user-supplied block,
   # receiving itself as the argument.
   class Victim < Cool.io::IOWatcher
     def initialize(io, &on_readable)
@@ -34,16 +34,21 @@ describe Cool.io::Loop do
   # crashed intermittently on macOS.
   it "does not raise when a watcher with a pending event is detached during dispatch" do
     iterations = 200
+    # Winsock select monitors sockets, not IO.pipe handles. TCP connections
+    # exercise the same queued-event scenario on every supported platform.
+    listener = TCPServer.new('127.0.0.1', 0)
 
-    expect {
-      iterations.times do
-        coolio_loop = Cool.io::Loop.new
-        pipes = []
-        watchers = []
+    iterations.times do
+      coolio_loop = Cool.io::Loop.new
+      connections = []
+      watchers = []
 
+      begin
         5.times do
-          r, w = IO.pipe
-          pipes << [r, w]
+          w = TCPSocket.new('127.0.0.1', listener.addr[1])
+          connections << [nil, w]
+          r = listener.accept
+          connections.last[0] = r
 
           watcher = Victim.new(r) do |fired|
             # Detach every other watcher whose event is already queued for this
@@ -58,16 +63,23 @@ describe Cool.io::Loop do
           w.write("dummy\n") # make the read end readable so an event is pending
         end
 
+        # TCP delivery is asynchronous. Ensure all five read ends are ready
+        # before libev collects the events, without consuming their data.
+        connections.each do |r, _|
+          expect(IO.select([r], nil, nil, 2)).not_to be_nil
+        end
         coolio_loop.run_once
 
         # Only the first dispatched watcher runs; it detaches the other four,
         # whose pending events are then skipped.
         expect(watchers.count(&:attached?)).to eq(1)
-
+      ensure
         watchers.each { |watcher| watcher.detach if watcher.attached? }
-        pipes.each { |r, w| r.close; w.close }
+        connections.each { |r, w| r.close if r; w.close }
       end
-    }.not_to raise_error
+    end
+  ensure
+    listener.close if listener
   end
 
   class HttpHandler < Coolio::IO
