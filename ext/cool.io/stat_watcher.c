@@ -5,6 +5,9 @@
  */
 
 #include "ruby.h"
+#ifdef _WIN32
+#include "ruby/encoding.h"
+#endif
 #include "ev_wrap.h"
 
 #include "cool.io.h"
@@ -74,7 +77,7 @@ void Init_coolio_stat_watcher()
  * specified how often in seconds the path should be polled for changes.
  * Setting interval to zero uses an "automatic" value (typically around 5
  * seconds) which optimizes performance.  Otherwise, values less than
- * 0.1 are not particularly meaningful.  Where available (at present, on Linux)
+ * 0.1 are not particularly meaningful.  Where available (on Linux and Windows)
  * high performance file monitoring interfaces will be used instead of polling.
  */
 static VALUE Coolio_StatWatcher_initialize(int argc, VALUE *argv, VALUE self)
@@ -91,6 +94,12 @@ static VALUE Coolio_StatWatcher_initialize(int argc, VALUE *argv, VALUE self)
   path = rb_String(path);
   path_str = StringValueCStr(path);
   rb_iv_set(self, "@path", path);
+
+#ifdef _WIN32
+  /* libev's wide Windows APIs and stat wrapper use UTF-8 paths. */
+  path = rb_str_export_to_enc(path, rb_utf8_encoding());
+  path_str = StringValueCStr(path);
+#endif
 
   watcher_data = Coolio_Watcher_ptr(self);
 
@@ -136,7 +145,7 @@ static VALUE Coolio_StatWatcher_attach(VALUE self, VALUE loop)
   watcher_data = Coolio_Watcher_ptr(self);
 
   if(watcher_data->loop != Qnil)
-    Coolio_StatWatcher_detach(self);
+    rb_funcall(self, rb_intern("detach"), 0);
 
   watcher_data->loop = loop;
 

@@ -322,14 +322,15 @@ Coolio_Buffer_read(int argc, VALUE * argv, VALUE self)
     TypedData_Get_Struct(self, struct buffer, &Coolio_Buffer_type, buf);
 
     if (rb_scan_args(argc, argv, "01", &length_obj) == 1) {
-        /* Read signed so a negative argument still raises ArgumentError here
-         * rather than RangeError out of the conversion */
-        long requested = NUM2LONG(length_obj);
-        if(requested < 1)
+        /* Clamp before converting to C: long is only 32 bits on 64-bit Windows,
+         * and a request larger than the buffer never needs to fit in C at all.
+         * Keep the integer coercion and ArgumentError for non-positive lengths. */
+        VALUE requested = rb_to_int(length_obj);
+        if(rb_funcall(requested, rb_intern("<"), 1, INT2NUM(1)) == Qtrue)
           rb_raise(rb_eArgError, "length must be greater than zero");
-        length = (size_t) requested;
-        if(length > buf->size)
-          length = buf->size;
+        length = buf->size;
+        if(rb_funcall(requested, rb_intern("<"), 1, SIZET2NUM(length)) == Qtrue)
+          length = NUM2SIZET(requested);
     } else
         length = buf->size;
 

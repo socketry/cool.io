@@ -36,12 +36,32 @@ describe Cool.io::Buffer do
       buffer << "foo"
       expect { buffer.read 0 }.to raise_error ArgumentError
       expect { buffer.read(-1) }.to raise_error ArgumentError
+      expect { buffer.read(-(2**100)) }.to raise_error ArgumentError
     end
 
     it "clamps a length which does not fit in a C int to the buffer size" do
       buffer << "foobar"
       expect(buffer.read 2**31).to eq "foobar"
       expect(buffer.size).to eq 0
+    end
+
+    it "clamps lengths larger than an unsigned long or size_t to the buffer size" do
+      [2**32, 2**64, 2**100].each do |length|
+        buffer << "foobar"
+        expect(buffer.read(length)).to eq "foobar"
+        expect(buffer.size).to eq 0
+      end
+    end
+
+    it "keeps integer coercion for numeric and to_int lengths" do
+      length = Object.new
+      def length.to_int
+        2
+      end
+      buffer << "foobar"
+      expect(buffer.read(length)).to eq "fo"
+      expect(buffer.read(2.9)).to eq "ob"
+      expect(buffer.to_str).to eq "ar"
     end
   end
   

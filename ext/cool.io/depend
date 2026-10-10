@@ -1,0 +1,1 @@
+libev.o: $(srcdir)/../libev/ev.c $(srcdir)/../libev/ev.h $(srcdir)/../libev/ev_vars.h $(srcdir)/../libev/ev_wrap.h $(srcdir)/../libev/ev_win32_stat.c
