@@ -219,6 +219,10 @@
 # endif
 # include <winsock2.h>
 # include <windows.h>
+# include <process.h>
+# ifndef EV_WIN32_STAT_CODEPAGE
+#  define EV_WIN32_STAT_CODEPAGE CP_ACP
+# endif
 # ifndef EV_SELECT_IS_WINSOCKET
 #  define EV_SELECT_IS_WINSOCKET 1
 # endif
@@ -1855,6 +1859,10 @@ typedef struct
 
 #endif
 
+#if defined(_WIN32) && EV_STAT_ENABLE && EV_ASYNC_ENABLE
+static void win32_fs_destroy (EV_P);
+#endif
+
 #if EV_FEATURE_API
 # define EV_RELEASE_CB if (expect_false (release_cb)) release_cb (EV_A)
 # define EV_ACQUIRE_CB if (expect_false (acquire_cb)) acquire_cb (EV_A)
@@ -2914,6 +2922,9 @@ loop_init (EV_P_ unsigned int flags) EV_THROW
       pipe_write_wanted  = 0;
       evpipe [0]         = -1;
       evpipe [1]         = -1;
+#if defined(_WIN32) && EV_STAT_ENABLE && EV_ASYNC_ENABLE
+      win32_fs          = 0;
+#endif
 #if EV_USE_INOTIFY
       fs_fd              = flags & EVFLAG_NOINOTIFY ? -1 : -2;
 #endif
@@ -2980,6 +2991,10 @@ ev_loop_destroy (EV_P)
       ev_ref (EV_A); /* child watcher */
       ev_signal_stop (EV_A_ &childev);
     }
+#endif
+
+#if defined(_WIN32) && EV_STAT_ENABLE && EV_ASYNC_ENABLE
+  win32_fs_destroy (EV_A);
 #endif
 
   if (ev_is_active (&pipe_w))
@@ -4341,6 +4356,10 @@ ev_child_stop (EV_P_ ev_child *w) EV_THROW
 
 noinline static void stat_timer_cb (EV_P_ ev_timer *w_, int revents);
 
+#if defined(_WIN32) && EV_ASYNC_ENABLE
+# include "ev_win32_stat.c"
+#endif
+
 #if EV_USE_INOTIFY
 
 /* the * 2 is to allow for alignment padding, which for some reason is >> 8 */
@@ -4581,7 +4600,23 @@ infy_fork (EV_P)
 #endif
 
 #ifdef _WIN32
-# define EV_LSTAT(p,b) _stati64 (p, b)
+static int
+win32_stat (const char *path, ev_statdata *attr)
+{
+  int result;
+  int length = MultiByteToWideChar (EV_WIN32_STAT_CODEPAGE, 0, path, -1, 0, 0);
+  wchar_t *wide;
+  if (!length)
+    { errno = EINVAL; return -1; }
+  wide = (wchar_t *)malloc (length * sizeof (wchar_t));
+  if (!wide)
+    { errno = ENOMEM; return -1; }
+  MultiByteToWideChar (EV_WIN32_STAT_CODEPAGE, 0, path, -1, wide, length);
+  result = _wstati64 (wide, attr);
+  free (wide);
+  return result;
+}
+# define EV_LSTAT(p,b) win32_stat (p, b)
 #else
 # define EV_LSTAT(p,b) lstat (p, b)
 #endif
@@ -4589,7 +4624,7 @@ infy_fork (EV_P)
 void
 ev_stat_stat (EV_P_ ev_stat *w) EV_THROW
 {
-  if (lstat (w->path, &w->attr) < 0)
+  if (EV_LSTAT (w->path, &w->attr) < 0)
     w->attr.st_nlink = 0;
   else if (!w->attr.st_nlink)
     w->attr.st_nlink = 1;
@@ -4600,6 +4635,11 @@ static void
 stat_timer_cb (EV_P_ ev_timer *w_, int revents)
 {
   ev_stat *w = (ev_stat *)(((char *)w_) - offsetof (ev_stat, timer));
+
+#if defined(_WIN32) && EV_ASYNC_ENABLE
+  if (revents & EV_TIMER)
+    win32_fs_add (EV_A_ w); /* retry missing parents or failed directory handles */
+#endif
 
   ev_statdata prev = w->attr;
   ev_stat_stat (EV_A_ w);
@@ -4622,6 +4662,12 @@ stat_timer_cb (EV_P_ ev_timer *w_, int revents)
       /* in case we test more often than invoke the callback, */
       /* to ensure that prev is always different to attr */
       w->prev = prev;
+
+#if defined(_WIN32) && EV_ASYNC_ENABLE
+      if (!prev.st_nlink || !w->attr.st_nlink
+          || (prev.st_mode & S_IFMT) != (w->attr.st_mode & S_IFMT))
+        win32_fs_add (EV_A_ w); /* register directory children after creation */
+#endif
 
       #if EV_USE_INOTIFY
         if (fs_fd >= 0)
@@ -4664,6 +4710,11 @@ ev_stat_start (EV_P_ ev_stat *w) EV_THROW
 
   ev_start (EV_A_ (W)w, 1);
 
+#if defined(_WIN32) && EV_ASYNC_ENABLE
+  win32_fs_add (EV_A_ w);
+  stat_timer_cb (EV_A_ &w->timer, 0); /* close the stat/registration race */
+#endif
+
   EV_FREQUENT_CHECK;
 }
 
@@ -4675,6 +4726,10 @@ ev_stat_stop (EV_P_ ev_stat *w) EV_THROW
     return;
 
   EV_FREQUENT_CHECK;
+
+#if defined(_WIN32) && EV_ASYNC_ENABLE
+  win32_fs_del (EV_A_ w);
+#endif
 
 #if EV_USE_INOTIFY
   infy_del (EV_A_ w);
