@@ -51,6 +51,7 @@ end
 if RUBY_PLATFORM.include?('linux')
   require 'ruby_memcheck'
   require 'ruby_memcheck/rspec/rake_task'
+  RubyMemcheck.config(binary_name: 'cool.io_ext')
   namespace :spec do
     RubyMemcheck::RSpec::RakeTask.new(valgrind: :compile)
   end
