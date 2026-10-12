@@ -64,7 +64,18 @@ describe Cool.io::Buffer do
       expect(buffer.to_str).to eq "ar"
     end
   end
-  
+
+  it "raises RangeError when to_str is called on a buffer past LONG_MAX",
+     :if => [0].pack("l!").bytesize == 4 do
+    long_max = 2**31 - 1
+    node_size = 16 * 1024 * 1024
+    big = Cool.io::Buffer.new(node_size)
+    chunk = "x" * node_size
+    ((long_max / node_size) + 1).times { big << chunk }
+    expect(big.size).to be > long_max
+    expect { big.to_str }.to raise_error(RangeError)
+  end
+
   describe "provides methods for performing non-blocking I/O" do
     require "tempfile"
     

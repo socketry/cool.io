@@ -15,6 +15,7 @@
 #include <unistd.h>
 #endif
 #include <errno.h>
+#include <limits.h>
 
 /* 1 GiB maximum buffer size */
 #define MAX_BUFFER_SIZE 0x40000000
@@ -308,6 +309,8 @@ Coolio_Buffer_prepend(VALUE self, VALUE data)
  * Read the specified abount of data from the buffer.  If no value
  * is given the entire contents of the buffer are returned.  Any data
  * read from the buffer is cleared.
+ * At most LONG_MAX bytes are returned per call; on platforms where a String
+ * cannot hold the whole buffer the remainder is kept for later reads.
  * The given length must be greater than 0 or an exception would raise.
  * If the buffer size is zero then an empty string is returned (regardless
  * the given length).
@@ -336,6 +339,9 @@ Coolio_Buffer_read(int argc, VALUE * argv, VALUE self)
 
     if(buf->size == 0)
         return rb_str_new2("");
+
+    if(length > (size_t) LONG_MAX)
+        length = (size_t) LONG_MAX;
 
     str = rb_str_new(0, (long) length);
     buffer_read(buf, RSTRING_PTR(str), length);
@@ -384,6 +390,9 @@ Coolio_Buffer_to_str(VALUE self)
     struct buffer *buf;
 
     TypedData_Get_Struct(self, struct buffer, &Coolio_Buffer_type, buf);
+
+    if(buf->size > (size_t) LONG_MAX)
+        rb_raise(rb_eRangeError, "buffer is too large to convert to a String");
 
     str = rb_str_new(0, (long) buf->size);
     buffer_copy(buf, RSTRING_PTR(str), buf->size);
