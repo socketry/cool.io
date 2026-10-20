@@ -6,6 +6,13 @@
  * Directory events (including overflow) are hints to re-stat, not callbacks.
  */
 
+struct ev_win32_subscription
+{
+  struct ev_win32_subscription *next;
+  struct ev_win32_dir *dir;
+  struct ev_win32_watch *watch;
+};
+
 struct ev_win32_dir
 {
   struct ev_win32_dir *next;
@@ -13,15 +20,18 @@ struct ev_win32_dir
   OVERLAPPED overlapped;
   wchar_t *path;
   unsigned int refs;
-  int pending, retired, failed;
+  int pending, retired, failed, dirty;
+  struct ev_win32_subscription *subscribers;
   DWORD buffer[4096]; /* DWORD aligned; below the network 64 KiB limit */
 };
 
 struct ev_win32_watch
 {
   struct ev_win32_watch *next;
-  struct ev_win32_dir *dir;
-  struct ev_win32_dir *children;
+  struct ev_win32_watch *dirty_next;
+  struct ev_win32_subscription parent, children;
+  wchar_t *path, *shortpath, *longpath;
+  const wchar_t *name, *shortname, *longname;
   ev_stat *watcher;
   int dirty;
 };
@@ -33,6 +43,7 @@ struct ev_win32_fs
   ev_async async;
   struct ev_win32_dir *dirs;
   struct ev_win32_watch *watches;
+  struct ev_win32_watch *dirty;
   int stopping;
 #if EV_MULTIPLICITY
   struct ev_loop *owner;
@@ -40,6 +51,87 @@ struct ev_win32_fs
 };
 
 static void win32_fs_add_locked (EV_P_ ev_stat *w);
+static int win32_dir_matches (struct ev_win32_dir *dir, const wchar_t *parent);
+
+static void
+win32_watch_names (struct ev_win32_watch *watch)
+{
+  DWORD length = GetShortPathNameW (watch->path, 0, 0);
+  free (watch->shortpath);
+  watch->shortname = 0;
+  watch->shortpath = length ? (wchar_t *)malloc (length * sizeof (wchar_t)) : 0;
+  if (watch->shortpath)
+    {
+      DWORD written = GetShortPathNameW (watch->path, watch->shortpath, length);
+      wchar_t *slash = written && written < length ? wcsrchr (watch->shortpath, L'\\') : 0;
+      if (slash)
+        watch->shortname = slash + 1;
+    }
+  length = GetLongPathNameW (watch->path, 0, 0);
+  free (watch->longpath);
+  watch->longname = 0;
+  watch->longpath = length ? (wchar_t *)malloc (length * sizeof (wchar_t)) : 0;
+  if (watch->longpath)
+    {
+      DWORD written = GetLongPathNameW (watch->path, watch->longpath, length);
+      wchar_t *slash = written && written < length ? wcsrchr (watch->longpath, L'\\') : 0;
+      if (slash)
+        watch->longname = slash + 1;
+    }
+}
+
+/* Called with ctx->lock held. Queue each watcher at most once per batch. */
+static void
+win32_watch_dirty (struct ev_win32_fs *ctx, struct ev_win32_watch *watch)
+{
+  if (!watch->dirty)
+    {
+      watch->dirty = 1;
+      watch->dirty_next = ctx->dirty;
+      ctx->dirty = watch;
+    }
+}
+
+static int
+win32_name_matches (const wchar_t *name, const FILE_NOTIFY_INFORMATION *event)
+{
+  int length = event->FileNameLength / sizeof (wchar_t);
+  return name && wcslen (name) == (size_t)length
+    && CompareStringOrdinal (name, length, event->FileName, length, TRUE) == CSTR_EQUAL;
+}
+
+/* Name records only select paths to re-stat. Missing or malformed records
+ * (including buffer overflow) invalidate every subscriber to this directory. */
+static void
+win32_dir_notify (struct ev_win32_fs *ctx, struct ev_win32_dir *dir, DWORD bytes)
+{
+  struct ev_win32_subscription *sub;
+  DWORD offset = 0;
+  dir->dirty = 1;
+  while (bytes && offset < bytes)
+    {
+      FILE_NOTIFY_INFORMATION *event = (FILE_NOTIFY_INFORMATION *)((char *)dir->buffer + offset);
+      DWORD remaining = bytes - offset;
+      DWORD header = offsetof (FILE_NOTIFY_INFORMATION, FileName);
+      if (remaining < header || event->FileNameLength % sizeof (wchar_t)
+          || event->FileNameLength > remaining - header)
+        break;
+      for (sub = dir->subscribers; sub; sub = sub->next)
+        if (sub == &sub->watch->children
+            || win32_name_matches (sub->watch->name, event)
+            || win32_name_matches (sub->watch->shortname, event)
+            || win32_name_matches (sub->watch->longname, event))
+          win32_watch_dirty (ctx, sub->watch);
+      if (!event->NextEntryOffset)
+        return;
+      if (event->NextEntryOffset < header + event->FileNameLength
+          || event->NextEntryOffset >= remaining || event->NextEntryOffset % sizeof (DWORD))
+        break;
+      offset += event->NextEntryOffset;
+    }
+  for (sub = dir->subscribers; sub; sub = sub->next)
+    win32_watch_dirty (ctx, sub->watch);
+}
 
 static int
 win32_dir_read (struct ev_win32_dir *dir)
@@ -98,15 +190,13 @@ win32_fs_thread (void *arg)
             win32_dir_free (ctx, dir);
           else
             {
-              struct ev_win32_watch *watch;
-              /* Re-stat every subscriber, also for zero-byte overflow or a
-               * failed handle. This avoids depending on lossy name records. */
-              for (watch = ctx->watches; watch; watch = watch->next)
-                if (watch->dir == dir || watch->children == dir)
-                  watch->dirty = 1;
+              win32_dir_notify (ctx, dir, ok && bytes <= sizeof (dir->buffer) ? bytes : 0);
 
               if ((!ok && error != ERROR_NOTIFY_ENUM_DIR) || !win32_dir_read (dir))
-                dir->failed = 1;
+                {
+                  dir->failed = 1;
+                  win32_dir_notify (ctx, dir, 0);
+                }
 
 #if EV_MULTIPLICITY
               ev_async_send (ctx->owner, &ctx->async);
@@ -129,26 +219,56 @@ static void
 win32_fs_cb (EV_P_ ev_async *async, int revents)
 {
   struct ev_win32_fs *ctx = (struct ev_win32_fs *)async->data;
-  for (;;)
+  struct ev_win32_dir *dir;
+  struct ev_win32_watch *watch;
+  struct win32_stat_batch
     {
-      struct ev_win32_watch *watch;
-      ev_stat *watcher = 0;
-      EnterCriticalSection (&ctx->lock);
-      /* Refresh registrations before stat callbacks. A parent directory may
-       * have moved while its old handle was receiving notifications. */
-      for (watch = ctx->watches; watch; watch = watch->next)
-        if (watch->dirty)
+      ev_stat *watcher;
+      int refresh;
+    } *batch;
+  size_t count = 0, i = 0;
+
+  EnterCriticalSection (&ctx->lock);
+  /* Check identity once per directory per batch, rather than once for every
+   * subscriber. A HANDLE can still refer to a directory moved elsewhere. */
+  for (dir = ctx->dirs; dir; dir = dir->next)
+    if (dir->dirty && !dir->retired)
+      {
+        dir->dirty = 0;
+        if (dir->failed || !win32_dir_matches (dir, dir->path))
           {
-            watch->dirty = 0;
-            watcher = watch->watcher;
-            win32_fs_add_locked (EV_A_ watcher);
-            break;
+            dir->failed = 1;
+            win32_dir_notify (ctx, dir, 0);
           }
-      LeaveCriticalSection (&ctx->lock);
-      if (!watcher)
-        break;
-      stat_timer_cb (EV_A_ &watcher->timer, EV_STAT);
-    }
+      }
+  for (watch = ctx->dirty; watch; watch = watch->dirty_next)
+    ++count;
+  batch = count ? (struct win32_stat_batch *)malloc (count * sizeof (*batch)) : 0;
+  if (batch)
+    while ((watch = ctx->dirty))
+      {
+        ctx->dirty = watch->dirty_next;
+        watch->dirty = 0;
+        batch[i].watcher = watch->watcher;
+        batch[i++].refresh = watch->parent.dir->failed
+          || (watch->children.dir && watch->children.dir->failed);
+      }
+  LeaveCriticalSection (&ctx->lock);
+
+  /* stat_timer_cb only queues user callbacks, so these ev_stat pointers stay
+   * valid for this batch. Notifications arriving meanwhile form the next one. */
+  if (batch)
+    for (i = 0; i < count; ++i)
+      {
+        if (batch[i].refresh)
+          {
+            EnterCriticalSection (&ctx->lock);
+            win32_fs_add_locked (EV_A_ batch[i].watcher);
+            LeaveCriticalSection (&ctx->lock);
+          }
+        stat_timer_cb (EV_A_ &batch[i].watcher->timer, EV_STAT);
+      }
+  free (batch);
 }
 
 static int
@@ -225,17 +345,50 @@ win32_fs_path (const char *path, int parent)
 }
 
 static void
+win32_subscription_add (struct ev_win32_subscription *sub, struct ev_win32_watch *watch,
+                        struct ev_win32_dir *dir)
+{
+  sub->dir = dir;
+  sub->watch = watch;
+  if (dir)
+    {
+      sub->next = dir->subscribers;
+      dir->subscribers = sub;
+    }
+}
+
+static void
+win32_subscription_del (struct ev_win32_fs *ctx, struct ev_win32_subscription *sub)
+{
+  struct ev_win32_dir *dir = sub->dir;
+  struct ev_win32_subscription **link;
+  if (!dir)
+    return;
+  for (link = &dir->subscribers; *link != sub; link = &(*link)->next)
+    ;
+  *link = sub->next;
+  if (!--dir->refs)
+    win32_dir_retire (ctx, dir);
+}
+
+static void
 win32_fs_remove (struct ev_win32_fs *ctx, struct ev_win32_watch **link)
 {
   struct ev_win32_watch *watch = *link;
-  struct ev_win32_dir *dir = watch->dir;
-  struct ev_win32_dir *children = watch->children;
   *link = watch->next;
+  if (watch->dirty)
+    {
+      struct ev_win32_watch **dirty;
+      for (dirty = &ctx->dirty; *dirty != watch; dirty = &(*dirty)->dirty_next)
+        ;
+      *dirty = watch->dirty_next;
+    }
+  win32_subscription_del (ctx, &watch->parent);
+  win32_subscription_del (ctx, &watch->children);
+  free (watch->path);
+  free (watch->shortpath);
+  free (watch->longpath);
   free (watch);
-  if (!--dir->refs)
-    win32_dir_retire (ctx, dir);
-  if (children && !--children->refs)
-    win32_dir_retire (ctx, children);
 }
 
 /* A directory HANDLE follows renames. Periodically verify that it still names
@@ -314,7 +467,7 @@ win32_fs_add_locked (EV_P_ ev_stat *w)
   struct ev_win32_fs *ctx;
   struct ev_win32_watch **link, *watch;
   struct ev_win32_dir *dir;
-  wchar_t *parent, *children;
+  wchar_t *parent, *children, *path;
   if (!win32_fs_init (EV_A))
     return;
   ctx = win32_fs;
@@ -327,31 +480,39 @@ win32_fs_add_locked (EV_P_ ev_stat *w)
     if ((*link)->watcher == w)
       {
         struct ev_win32_watch *old = *link;
-        if (!old->dir->failed && win32_dir_matches (old->dir, parent)
-            && ((!children && !old->children)
-                || (children && old->children && !old->children->failed
-                    && win32_dir_matches (old->children, children))))
+        int same_parent = !old->parent.dir->failed && win32_dir_matches (old->parent.dir, parent);
+        int same_children = !children && !old->children.dir;
+        if (children && old->children.dir)
+          same_children = !old->children.dir->failed && win32_dir_matches (old->children.dir, children);
+        if (same_parent && same_children)
           {
+            win32_watch_names (old);
             free (parent);
             free (children);
             return;
           }
-        if (!_wcsicmp (old->dir->path, parent) && !win32_dir_matches (old->dir, parent))
-          old->dir->failed = 1;
-        if (children && old->children && !win32_dir_matches (old->children, children))
-          old->children->failed = 1;
-        win32_fs_remove (ctx, link);
+        if (!same_parent && !_wcsicmp (old->parent.dir->path, parent))
+          old->parent.dir->failed = 1;
+        if (!same_children && children && old->children.dir)
+          old->children.dir->failed = 1;
         break;
       }
 
-  watch = (struct ev_win32_watch *)calloc (1, sizeof (*watch));
+  path = win32_fs_path (w->path, 0);
+  watch = path ? (struct ev_win32_watch *)calloc (1, sizeof (*watch)) : 0;
   if (!watch)
-    { free (parent); free (children); return; }
+    { free (parent); free (children); free (path); return; }
   dir = win32_dir_acquire (ctx, parent);
   if (!dir)
-    { free (watch); free (children); return; }
-  watch->dir = dir;
-  watch->children = win32_dir_acquire (ctx, children);
+    { free (watch); free (children); free (path); return; }
+  watch->path = path;
+  watch->name = wcsrchr (path, L'\\') + 1;
+  win32_watch_names (watch);
+  win32_subscription_add (&watch->parent, watch, dir);
+  win32_subscription_add (&watch->children, watch, win32_dir_acquire (ctx, children));
+  /* Acquire the replacement first, retaining unchanged shared directory reads. */
+  if (*link)
+    win32_fs_remove (ctx, link);
   watch->watcher = w;
   watch->next = ctx->watches;
   ctx->watches = watch;

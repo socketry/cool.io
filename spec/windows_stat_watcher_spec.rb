@@ -1,6 +1,7 @@
 require File.expand_path('../spec_helper', __FILE__)
 require 'tmpdir'
 require 'fileutils'
+require 'rbconfig'
 
 describe 'Windows notification-backed StatWatcher', :if => RUBY_PLATFORM =~ /mingw|mswin/ do
   before do
@@ -87,6 +88,16 @@ describe 'Windows notification-backed StatWatcher', :if => RUBY_PLATFORM =~ /min
     path = File.join(directory, "\u5909\u66f4.txt")
     File.write(path, 'a')
     _, current = await_change(watch(path)) { File.write(path, 'longer') }
+    expect(current.size).to eq(6)
+  end
+
+  it 'matches notification names using Windows Unicode case folding' do
+    path = File.join(@directory, "\u00c4.txt")
+    File.write(path, 'a')
+    folded = File.join(@directory, "\u00e4.txt")
+    skip 'requires a case-insensitive directory' unless File.exist?(folded)
+    watcher = watch(folded)
+    _, current = await_change(watcher, size: 6) { File.write(path, 'longer') }
     expect(current.size).to eq(6)
   end
 
@@ -200,6 +211,70 @@ describe 'Windows notification-backed StatWatcher', :if => RUBY_PLATFORM =~ /min
     File.write(second, 'a')
     _, current = await_change(watch(second), size: 5) { File.write(second, 'final') }
     expect(current.size).to eq(5)
+  end
+
+  it 'keeps timers and Ruby threads responsive during sustained notifications' do
+    observed_size = nil
+    paths = 1000.times.map do |index|
+      path = File.join(@directory, "#{index}.log")
+      File.write(path, 'a')
+      watch(path).define_singleton_method(:on_change) do |_, current|
+        observed_size = current.size if index.zero?
+      end
+      path
+    end
+    clock = -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) }
+    timer_gaps = []
+    thread_gaps = []
+    previous = clock.call
+    timer = Coolio::TimerWatcher.new(0.1, true)
+    timer.on_timer do
+      now = clock.call
+      timer_gaps << now - previous
+      previous = now
+    end
+    timer.attach(@loop)
+    @watchers << timer
+    done = false
+    @threads << Thread.new do
+      last = clock.call
+      until done
+        sleep 0.05
+        now = clock.call
+        thread_gaps << now - last
+        last = now
+      end
+    end
+    # Use a separate process: a Ruby writer thread would itself be blocked by
+    # the GVL while the notification callback is draining the dirty set.
+    writer = <<~'RUBY'
+      path = ARGV.fetch(0)
+      sleep 0.3
+      clock = -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) }
+      start = clock.call
+      writes = 0
+      while clock.call - start < 3
+        File.write(path, 'x', mode: 'a')
+        writes += 1
+        sleep [start + writes.fdiv(64) - clock.call, 0].max
+      end
+    RUBY
+    child = Process.spawn(RbConfig.ruby, '-e', writer, paths.first)
+    deadline = Coolio::TimerWatcher.new(4, false)
+    deadline.on_timer { @loop.stop }
+    deadline.attach(@loop)
+    @watchers << deadline
+    @loop.run
+    _, status = Process.wait2(child)
+    child = nil
+    expect(status.success?).to eq(true)
+    expect(timer_gaps.max).to be < 2
+    expect(thread_gaps.max).to be < 2
+    expect(File.size(paths.first)).to be > 1
+    expect(observed_size).to eq(File.size(paths.first))
+  ensure
+    done = true
+    Process.wait(child) if child
   end
 
   it 'can repeatedly detach and reattach while changes are pending' do
