@@ -258,6 +258,32 @@ describe 'Windows notification-backed StatWatcher', :if => RUBY_PLATFORM =~ /min
     expect(current.size).to eq(5)
   end
 
+  it 'keeps timers responsive while polling many files in a shared directory' do
+    1000.times do |index|
+      path = File.join(@directory, "#{index}.log")
+      File.write(path, 'a')
+      watch(path, 0.1)
+    end
+    clock = -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) }
+    gaps = []
+    previous = clock.call
+    timer = Coolio::TimerWatcher.new(0.1, true)
+    timer.on_timer do
+      now = clock.call
+      gaps << now - previous
+      previous = now
+    end
+    timer.attach(@loop)
+    @watchers << timer
+    deadline = Coolio::TimerWatcher.new(3, false)
+    deadline.on_timer { @loop.stop }
+    deadline.attach(@loop)
+    @watchers << deadline
+    @loop.run
+    expect(gaps.size).to be >= 10
+    expect(gaps.max).to be < 2
+  end
+
   it 'keeps timers and Ruby threads responsive during sustained notifications' do
     observed_size = nil
     paths = 1000.times.map do |index|

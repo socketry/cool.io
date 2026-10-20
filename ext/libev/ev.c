@@ -4644,7 +4644,7 @@ stat_timer_cb (EV_P_ ev_timer *w_, int revents)
 
 #if defined(_WIN32) && EV_ASYNC_ENABLE
   if (revents & EV_TIMER)
-    win32_fs_add (EV_A_ w); /* retry missing parents or failed directory handles */
+    win32_fs_add (EV_A_ w, 1); /* retry missing parents or failed directory handles */
 #endif
 
   ev_statdata prev = w->attr;
@@ -4670,9 +4670,7 @@ stat_timer_cb (EV_P_ ev_timer *w_, int revents)
       w->prev = prev;
 
 #if defined(_WIN32) && EV_ASYNC_ENABLE
-      if (!prev.st_nlink || !w->attr.st_nlink
-          || (prev.st_mode & S_IFMT) != (w->attr.st_mode & S_IFMT))
-        win32_fs_add (EV_A_ w); /* register directory children after creation */
+      win32_fs_add (EV_A_ w, 0); /* refresh aliases and directory subscriptions */
 #endif
 
       #if EV_USE_INOTIFY
@@ -4717,7 +4715,7 @@ ev_stat_start (EV_P_ ev_stat *w) EV_THROW
   ev_start (EV_A_ (W)w, 1);
 
 #if defined(_WIN32) && EV_ASYNC_ENABLE
-  win32_fs_add (EV_A_ w);
+  win32_fs_add (EV_A_ w, 0);
   stat_timer_cb (EV_A_ &w->timer, 0); /* close the stat/registration race */
 #endif
 

@@ -20,6 +20,7 @@ struct ev_win32_dir
   OVERLAPPED overlapped;
   wchar_t *path;
   unsigned int refs;
+  ev_tstamp checked_at;
   int pending, retired, failed, dirty;
   struct ev_win32_subscription *subscribers;
   DWORD buffer[4096]; /* DWORD aligned; below the network 64 KiB limit */
@@ -50,7 +51,7 @@ struct ev_win32_fs
 #endif
 };
 
-static void win32_fs_add_locked (EV_P_ ev_stat *w);
+static void win32_fs_add_locked (EV_P_ ev_stat *w, int polling);
 static int win32_dir_matches (struct ev_win32_dir *dir, const wchar_t *parent);
 
 static void
@@ -267,7 +268,7 @@ win32_fs_cb (EV_P_ ev_async *async, int revents)
         if (batch[i].refresh)
           {
             EnterCriticalSection (&ctx->lock);
-            win32_fs_add_locked (EV_A_ batch[i].watcher);
+            win32_fs_add_locked (EV_A_ batch[i].watcher, 0);
             LeaveCriticalSection (&ctx->lock);
           }
         stat_timer_cb (EV_A_ &batch[i].watcher->timer, EV_STAT);
@@ -498,7 +499,7 @@ fail:
 }
 
 static void
-win32_fs_add_locked (EV_P_ ev_stat *w)
+win32_fs_add_locked (EV_P_ ev_stat *w, int polling)
 {
   struct ev_win32_fs *ctx;
   struct ev_win32_watch **link, *watch;
@@ -516,13 +517,36 @@ win32_fs_add_locked (EV_P_ ev_stat *w)
     if ((*link)->watcher == w)
       {
         struct ev_win32_watch *old = *link;
-        int same_parent = !old->parent.dir->failed && win32_dir_matches (old->parent.dir, parent);
+        int same_parent;
         int same_children = !children && !old->children.dir;
+        /* Timer callbacks in one loop turn share the same timestamp. Validate
+         * shared handles once per turn; new registrations still check afresh. */
+        if (polling)
+          {
+            struct ev_win32_dir *dirs[2];
+            int i;
+            dirs[0] = old->parent.dir;
+            dirs[1] = old->children.dir;
+            for (i = 0; i < 2; ++i)
+              if (dirs[i] && !dirs[i]->failed && dirs[i]->checked_at != ev_rt_now)
+                {
+                  dirs[i]->checked_at = ev_rt_now;
+                  if (!win32_dir_matches (dirs[i], dirs[i]->path))
+                    dirs[i]->failed = 1;
+                }
+          }
+        same_parent = !old->parent.dir->failed
+          && (polling ? !_wcsicmp (old->parent.dir->path, parent)
+                      : win32_dir_matches (old->parent.dir, parent));
         if (children && old->children.dir)
-          same_children = !old->children.dir->failed && win32_dir_matches (old->children.dir, children);
+          same_children = !old->children.dir->failed
+            && (polling ? !_wcsicmp (old->children.dir->path, children)
+                        : win32_dir_matches (old->children.dir, children));
         if (same_parent && same_children)
           {
-            win32_watch_names (old);
+            /* Refresh aliases after observed changes, not every polling tick. */
+            if (!polling)
+              win32_watch_names (old);
             free (parent);
             free (children);
             return;
@@ -555,14 +579,14 @@ win32_fs_add_locked (EV_P_ ev_stat *w)
 }
 
 static void
-win32_fs_add (EV_P_ ev_stat *w)
+win32_fs_add (EV_P_ ev_stat *w, int polling)
 {
   struct ev_win32_fs *ctx;
   if (!win32_fs_init (EV_A))
     return;
   ctx = win32_fs;
   EnterCriticalSection (&ctx->lock);
-  win32_fs_add_locked (EV_A_ w);
+  win32_fs_add_locked (EV_A_ w, polling);
   LeaveCriticalSection (&ctx->lock);
 }
 
