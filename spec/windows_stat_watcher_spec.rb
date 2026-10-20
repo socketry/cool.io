@@ -75,7 +75,7 @@ describe 'Windows notification-backed StatWatcher', :if => RUBY_PLATFORM =~ /min
   it 'wakes a blocked loop for a file size change without waiting for polling' do
     path = File.join(@directory, 'file')
     File.write(path, 'a')
-    previous, current = await_change(watch(path)) { File.write(path, 'longer') }
+    previous, current = await_change(watch(path), size: 6) { File.write(path, 'longer') }
     expect(previous.size).to eq(1)
     expect(current.size).to eq(6)
   end
@@ -104,7 +104,7 @@ describe 'Windows notification-backed StatWatcher', :if => RUBY_PLATFORM =~ /min
     Dir.mkdir(directory)
     path = File.join(directory, "\u5909\u66f4.txt")
     File.write(path, 'a')
-    _, current = await_change(watch(path)) { File.write(path, 'longer') }
+    _, current = await_change(watch(path), size: 6) { File.write(path, 'longer') }
     expect(current.size).to eq(6)
   end
 
@@ -154,7 +154,7 @@ describe 'Windows notification-backed StatWatcher', :if => RUBY_PLATFORM =~ /min
     first_watcher = watch(first)
     second_watcher = watch(second)
     first_watcher.detach
-    _, current = await_change(second_watcher) { File.write(second, 'longer') }
+    _, current = await_change(second_watcher, size: 6) { File.write(second, 'longer') }
     expect(current.size).to eq(6)
   end
 
@@ -162,7 +162,7 @@ describe 'Windows notification-backed StatWatcher', :if => RUBY_PLATFORM =~ /min
     path = File.join(@directory, "\u5909\u66f4.txt")
     File.write(path, 'a')
     watcher = watch(path.encode('Windows-31J'))
-    _, current = await_change(watcher) { File.write(path, 'longer') }
+    _, current = await_change(watcher, size: 6) { File.write(path, 'longer') }
     expect(current.size).to eq(6)
   end
 
@@ -174,7 +174,7 @@ describe 'Windows notification-backed StatWatcher', :if => RUBY_PLATFORM =~ /min
     @loop = Coolio::Loop.new
     watcher.attach(@loop)
     old_loop.run_nonblock
-    _, current = await_change(watcher) { File.write(path, 'longer') }
+    _, current = await_change(watcher, size: 6) { File.write(path, 'longer') }
     expect(current.size).to eq(6)
   end
 
@@ -190,7 +190,7 @@ describe 'Windows notification-backed StatWatcher', :if => RUBY_PLATFORM =~ /min
     @loop.run_nonblock
     expect(calls).to eq(0)
     watcher.enable
-    _, current = await_change(watcher) { File.write(path, 'after enable') }
+    _, current = await_change(watcher, size: 12) { File.write(path, 'after enable') }
     expect(current.size).to eq(12)
   end
 
@@ -202,7 +202,7 @@ describe 'Windows notification-backed StatWatcher', :if => RUBY_PLATFORM =~ /min
     expect(current.size).to eq(7)
     # Reattach with a long interval to prove the now-existing parent is watched.
     watcher.detach
-    _, current = await_change(watch(path)) { File.write(path, 'longer than before') }
+    _, current = await_change(watch(path), size: 18) { File.write(path, 'longer than before') }
     expect(current.size).to eq(18)
   end
 
@@ -230,6 +230,19 @@ describe 'Windows notification-backed StatWatcher', :if => RUBY_PLATFORM =~ /min
     expect(current.size).to eq(11)
     _, current = await_change(watcher, size: 5) { File.write(path, 'final') }
     expect(current.size).to eq(5)
+  end
+
+  it 'keeps monitoring after an existing file is replaced' do
+    path = File.join(@directory, 'long-watched-filename.log')
+    replacement = File.join(@directory, 'replacement.log')
+    File.write(path, 'a')
+    File.write(replacement, 'replacement')
+    watcher = watch(path)
+    await_change(watcher, size: 11, exists: true) do
+      File.rename(path, "#{path}.old")
+      File.rename(replacement, path)
+    end
+    await_change(watcher, size: 12) { File.write(path, 'x', mode: 'a') }
   end
 
   it 'coalesces a burst of notifications and observes the final state' do
@@ -344,7 +357,7 @@ describe 'Windows notification-backed StatWatcher', :if => RUBY_PLATFORM =~ /min
       watcher.detach
       watcher.attach(@loop)
     end
-    _, current = await_change(watcher) { File.write(path, 'final') }
+    _, current = await_change(watcher, size: 5) { File.write(path, 'final') }
     expect(current.size).to eq(5)
   end
 end

@@ -99,6 +99,7 @@
 #define vec_wi ((loop)->vec_wi)
 #define vec_wo ((loop)->vec_wo)
 #define win32_fs ((loop)->win32_fs)
+#define win32_fs_disabled ((loop)->win32_fs_disabled)
 #else
 #undef EV_WRAP_H
 #undef acquire_cb
@@ -199,4 +200,5 @@
 #undef vec_wi
 #undef vec_wo
 #undef win32_fs
+#undef win32_fs_disabled
 #endif

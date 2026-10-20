@@ -2935,6 +2935,7 @@ loop_init (EV_P_ unsigned int flags) EV_THROW
       evpipe [1]         = -1;
 #if defined(_WIN32) && EV_STAT_ENABLE && EV_ASYNC_ENABLE
       win32_fs          = 0;
+      win32_fs_disabled = (flags & EVFLAG_NOINOTIFY) != 0;
 #endif
 #if EV_USE_INOTIFY
       fs_fd              = flags & EVFLAG_NOINOTIFY ? -1 : -2;
@@ -4644,7 +4645,7 @@ stat_timer_cb (EV_P_ ev_timer *w_, int revents)
 
 #if defined(_WIN32) && EV_ASYNC_ENABLE
   if (revents & EV_TIMER)
-    win32_fs_add (EV_A_ w); /* retry missing parents or failed directory handles */
+    win32_fs_add (EV_A_ w, 1); /* retry missing parents or failed directory handles */
 #endif
 
   ev_statdata prev = w->attr;
@@ -4672,7 +4673,7 @@ stat_timer_cb (EV_P_ ev_timer *w_, int revents)
 #if defined(_WIN32) && EV_ASYNC_ENABLE
       if (!prev.st_nlink || !w->attr.st_nlink
           || (prev.st_mode & S_IFMT) != (w->attr.st_mode & S_IFMT))
-        win32_fs_add (EV_A_ w); /* register directory children after creation */
+        win32_fs_add (EV_A_ w, 0); /* register directory children after creation */
 #endif
 
       #if EV_USE_INOTIFY
@@ -4717,7 +4718,7 @@ ev_stat_start (EV_P_ ev_stat *w) EV_THROW
   ev_start (EV_A_ (W)w, 1);
 
 #if defined(_WIN32) && EV_ASYNC_ENABLE
-  win32_fs_add (EV_A_ w);
+  win32_fs_add (EV_A_ w, 0);
   stat_timer_cb (EV_A_ &w->timer, 0); /* close the stat/registration race */
 #endif
 
