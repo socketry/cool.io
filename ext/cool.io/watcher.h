@@ -7,23 +7,6 @@
 #ifndef WATCHER_H
 #define WATCHER_H
 
-#define Watcher_Attach(watcher_type, detach_func, watcher, loop) \
-  struct Coolio_Watcher *watcher_data; \
-  struct Coolio_Loop *loop_data; \
-  \
-  if(!rb_obj_is_kind_of(loop, cCoolio_Loop)) \
-    rb_raise(rb_eArgError, "expected loop to be an instance of Coolio::Loop, not %s", RSTRING_PTR(rb_inspect(loop))); \
-  \
-  watcher_data = Coolio_Watcher_ptr(watcher); \
-  loop_data = Coolio_Loop_ptr(loop); \
-  \
-  if(watcher_data->loop != Qnil) \
-    detach_func(watcher); \
-  \
-  watcher_data->loop = loop; \
-  ev_##watcher_type##_start(loop_data->ev_loop, &watcher_data->event_types.ev_##watcher_type); \
-  rb_call_super(1, &loop)
-
 #define Watcher_Detach(watcher_type, watcher) \
   struct Coolio_Watcher *watcher_data; \
   \

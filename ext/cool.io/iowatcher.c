@@ -111,7 +111,24 @@ static VALUE Coolio_IOWatcher_initialize(int argc, VALUE *argv, VALUE self)
  */
 static VALUE Coolio_IOWatcher_attach(VALUE self, VALUE loop)
 {
-  Watcher_Attach(io, Coolio_IOWatcher_detach, self, loop);
+  struct Coolio_Watcher *watcher_data;
+  struct Coolio_Loop *loop_data;
+
+  if(!rb_obj_is_kind_of(loop, cCoolio_Loop))
+    rb_raise(rb_eArgError, "expected loop to be an instance of Coolio::Loop, not %s", RSTRING_PTR(rb_inspect(loop)));
+
+  watcher_data = Coolio_Watcher_ptr(self);
+  loop_data = Coolio_Loop_ptr(loop);
+
+  if(watcher_data->loop != Qnil)
+    rb_funcall(self, rb_intern("detach"), 0);
+
+  /* A new loop must resolve the Windows socket handle for this fd again. */
+  ev_io_set(&watcher_data->event_types.ev_io,
+    watcher_data->event_types.ev_io.fd, watcher_data->event_types.ev_io.events);
+  watcher_data->loop = loop;
+  ev_io_start(loop_data->ev_loop, &watcher_data->event_types.ev_io);
+  rb_call_super(1, &loop);
 
   return self;  
 }
