@@ -44,16 +44,23 @@ describe 'Windows notification-backed StatWatcher', :if => RUBY_PLATFORM =~ /min
     first_previous = nil
     reactor = @loop
     callback_thread = nil
+    stopped = false
+    stop = -> do
+      unless stopped
+        stopped = true
+        reactor.stop
+      end
+    end
     watcher.define_singleton_method(:on_change) do |previous, current|
       first_previous ||= previous
       if (size.nil? || current.size == size) && (exists.nil? || (current.nlink != 0) == exists)
         change = [first_previous, current]
         callback_thread = Thread.current
-        reactor.stop
+        stop.call
       end
     end
     deadline = Coolio::TimerWatcher.new(2, false)
-    deadline.on_timer { @loop.stop }
+    deadline.on_timer { stop.call }
     deadline.attach(@loop)
     @threads << Thread.new { sleep 0.1; mutation.call }
     @loop.run
