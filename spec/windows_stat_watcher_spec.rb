@@ -187,6 +187,21 @@ describe 'Windows notification-backed StatWatcher', :if => RUBY_PLATFORM =~ /min
     expect(current.size).to eq(5)
   end
 
+  it 'validates a shared directory handle before attaching a new watcher' do
+    directory = File.join(@directory, 'parent')
+    Dir.mkdir(directory)
+    first = File.join(directory, 'first')
+    File.write(first, 'a')
+    watch(first)
+
+    File.rename(directory, "#{directory}.old")
+    Dir.mkdir(directory)
+    second = File.join(directory, 'second')
+    File.write(second, 'a')
+    _, current = await_change(watch(second), size: 5) { File.write(second, 'final') }
+    expect(current.size).to eq(5)
+  end
+
   it 'can repeatedly detach and reattach while changes are pending' do
     path = File.join(@directory, 'file')
     File.write(path, 'a')

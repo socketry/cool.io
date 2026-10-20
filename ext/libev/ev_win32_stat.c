@@ -272,7 +272,13 @@ win32_dir_acquire (struct ev_win32_fs *ctx, wchar_t *path)
     return 0;
   for (dir = ctx->dirs; dir; dir = dir->next)
     if (!dir->retired && !dir->failed && !_wcsicmp (dir->path, path))
-      break;
+      {
+        if (win32_dir_matches (dir, path))
+          break;
+        /* An open HANDLE follows a renamed directory, even after another
+         * directory has been created at the same path. */
+        dir->failed = 1;
+      }
 
   if (dir)
     free (path);
