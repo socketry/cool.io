@@ -304,16 +304,17 @@ Coolio_Buffer_prepend(VALUE self, VALUE data)
 
 /**
  *  call-seq:
- *    Coolio::Buffer#read(length = nil) -> String
+ *    Coolio::Buffer#read -> String
+ *    Coolio::Buffer#read(length) -> String
  *
- * Read the specified abount of data from the buffer.  If no value
- * is given the entire contents of the buffer are returned.  Any data
- * read from the buffer is cleared.
+ * Read data from the buffer.  Any data read from the buffer is cleared.
+ * With no argument, the entire contents of the buffer are returned.  With
+ * length, at most length bytes are returned.
  * At most LONG_MAX bytes are returned per call; on platforms where a String
  * cannot hold the whole buffer the remainder is kept for later reads.
- * The given length must be greater than 0 or an exception would raise.
- * If the buffer size is zero then an empty string is returned (regardless
- * the given length).
+ * length is converted with to_int, so nil raises TypeError.  A length less
+ * than 1 raises ArgumentError, even when the buffer is empty.
+ * Otherwise, if the buffer is empty, an empty string is returned.
  */
 static VALUE
 Coolio_Buffer_read(int argc, VALUE * argv, VALUE self)
