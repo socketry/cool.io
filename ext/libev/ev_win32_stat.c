@@ -286,6 +286,10 @@ win32_fs_init (EV_P)
   ctx->port = CreateIoCompletionPort (INVALID_HANDLE_VALUE, 0, 0, 1);
   if (!ctx->port)
     { free (ctx); return 0; }
+  /* Prepare the same pipe ev_async_start will use, with a recoverable failure
+   * path for optional notifications. Existing async/signal callers still retry. */
+  if (!evpipe_init_try (EV_A))
+    { CloseHandle (ctx->port); free (ctx); return 0; }
   InitializeCriticalSection (&ctx->lock);
 #if EV_MULTIPLICITY
   ctx->owner = EV_A;

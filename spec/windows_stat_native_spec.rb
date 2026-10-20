@@ -81,4 +81,9 @@ describe 'Windows stat notification internals', :if => RUBY_PLATFORM =~ /mingw|m
     expect(native_paths(paths)).to eq(paths.map(&:last))
   end
 
+  it 'falls back to polling on pipe failure and recovers without creating a second pipe' do
+    path = File.join(@build, 'watched.txt')
+    result = native_result('$stdout.write(Marshal.dump(CoolioStatNativeSpec.check_pipe(ARGV[0])))', path)
+    expect(result).to eq(true)
+  end
 end

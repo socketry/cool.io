@@ -2415,8 +2415,8 @@ static ANSIG signals [EV_NSIG - 1];
 #if EV_SIGNAL_ENABLE || EV_ASYNC_ENABLE
 
 noinline ecb_cold
-static void
-evpipe_init (EV_P)
+static int
+evpipe_init_try (EV_P)
 {
   if (!ev_is_active (&pipe_w))
     {
@@ -2431,8 +2431,8 @@ evpipe_init (EV_P)
       if (fds [1] < 0)
 # endif
         {
-          while (pipe (fds))
-            ev_syserr ("(libev) error creating signal/async pipe");
+          if (pipe (fds))
+            return 0;
 
           fd_intern (fds [0]);
         }
@@ -2458,6 +2458,16 @@ evpipe_init (EV_P)
       ev_io_start (EV_A_ &pipe_w);
       ev_unref (EV_A); /* watcher should not keep loop alive */
     }
+
+  return 1;
+}
+
+noinline ecb_cold
+static void
+evpipe_init (EV_P)
+{
+  while (!evpipe_init_try (EV_A))
+    ev_syserr ("(libev) error creating signal/async pipe");
 }
 
 inline_speed void
