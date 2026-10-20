@@ -288,7 +288,6 @@ path_work (VALUE self, VALUE directory, VALUE mode)
   enum { count = 32 };
   struct ev_loop *loop;
   struct ev_win32_fs *ctx;
-  struct ev_win32_watch *watch;
   ev_stat watchers[count];
   char paths[count][1024];
   WSADATA data;
@@ -346,8 +345,8 @@ path_work (VALUE self, VALUE directory, VALUE mode)
     {
       /* Queue the whole changed set without depending on IOCP batch timing. */
       EnterCriticalSection (&ctx->lock);
-      for (watch = ctx->watches; watch; watch = watch->next)
-        win32_watch_dirty (ctx, watch);
+      for (i = 0; i < ctx->watchcnt; ++i)
+        win32_watch_dirty (ctx, ctx->watches[i]);
       ctx->dirs->dirty = 1;
       LeaveCriticalSection (&ctx->lock);
     }
@@ -363,6 +362,111 @@ path_work (VALUE self, VALUE directory, VALUE mode)
     INT2NUM (short_calls), INT2NUM (long_calls), valid ? Qtrue : Qfalse);
   for (i = 0; i < count; ++i)
     ev_stat_stop (loop, &watchers[i]);
+  ev_loop_destroy (loop);
+  WSACleanup ();
+  return result;
+}
+
+static int
+watch_index_consistent (struct ev_win32_fs *ctx, ev_stat *watchers, int count)
+{
+  int i, active = 0;
+  for (i = 0; i < count; ++i)
+    {
+      struct ev_win32_watch *watch = win32_fs_watch (ctx, &watchers[i]);
+      if (ev_is_active (&watchers[i]))
+        {
+          if (!watch || watch->parent.dir->failed)
+            {
+              return 0;
+            }
+          ++active;
+        }
+      else if (watch)
+        {
+          return 0;
+        }
+    }
+  return ctx->watchcnt == active;
+}
+
+static void
+poll_active (struct ev_loop *loop, ev_stat *watchers, int count)
+{
+  int i;
+  for (i = 0; i < count; ++i)
+    {
+      if (ev_is_active (&watchers[i]))
+        {
+          stat_timer_cb (loop, &watchers[i].timer, EV_TIMER);
+        }
+    }
+}
+
+static VALUE
+watch_index (VALUE self, VALUE directory)
+{
+  enum { count = 4 };
+  struct ev_loop *loop;
+  struct ev_win32_fs *ctx;
+  ev_stat watchers[count];
+  char paths[count][1024];
+  WSADATA data;
+  FILE *file;
+  VALUE result;
+  int i, stopped, replaced;
+  const char *parent = StringValueCStr (directory);
+  if (WSAStartup (MAKEWORD (2, 2), &data))
+    {
+      rb_raise (rb_eRuntimeError, "WSAStartup failed");
+    }
+  for (i = 0; i < count; ++i)
+    {
+      snprintf (paths[i], sizeof (paths[i]), "%s/index%d.txt", parent, i);
+      file = fopen (paths[i], "w");
+      if (!file)
+        {
+          WSACleanup ();
+          rb_sys_fail (paths[i]);
+        }
+      fputs ("a", file);
+      fclose (file);
+    }
+  loop = ev_loop_new (EVFLAG_NOENV | EVBACKEND_SELECT);
+  if (!loop)
+    {
+      WSACleanup ();
+      rb_raise (rb_eRuntimeError, "ev_loop_new failed");
+    }
+  for (i = 0; i < count; ++i)
+    {
+      ev_stat_init (&watchers[i], changed_cb, paths[i], 60);
+      ev_stat_start (loop, &watchers[i]);
+    }
+  ctx = loop->win32_fs;
+  if (!ctx)
+    {
+      ev_loop_destroy (loop);
+      WSACleanup ();
+      rb_raise (rb_eRuntimeError, "notification worker did not start");
+    }
+  ev_stat_stop (loop, &watchers[1]);
+  directory_opens = identity_calls = short_calls = long_calls = 0;
+  poll_active (loop, watchers, count);
+  result = rb_ary_new_from_args (4, INT2NUM (directory_opens), INT2NUM (identity_calls),
+    INT2NUM (short_calls), INT2NUM (long_calls));
+  stopped = watch_index_consistent (ctx, watchers, count);
+  ev_stat_stop (loop, ctx->watches[ctx->watchcnt - 1]->watcher);
+  ev_stat_start (loop, &watchers[1]);
+  ctx->watches[0]->parent.dir->failed = 1;
+  poll_active (loop, watchers, count);
+  replaced = watch_index_consistent (ctx, watchers, count);
+  rb_ary_push (result, stopped ? Qtrue : Qfalse);
+  rb_ary_push (result, replaced ? Qtrue : Qfalse);
+  for (i = 0; i < count; ++i)
+    {
+      ev_stat_stop (loop, &watchers[i]);
+    }
   ev_loop_destroy (loop);
   WSACleanup ();
   return result;
@@ -398,7 +502,7 @@ alias_recovery (VALUE self, VALUE path)
   ctx = loop->win32_fs;
   if (!ctx)
     rb_raise (rb_eRuntimeError, "notification worker did not start");
-  watch = ctx->watches;
+  watch = ctx->watches[0];
   initial = !watch->shortname && !watch->longname;
   fail_alias = 0;
   stat_timer_cb (loop, &watcher.timer, EV_TIMER);
@@ -440,5 +544,6 @@ Init_coolio_stat_native (void)
   rb_define_singleton_method (module, "check_shutdown", check_shutdown, 1);
   rb_define_singleton_method (module, "notification_enabled", notification_enabled, 2);
   rb_define_singleton_method (module, "path_work", path_work, 2);
+  rb_define_singleton_method (module, "watch_index", watch_index, 1);
   rb_define_singleton_method (module, "alias_recovery", alias_recovery, 1);
 }

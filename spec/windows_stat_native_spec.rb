@@ -104,6 +104,11 @@ describe 'Windows stat notification internals', :if => RUBY_PLATFORM =~ /mingw|m
     end
   end
 
+  it 'keeps finding each watch as watchers stop, restart and re-register' do
+    result = native_result('$stdout.write(Marshal.dump(CoolioStatNativeSpec.watch_index(ARGV[0])))', @build)
+    expect(result).to eq([1, 2, 0, 0, true, true])
+  end
+
   it 'refreshes aliases after replacement records and retries failed lookups' do
     path = File.join(@build, 'aliases.txt')
     result = native_result('$stdout.write(Marshal.dump(CoolioStatNativeSpec.alias_recovery(ARGV[0])))', path)
