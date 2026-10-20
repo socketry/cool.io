@@ -109,6 +109,28 @@ describe 'Windows stat notification internals', :if => RUBY_PLATFORM =~ /mingw|m
     expect(result).to eq([1, 2, 0, 0, true, true])
   end
 
+  it 'shares directories and routes name records through the directory index' do
+    result = native_result(<<~'RUBY', @build)
+      dir = File.join(ARGV[0], 'a')
+      Dir.mkdir(dir) unless Dir.exist?(dir)
+      File.write(File.join(dir, "\u00e9.txt"), 'a')
+      $stdout.write(Marshal.dump(CoolioStatNativeSpec.name_index(ARGV[0])))
+    RUBY
+    expect(result).to eq([true,
+      [false, true, false, true, false, true, true],
+      [true, true, false, true, false, true, true]])
+  end
+
+  it 'relinks changed alias names and unlinks them when the watcher stops' do
+    result = native_result('$stdout.write(Marshal.dump(CoolioStatNativeSpec.alias_index(ARGV[0])))', @build)
+    expect(result).to eq([true, false, true, true, true])
+  end
+
+  it 'keeps sharing directories, queues and routing names after the tables grow' do
+    result = native_result('$stdout.write(Marshal.dump(CoolioStatNativeSpec.index_growth(ARGV[0])))', @build)
+    expect(result).to eq([true, true, true, true])
+  end
+
   it 'refreshes aliases after replacement records and retries failed lookups' do
     path = File.join(@build, 'aliases.txt')
     result = native_result('$stdout.write(Marshal.dump(CoolioStatNativeSpec.alias_recovery(ARGV[0])))', path)
