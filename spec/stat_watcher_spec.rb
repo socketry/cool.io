@@ -122,6 +122,34 @@ describe Cool.io::StatWatcher do
     end
   end
 
+  it "reports blksize and blocks as File.lstat does" do
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "file")
+      File.write(path, "a")
+      size = 8192
+      current = nil
+      reactor = Cool.io::Loop.new
+      watcher = Cool.io::StatWatcher.new(path, INTERVAL)
+      watcher.define_singleton_method(:on_change) { |_, cur| current = cur }
+      watcher.attach(reactor)
+      begin
+        File.write(path, "a" * size)
+        deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 5
+        until (current && current.size == size) ||
+              Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+          reactor.run_once(0.1)
+        end
+      ensure
+        watcher.detach
+      end
+
+      stat = File.lstat(path)
+      expect(current).not_to be_nil
+      expect(current.blksize).to eq(stat.blksize)
+      expect(current.blocks).to eq(stat.blocks)
+    end
+  end
+
   it "raises ArgumentError when the path contains a null byte" do
     expect { MyStatWatcher.new("foo\0bar") }.to raise_error(ArgumentError)
   end
