@@ -4356,11 +4356,6 @@ ev_child_stop (EV_P_ ev_child *w) EV_THROW
 
 #if EV_STAT_ENABLE
 
-# ifdef _WIN32
-#  undef lstat
-#  define lstat(a,b) _stati64 (a,b)
-# endif
-
 #define DEF_STAT_INTERVAL  5.0074891
 #define NFS_STAT_INTERVAL 30.1074891 /* for filesystems potentially failing inotify */
 #define MIN_STAT_INTERVAL  0.1074891
