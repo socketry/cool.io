@@ -102,7 +102,7 @@ static VALUE Coolio_TimerWatcher_attach(VALUE self, VALUE loop)
   watcher_data = Coolio_Watcher_ptr(self);
 
   if(watcher_data->loop != Qnil)
-    Coolio_TimerWatcher_detach(self);
+    rb_funcall(self, rb_intern("detach"), 0);
 
   watcher_data->loop = loop;
   
