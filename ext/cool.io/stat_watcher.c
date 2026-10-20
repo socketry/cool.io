@@ -269,8 +269,10 @@ static VALUE Coolio_StatInfo_build(ev_statdata *statdata_struct)
   gid     = LL2NUM((long long)statdata_struct->st_gid);
   rdev    = LL2NUM((long long)statdata_struct->st_rdev);
   size    = LL2NUM((long long)statdata_struct->st_size);
-#ifdef HAVE_ST_BLKSIZE
+#ifdef HAVE_STRUCT_STAT_ST_BLKSIZE
   blksize = LL2NUM((long long)statdata_struct->st_blksize);
+#endif
+#ifdef HAVE_STRUCT_STAT_ST_BLOCKS
   blocks  = LL2NUM((long long)statdata_struct->st_blocks);
 #endif
 
