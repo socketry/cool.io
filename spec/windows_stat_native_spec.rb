@@ -93,6 +93,23 @@ describe 'Windows stat notification internals', :if => RUBY_PLATFORM =~ /mingw|m
     expect(result).to eq(true)
   end
 
+  [[0, 'polling'], [1, 'notifications'], [2, 'polling after an unrelated name change']].each do |mode, description|
+    it "checks a shared directory once without alias lookups during #{description}" do
+      result = native_result(<<~'RUBY', @build, mode.to_s)
+        result = CoolioStatNativeSpec.path_work(ARGV[0], ARGV[1].to_i)
+        $stdout.write(Marshal.dump(result))
+      RUBY
+      # One open and two identity queries for 32 changed files; no alias work.
+      expect(result).to eq([1, 2, 0, 0, true])
+    end
+  end
+
+  it 'refreshes aliases after replacement records and retries failed lookups' do
+    path = File.join(@build, 'aliases.txt')
+    result = native_result('$stdout.write(Marshal.dump(CoolioStatNativeSpec.alias_recovery(ARGV[0])))', path)
+    expect(result).to eq([true, true, true, true])
+  end
+
   it 'uses effective notification flags and respects EVFLAG_NOENV' do
     path = File.join(@build, 'flags.txt')
     # EVFLAG_NOINOTIFY = 0x00100000; EVFLAG_NOENV = 0x01000000.

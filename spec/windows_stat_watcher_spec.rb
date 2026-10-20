@@ -232,6 +232,19 @@ describe 'Windows notification-backed StatWatcher', :if => RUBY_PLATFORM =~ /min
     expect(current.size).to eq(5)
   end
 
+  it 'keeps monitoring after an existing file is replaced' do
+    path = File.join(@directory, 'long-watched-filename.log')
+    replacement = File.join(@directory, 'replacement.log')
+    File.write(path, 'a')
+    File.write(replacement, 'replacement')
+    watcher = watch(path)
+    await_change(watcher, size: 11, exists: true) do
+      File.rename(path, "#{path}.old")
+      File.rename(replacement, path)
+    end
+    await_change(watcher, size: 12) { File.write(path, 'x', mode: 'a') }
+  end
+
   it 'coalesces a burst of notifications and observes the final state' do
     path = File.join(@directory, 'file')
     File.write(path, 'a')
@@ -256,32 +269,6 @@ describe 'Windows notification-backed StatWatcher', :if => RUBY_PLATFORM =~ /min
     File.write(second, 'a')
     _, current = await_change(watch(second), size: 5) { File.write(second, 'final') }
     expect(current.size).to eq(5)
-  end
-
-  it 'keeps timers responsive while polling many files in a shared directory' do
-    1000.times do |index|
-      path = File.join(@directory, "#{index}.log")
-      File.write(path, 'a')
-      watch(path, 0.1)
-    end
-    clock = -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) }
-    gaps = []
-    previous = clock.call
-    timer = Coolio::TimerWatcher.new(0.1, true)
-    timer.on_timer do
-      now = clock.call
-      gaps << now - previous
-      previous = now
-    end
-    timer.attach(@loop)
-    @watchers << timer
-    deadline = Coolio::TimerWatcher.new(3, false)
-    deadline.on_timer { @loop.stop }
-    deadline.attach(@loop)
-    @watchers << deadline
-    @loop.run
-    expect(gaps.size).to be >= 10
-    expect(gaps.max).to be < 2
   end
 
   it 'keeps timers and Ruby threads responsive during sustained notifications' do

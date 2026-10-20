@@ -4671,7 +4671,9 @@ stat_timer_cb (EV_P_ ev_timer *w_, int revents)
       w->prev = prev;
 
 #if defined(_WIN32) && EV_ASYNC_ENABLE
-      win32_fs_add (EV_A_ w, 0); /* refresh aliases and directory subscriptions */
+      if (!prev.st_nlink || !w->attr.st_nlink
+          || (prev.st_mode & S_IFMT) != (w->attr.st_mode & S_IFMT))
+        win32_fs_add (EV_A_ w, 0); /* register directory children after creation */
 #endif
 
       #if EV_USE_INOTIFY

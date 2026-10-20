@@ -1,5 +1,5 @@
-/* Compile a private libev copy to exercise path handling and inject socket
- * failures without adding test hooks to the cool.io extension. */
+/* Compile a private libev copy to count Windows API calls and inject failures
+ * without adding test hooks to the cool.io extension. */
 #include <ruby.h>
 #include <ruby/encoding.h>
 #include <winsock2.h>
@@ -9,6 +9,40 @@
 static int fail_socket, socket_calls, syserr_calls, changed, timed_out;
 static HANDLE completion_entered, completion_release;
 static volatile LONG delay_completion;
+static int directory_opens, identity_calls, short_calls, long_calls, fail_alias;
+
+static HANDLE WINAPI
+test_create_file (LPCWSTR path, DWORD access, DWORD share, LPSECURITY_ATTRIBUTES security,
+                  DWORD disposition, DWORD attributes, HANDLE template)
+{
+  ++directory_opens;
+  return CreateFileW (path, access, share, security, disposition, attributes, template);
+}
+
+static BOOL WINAPI
+test_file_information (HANDLE handle, LPBY_HANDLE_FILE_INFORMATION information)
+{
+  ++identity_calls;
+  return GetFileInformationByHandle (handle, information);
+}
+
+static DWORD WINAPI
+test_short_path (LPCWSTR path, LPWSTR buffer, DWORD size)
+{
+  ++short_calls;
+  if (fail_alias)
+    { SetLastError (ERROR_ACCESS_DENIED); return 0; }
+  return GetShortPathNameW (path, buffer, size);
+}
+
+static DWORD WINAPI
+test_long_path (LPCWSTR path, LPWSTR buffer, DWORD size)
+{
+  ++long_calls;
+  if (fail_alias)
+    { SetLastError (ERROR_ACCESS_DENIED); return 0; }
+  return GetLongPathNameW (path, buffer, size);
+}
 
 static BOOL WINAPI
 test_completion (HANDLE port, DWORD *bytes, ULONG_PTR *key,
@@ -40,6 +74,10 @@ test_socket (int af, int type, int protocol)
 
 #define socket test_socket
 #define GetQueuedCompletionStatus test_completion
+#define CreateFileW test_create_file
+#define GetFileInformationByHandle test_file_information
+#define GetShortPathNameW test_short_path
+#define GetLongPathNameW test_long_path
 #define EV_STANDALONE 1
 #define EV_USE_REALTIME 0
 #define EV_USE_MONOTONIC 0
@@ -47,6 +85,10 @@ test_socket (int af, int type, int protocol)
 #include "ev.c"
 #undef socket
 #undef GetQueuedCompletionStatus
+#undef CreateFileW
+#undef GetFileInformationByHandle
+#undef GetShortPathNameW
+#undef GetLongPathNameW
 
 static void
 recover_socket (const char *message)
@@ -240,6 +282,155 @@ notification_enabled (VALUE self, VALUE path, VALUE flags)
   return enabled ? Qtrue : Qfalse;
 }
 
+static VALUE
+path_work (VALUE self, VALUE directory, VALUE mode)
+{
+  enum { count = 32 };
+  struct ev_loop *loop;
+  struct ev_win32_fs *ctx;
+  struct ev_win32_watch *watch;
+  ev_stat watchers[count];
+  char paths[count][1024];
+  WSADATA data;
+  FILE *file;
+  VALUE result;
+  int i, valid = 1, notification = NUM2INT (mode) == 1;
+  const char *parent = StringValueCStr (directory);
+  if (WSAStartup (MAKEWORD (2, 2), &data))
+    rb_raise (rb_eRuntimeError, "WSAStartup failed");
+  /* Create everything before registration so setup cannot invalidate aliases. */
+  for (i = 0; i < count; ++i)
+    {
+      snprintf (paths[i], sizeof (paths[i]), "%s/work%d.txt", parent, i);
+      file = fopen (paths[i], "w");
+      if (!file)
+        rb_sys_fail (paths[i]);
+      fputs ("a", file);
+      fclose (file);
+    }
+  loop = ev_loop_new (EVFLAG_NOENV | EVBACKEND_SELECT);
+  if (!loop)
+    rb_raise (rb_eRuntimeError, "ev_loop_new failed");
+  for (i = 0; i < count; ++i)
+    {
+      ev_stat_init (&watchers[i], changed_cb, paths[i], 60);
+      ev_stat_start (loop, &watchers[i]);
+    }
+  ctx = loop->win32_fs;
+  if (!ctx)
+    rb_raise (rb_eRuntimeError, "notification worker did not start");
+  for (i = 0; i < count; ++i)
+    {
+      file = fopen (paths[i], "a");
+      if (!file)
+        rb_sys_fail (paths[i]);
+      fputs ("x", file);
+      fclose (file);
+    }
+  if (NUM2INT (mode) == 2)
+    {
+      struct ev_win32_dir event_dir;
+      FILE_NOTIFY_INFORMATION *event = (FILE_NOTIFY_INFORMATION *)event_dir.buffer;
+      const wchar_t name[] = L"unrelated.tmp";
+      memset (&event_dir, 0, sizeof (event_dir));
+      event_dir.subscribers = ctx->dirs->subscribers;
+      event->Action = FILE_ACTION_ADDED;
+      event->FileNameLength = sizeof (name) - sizeof (wchar_t);
+      memcpy (event->FileName, name, event->FileNameLength);
+      EnterCriticalSection (&ctx->lock);
+      win32_dir_notify (ctx, &event_dir,
+        offsetof (FILE_NOTIFY_INFORMATION, FileName) + event->FileNameLength);
+      LeaveCriticalSection (&ctx->lock);
+    }
+  if (notification)
+    {
+      /* Queue the whole changed set without depending on IOCP batch timing. */
+      EnterCriticalSection (&ctx->lock);
+      for (watch = ctx->watches; watch; watch = watch->next)
+        win32_watch_dirty (ctx, watch);
+      ctx->dirs->dirty = 1;
+      LeaveCriticalSection (&ctx->lock);
+    }
+  directory_opens = identity_calls = short_calls = long_calls = 0;
+  if (notification)
+    win32_fs_cb (loop, &ctx->async, EV_ASYNC);
+  else
+    for (i = 0; i < count; ++i)
+      stat_timer_cb (loop, &watchers[i].timer, EV_TIMER);
+  for (i = 0; i < count; ++i)
+    valid = valid && watchers[i].attr.st_size == 2;
+  result = rb_ary_new_from_args (5, INT2NUM (directory_opens), INT2NUM (identity_calls),
+    INT2NUM (short_calls), INT2NUM (long_calls), valid ? Qtrue : Qfalse);
+  for (i = 0; i < count; ++i)
+    ev_stat_stop (loop, &watchers[i]);
+  ev_loop_destroy (loop);
+  WSACleanup ();
+  return result;
+}
+
+static VALUE
+alias_recovery (VALUE self, VALUE path)
+{
+  struct ev_loop *loop;
+  struct ev_win32_fs *ctx;
+  struct ev_win32_watch *watch;
+  struct ev_win32_dir event_dir;
+  FILE_NOTIFY_INFORMATION *event = (FILE_NOTIFY_INFORMATION *)event_dir.buffer;
+  ev_stat watcher;
+  WSADATA data;
+  FILE *file;
+  size_t length;
+  int initial, invalidated, retried, cached;
+  const char *filename = StringValueCStr (path);
+  if (WSAStartup (MAKEWORD (2, 2), &data))
+    rb_raise (rb_eRuntimeError, "WSAStartup failed");
+  file = fopen (filename, "w");
+  if (!file)
+    rb_sys_fail (filename);
+  fputs ("a", file);
+  fclose (file);
+  loop = ev_loop_new (EVFLAG_NOENV | EVBACKEND_SELECT);
+  if (!loop)
+    rb_raise (rb_eRuntimeError, "ev_loop_new failed");
+  ev_stat_init (&watcher, changed_cb, filename, 60);
+  fail_alias = 1;
+  ev_stat_start (loop, &watcher);
+  ctx = loop->win32_fs;
+  if (!ctx)
+    rb_raise (rb_eRuntimeError, "notification worker did not start");
+  watch = ctx->watches;
+  initial = !watch->shortname && !watch->longname;
+  fail_alias = 0;
+  stat_timer_cb (loop, &watcher.timer, EV_TIMER);
+  initial = initial && watch->shortname && watch->longname;
+
+  /* A replacement name record must refresh aliases even with equal stat data.
+   * Use a separate buffer: the real directory buffer belongs to pending I/O. */
+  memset (&event_dir, 0, sizeof (event_dir));
+  event_dir.subscribers = watch->parent.dir->subscribers;
+  length = wcslen (watch->name) * sizeof (wchar_t);
+  event->Action = FILE_ACTION_RENAMED_NEW_NAME;
+  event->FileNameLength = (DWORD)length;
+  memcpy (event->FileName, watch->name, length);
+  EnterCriticalSection (&ctx->lock);
+  win32_dir_notify (ctx, &event_dir, (DWORD)(offsetof (FILE_NOTIFY_INFORMATION, FileName) + length));
+  LeaveCriticalSection (&ctx->lock);
+  fail_alias = 1;
+  win32_fs_cb (loop, &ctx->async, EV_ASYNC);
+  invalidated = !watch->shortname && !watch->longname;
+  fail_alias = 0;
+  stat_timer_cb (loop, &watcher.timer, EV_TIMER);
+  retried = watch->shortname && watch->longname;
+  short_calls = long_calls = 0;
+  stat_timer_cb (loop, &watcher.timer, EV_TIMER);
+  cached = !short_calls && !long_calls;
+  ev_stat_stop (loop, &watcher);
+  ev_loop_destroy (loop);
+  WSACleanup ();
+  return rb_ary_new_from_args (4, initial ? Qtrue : Qfalse, invalidated ? Qtrue : Qfalse,
+    retried ? Qtrue : Qfalse, cached ? Qtrue : Qfalse);
+}
+
 RUBY_FUNC_EXPORTED void
 Init_coolio_stat_native (void)
 {
@@ -248,4 +439,6 @@ Init_coolio_stat_native (void)
   rb_define_singleton_method (module, "check_pipe", check_pipe, 1);
   rb_define_singleton_method (module, "check_shutdown", check_shutdown, 1);
   rb_define_singleton_method (module, "notification_enabled", notification_enabled, 2);
+  rb_define_singleton_method (module, "path_work", path_work, 2);
+  rb_define_singleton_method (module, "alias_recovery", alias_recovery, 1);
 }

@@ -34,7 +34,7 @@ struct ev_win32_watch
   wchar_t *path, *shortpath, *longpath;
   const wchar_t *name, *shortname, *longname;
   ev_stat *watcher;
-  int dirty;
+  int dirty, names_dirty, names_failed;
 };
 
 struct ev_win32_fs
@@ -58,6 +58,7 @@ static void
 win32_watch_names (struct ev_win32_watch *watch)
 {
   DWORD length = GetShortPathNameW (watch->path, 0, 0);
+  watch->names_dirty = 0;
   free (watch->shortpath);
   watch->shortname = 0;
   watch->shortpath = length ? (wchar_t *)malloc (length * sizeof (wchar_t)) : 0;
@@ -79,6 +80,7 @@ win32_watch_names (struct ev_win32_watch *watch)
       if (slash)
         watch->longname = slash + 1;
     }
+  watch->names_failed = !watch->shortname || !watch->longname;
 }
 
 /* Called with ctx->lock held. Queue each watcher at most once per batch. */
@@ -122,7 +124,12 @@ win32_dir_notify (struct ev_win32_fs *ctx, struct ev_win32_dir *dir, DWORD bytes
             || win32_name_matches (sub->watch->name, event)
             || win32_name_matches (sub->watch->shortname, event)
             || win32_name_matches (sub->watch->longname, event))
-          win32_watch_dirty (ctx, sub->watch);
+          {
+            /* Replacement can change aliases even with equal stat data. */
+            if (sub == &sub->watch->parent && event->Action != FILE_ACTION_MODIFIED)
+              sub->watch->names_dirty = 1;
+            win32_watch_dirty (ctx, sub->watch);
+          }
       if (!event->NextEntryOffset)
         return;
       if (event->NextEntryOffset < header + event->FileNameLength
@@ -131,7 +138,10 @@ win32_dir_notify (struct ev_win32_fs *ctx, struct ev_win32_dir *dir, DWORD bytes
       offset += event->NextEntryOffset;
     }
   for (sub = dir->subscribers; sub; sub = sub->next)
-    win32_watch_dirty (ctx, sub->watch);
+    {
+      sub->watch->names_dirty = 1; /* Overflow may have hidden a replacement. */
+      win32_watch_dirty (ctx, sub->watch);
+    }
 }
 
 static int
@@ -254,6 +264,8 @@ win32_fs_cb (EV_P_ ev_async *async, int revents)
       {
         ctx->dirty = watch->dirty_next;
         watch->dirty = 0;
+        if (watch->names_dirty)
+          win32_watch_names (watch);
         batch[i].watcher = watch->watcher;
         batch[i++].refresh = watch->parent.dir->failed
           || (watch->children.dir && watch->children.dir->failed);
@@ -544,8 +556,9 @@ win32_fs_add_locked (EV_P_ ev_stat *w, int polling)
                         : win32_dir_matches (old->children.dir, children));
         if (same_parent && same_children)
           {
-            /* Refresh aliases after observed changes, not every polling tick. */
-            if (!polling)
+            /* Appends leave aliases unchanged. Retry failures during polling,
+             * and refresh after name events or an explicit re-registration. */
+            if (!polling || old->names_dirty || old->names_failed)
               win32_watch_names (old);
             free (parent);
             free (children);
