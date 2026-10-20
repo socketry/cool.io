@@ -27,6 +27,16 @@ describe 'Windows notification-backed StatWatcher', :if => RUBY_PLATFORM =~ /min
     watcher
   end
 
+  def root_file
+    path = File.join(File.expand_path('/'), "coolio-#{File.basename(@directory)}")
+    begin
+      File.write(path, 'a')
+    rescue Errno::EACCES, Errno::EPERM, Errno::EROFS
+      skip 'requires write access to the drive root'
+    end
+    path
+  end
+
   # With a 60-second stat interval, a callback within this deadline must come
   # from native notifications. Mutate from another thread while select waits.
   def await_change(watcher, size: nil, exists: nil, &mutation)
@@ -99,6 +109,34 @@ describe 'Windows notification-backed StatWatcher', :if => RUBY_PLATFORM =~ /min
     watcher = watch(folded)
     _, current = await_change(watcher, size: 6) { File.write(path, 'longer') }
     expect(current.size).to eq(6)
+  end
+
+  it 'notifies for an extended-length file path below a directory' do
+    path = File.join(@directory, 'file')
+    File.write(path, 'a')
+    extended = "\\\\?\\#{path.tr('/', '\\')}"
+    _, current = await_change(watch(extended), size: 6) { File.write(path, 'longer') }
+    expect(current.size).to eq(6)
+  end
+
+  it 'notifies for an extended-length file path at the drive root' do
+    path = root_file
+    extended = "\\\\?\\#{path.tr('/', '\\')}"
+    _, current = await_change(watch(extended), size: 6) { File.write(path, 'longer') }
+    expect(current.size).to eq(6)
+  ensure
+    File.delete(path) if path && File.exist?(path)
+  end
+
+  it 'notifies for an extended-length drive root directory' do
+    path = root_file
+    child = "#{path}.child"
+    root = "\\\\?\\#{File.expand_path('/').tr('/', '\\')}"
+    watcher = watch(root)
+    sleep 1.1 # Directory timestamps are exposed as whole seconds.
+    await_change(watcher) { File.write(child, 'a') }
+  ensure
+    [path, child].compact.each { |file| File.delete(file) if File.exist?(file) }
   end
 
   it 'continues monitoring a shared directory after another watcher detaches' do

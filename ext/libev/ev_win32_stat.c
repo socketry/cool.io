@@ -308,6 +308,33 @@ win32_fs_init (EV_P)
   return 1;
 }
 
+/* Include the separator in drive, UNC share and extended-length roots. */
+static size_t
+win32_fs_root (const wchar_t *path)
+{
+  const wchar_t *start = path, *slash;
+  if (!wcsncmp (start, L"\\\\?\\", 4))
+    {
+      start += 4;
+      if (!_wcsnicmp (start, L"UNC\\", 4))
+        start += 4;
+      else
+        {
+          slash = wcschr (start, L'\\');
+          return slash ? slash - path + 1 : wcslen (path);
+        }
+    }
+  else if (start[0] == L'\\' && start[1] == L'\\')
+    start += 2;
+  else
+    return start[0] && start[1] == L':' && start[2] == L'\\' ? 3 : 0;
+
+  slash = wcschr (start, L'\\');
+  if (slash)
+    slash = wcschr (slash + 1, L'\\');
+  return slash ? slash - path + 1 : wcslen (path);
+}
+
 /* Snapshot an absolute path at registration. The configured codepage matches
  * the stat wrapper (UTF-8 for Ruby); all HANDLE operations are wide. */
 static wchar_t *
@@ -316,6 +343,7 @@ win32_fs_path (const char *path, int parent)
   wchar_t *input, *absolute, *slash;
   int length = MultiByteToWideChar (EV_WIN32_STAT_CODEPAGE, 0, path, -1, 0, 0);
   DWORD needed, written;
+  size_t root;
   if (!length)
     return 0;
   input = (wchar_t *)malloc (length * sizeof (wchar_t));
@@ -328,17 +356,17 @@ win32_fs_path (const char *path, int parent)
   if (!written || written >= needed)
     { free (input); free (absolute); return 0; }
   free (input);
+  root = win32_fs_root (absolute);
   length = (int)wcslen (absolute);
-  while (length > 3 && (absolute[length - 1] == L'\\' || absolute[length - 1] == L'/'))
+  while ((size_t)length > root && (absolute[length - 1] == L'\\' || absolute[length - 1] == L'/'))
     absolute[--length] = 0;
-  if (!parent)
+  if (!parent || (size_t)length <= root)
     return absolute;
   slash = wcsrchr (absolute, L'\\');
   if (!slash)
     { free (absolute); return 0; }
-  /* Keep the separator of a drive root (C:\\). */
-  if (slash == absolute + 2 && absolute[1] == L':')
-    slash[1] = 0;
+  if ((size_t)(slash - absolute) < root)
+    absolute[root] = 0;
   else
     *slash = 0;
   return absolute;
