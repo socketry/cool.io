@@ -226,25 +226,24 @@ describe 'Windows notification-backed StatWatcher', :if => RUBY_PLATFORM =~ /min
     clock = -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) }
     timer_gaps = []
     thread_gaps = []
-    previous = clock.call
+    child = status = final_size = previous = deadline_at = nil
     timer = Coolio::TimerWatcher.new(0.1, true)
     timer.on_timer do
       now = clock.call
       timer_gaps << now - previous
       previous = now
+      if child && (result = Process.wait2(child, Process::WNOHANG))
+        _, status = result
+        child = nil
+        final_size = File.size(paths.first)
+      end
+      # Process startup and notification delivery can outlast a fixed window
+      # on CI. Keep dispatching until the writer exits and its final size arrives.
+      @loop.stop if (status && observed_size == final_size) || now >= deadline_at
     end
     timer.attach(@loop)
     @watchers << timer
     done = false
-    @threads << Thread.new do
-      last = clock.call
-      until done
-        sleep 0.05
-        now = clock.call
-        thread_gaps << now - last
-        last = now
-      end
-    end
     # Use a separate process: a Ruby writer thread would itself be blocked by
     # the GVL while the notification callback is draining the dirty set.
     writer = <<~'RUBY'
@@ -260,21 +259,35 @@ describe 'Windows notification-backed StatWatcher', :if => RUBY_PLATFORM =~ /min
       end
     RUBY
     child = Process.spawn(RbConfig.ruby, '-e', writer, paths.first)
-    deadline = Coolio::TimerWatcher.new(4, false)
-    deadline.on_timer { @loop.stop }
-    deadline.attach(@loop)
-    @watchers << deadline
+    @threads << Thread.new do
+      last = clock.call
+      until done
+        sleep 0.05
+        now = clock.call
+        thread_gaps << now - last
+        last = now
+      end
+    end
+    previous = clock.call
+    deadline_at = previous + 15
     @loop.run
-    _, status = Process.wait2(child)
-    child = nil
+    done = true
+    @threads.each(&:join)
+    expect(status).not_to be_nil
     expect(status.success?).to eq(true)
     expect(timer_gaps.max).to be < 2
     expect(thread_gaps.max).to be < 2
-    expect(File.size(paths.first)).to be > 1
-    expect(observed_size).to eq(File.size(paths.first))
+    expect(final_size).to be > 1
+    expect(observed_size).to eq(final_size)
   ensure
     done = true
-    Process.wait(child) if child
+    if child
+      begin
+        Process.kill('KILL', child)
+      rescue Errno::ESRCH
+      end
+      Process.wait(child)
+    end
   end
 
   it 'can repeatedly detach and reattach while changes are pending' do
