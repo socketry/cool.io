@@ -7,6 +7,23 @@
 #include <errno.h>
 
 static int fail_socket, socket_calls, syserr_calls, changed, timed_out;
+static HANDLE completion_entered, completion_release;
+static volatile LONG delay_completion;
+
+static BOOL WINAPI
+test_completion (HANDLE port, DWORD *bytes, ULONG_PTR *key,
+                 OVERLAPPED **overlapped, DWORD timeout)
+{
+  BOOL result = GetQueuedCompletionStatus (port, bytes, key, overlapped, timeout);
+  DWORD error = GetLastError ();
+  if (*overlapped && InterlockedExchange (&delay_completion, 0))
+    {
+      SetEvent (completion_entered);
+      WaitForSingleObject (completion_release, 5000);
+    }
+  SetLastError (error);
+  return result;
+}
 
 static SOCKET
 test_socket (int af, int type, int protocol)
@@ -22,12 +39,14 @@ test_socket (int af, int type, int protocol)
 }
 
 #define socket test_socket
+#define GetQueuedCompletionStatus test_completion
 #define EV_STANDALONE 1
 #define EV_USE_REALTIME 0
 #define EV_USE_MONOTONIC 0
 #define EV_WIN32_STAT_CODEPAGE CP_UTF8
 #include "ev.c"
 #undef socket
+#undef GetQueuedCompletionStatus
 
 static void
 recover_socket (const char *message)
@@ -138,10 +157,66 @@ cleanup:
   return Qtrue;
 }
 
+static VALUE
+check_shutdown (VALUE self, VALUE path)
+{
+  struct ev_loop *loop;
+  ev_stat watcher;
+  WSADATA data;
+  FILE *file;
+  HANDLE thread = 0;
+  DWORD started, elapsed, finished;
+  const char *filename = StringValueCStr (path);
+  const char *error = 0;
+  if (WSAStartup (MAKEWORD (2, 2), &data))
+    rb_raise (rb_eRuntimeError, "WSAStartup failed");
+  completion_entered = CreateEvent (0, TRUE, FALSE, 0);
+  completion_release = CreateEvent (0, TRUE, FALSE, 0);
+  loop = ev_loop_new (EVFLAG_NOENV | EVBACKEND_SELECT);
+  if (!loop || !completion_entered || !completion_release)
+    rb_raise (rb_eRuntimeError, "shutdown test setup failed");
+  file = fopen (filename, "w");
+  if (!file)
+    rb_sys_fail (filename);
+  fputs ("a", file);
+  fclose (file);
+  ev_stat_init (&watcher, changed_cb, filename, 60);
+  ev_stat_start (loop, &watcher);
+  if (!loop->win32_fs || !DuplicateHandle (GetCurrentProcess (), loop->win32_fs->thread,
+      GetCurrentProcess (), &thread, 0, FALSE, DUPLICATE_SAME_ACCESS))
+    { error = "notification worker did not start"; goto cleanup; }
+  InterlockedExchange (&delay_completion, 1);
+  file = fopen (filename, "w");
+  if (!file)
+    { error = "could not update shutdown test file"; goto cleanup; }
+  fputs ("final", file);
+  fclose (file);
+  if (WaitForSingleObject (completion_entered, 5000) != WAIT_OBJECT_0)
+    { error = "worker did not receive a completion"; goto cleanup; }
+cleanup:
+  ev_stat_stop (loop, &watcher);
+  started = GetTickCount ();
+  ev_loop_destroy (loop);
+  elapsed = GetTickCount () - started;
+  SetEvent (completion_release);
+  finished = thread ? WaitForSingleObject (thread, 5000) : WAIT_OBJECT_0;
+  if (thread)
+    CloseHandle (thread);
+  CloseHandle (completion_entered);
+  CloseHandle (completion_release);
+  WSACleanup ();
+  if (error)
+    rb_raise (rb_eRuntimeError, "%s", error);
+  if (elapsed >= 1000 || finished != WAIT_OBJECT_0)
+    rb_raise (rb_eRuntimeError, "shutdown blocked or worker failed to exit");
+  return Qtrue;
+}
+
 RUBY_FUNC_EXPORTED void
 Init_coolio_stat_native (void)
 {
   VALUE module = rb_define_module ("CoolioStatNativeSpec");
   rb_define_singleton_method (module, "path", stat_path, 2);
   rb_define_singleton_method (module, "check_pipe", check_pipe, 1);
+  rb_define_singleton_method (module, "check_shutdown", check_shutdown, 1);
 }

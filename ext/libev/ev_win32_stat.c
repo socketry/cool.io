@@ -209,6 +209,10 @@ win32_fs_thread (void *arg)
       if (ctx->stopping && !ctx->dirs)
         {
           LeaveCriticalSection (&ctx->lock);
+          CloseHandle (ctx->thread);
+          CloseHandle (ctx->port);
+          DeleteCriticalSection (&ctx->lock);
+          free (ctx);
           return 0;
         }
       LeaveCriticalSection (&ctx->lock);
@@ -593,14 +597,14 @@ win32_fs_destroy (EV_P)
       if (!dir->retired)
         win32_dir_retire (ctx, dir);
     }
-  LeaveCriticalSection (&ctx->lock);
-  PostQueuedCompletionStatus (ctx->port, 0, 0, 0);
-  WaitForSingleObject (ctx->thread, INFINITE);
-  CloseHandle (ctx->thread);
-  CloseHandle (ctx->port);
   ev_ref (EV_A);
   ev_async_stop (EV_A_ &ctx->async);
-  DeleteCriticalSection (&ctx->lock);
-  free (ctx);
   win32_fs = 0;
+  /* The worker owns ctx after this handoff. Pending cancellation completions
+   * still reference directory buffers, so retain them until they arrive, but
+   * do not hold up loop destruction (which can run during Ruby GC). All
+   * subscriptions are gone and the worker can no longer signal this loop.
+   * A driver that never completes cancellation retains these resources. */
+  PostQueuedCompletionStatus (ctx->port, 0, 0, 0);
+  LeaveCriticalSection (&ctx->lock);
 }

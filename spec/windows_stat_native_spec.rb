@@ -86,4 +86,10 @@ describe 'Windows stat notification internals', :if => RUBY_PLATFORM =~ /mingw|m
     result = native_result('$stdout.write(Marshal.dump(CoolioStatNativeSpec.check_pipe(ARGV[0])))', path)
     expect(result).to eq(true)
   end
+
+  it 'destroys the loop without waiting for delayed worker completions' do
+    path = File.join(@build, 'shutdown.txt')
+    result = native_result('$stdout.write(Marshal.dump(CoolioStatNativeSpec.check_shutdown(ARGV[0])))', path)
+    expect(result).to eq(true)
+  end
 end
