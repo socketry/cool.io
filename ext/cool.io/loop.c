@@ -81,10 +81,9 @@ static void Coolio_Loop_free(void *data)
 {
   struct Coolio_Loop *loop = data;
 
-  if(!loop->ev_loop)
-    return;
-
-  ev_loop_destroy(loop->ev_loop);
+  if(loop->ev_loop) {
+    ev_loop_destroy(loop->ev_loop);
+  }
 
   xfree(loop->eventbuf);
   xfree(loop);
@@ -100,6 +99,9 @@ static VALUE Coolio_Loop_ev_loop_new(VALUE self, VALUE flags)
     rb_raise(rb_eRuntimeError, "loop already initialized");
 
   loop_data->ev_loop = ev_loop_new(NUM2INT(flags));
+  if(!loop_data->ev_loop) {
+    rb_raise(rb_eRuntimeError, "unable to initialize the event loop (no usable backend)");
+  }
 
   return Qnil;
 }
