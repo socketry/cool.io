@@ -77,8 +77,10 @@ void Init_coolio_stat_watcher()
  * specified how often in seconds the path should be polled for changes.
  * Setting interval to zero uses an "automatic" value (typically around 5
  * seconds) which optimizes performance.  Otherwise, values less than
- * 0.1 are not particularly meaningful.  Where available (on Linux and Windows)
- * high performance file monitoring interfaces will be used instead of polling.
+ * 0.1 are not particularly meaningful.  Where available (on Linux and Windows),
+ * high performance file monitoring interfaces are used.  On Windows, polling
+ * remains necessary because notification timing is not guaranteed.  An attached
+ * Windows watcher may also prevent renaming an ancestor directory until detached.
  */
 static VALUE Coolio_StatWatcher_initialize(int argc, VALUE *argv, VALUE self)
 {
