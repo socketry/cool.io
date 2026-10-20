@@ -28,7 +28,6 @@ struct ev_win32_dir
 
 struct ev_win32_watch
 {
-  struct ev_win32_watch *next;
   struct ev_win32_watch *dirty_next;
   struct ev_win32_subscription parent, children;
   wchar_t *path, *shortpath, *longpath;
@@ -43,7 +42,8 @@ struct ev_win32_fs
   CRITICAL_SECTION lock;
   ev_async async;
   struct ev_win32_dir *dirs;
-  struct ev_win32_watch *watches;
+  struct ev_win32_watch **watches;
+  int watchcnt, watchmax;
   struct ev_win32_watch *dirty;
   int stopping;
 #if EV_MULTIPLICITY
@@ -420,11 +420,17 @@ win32_subscription_del (struct ev_win32_fs *ctx, struct ev_win32_subscription *s
     win32_dir_retire (ctx, dir);
 }
 
-static void
-win32_fs_remove (struct ev_win32_fs *ctx, struct ev_win32_watch **link)
+static struct ev_win32_watch *
+win32_fs_watch (struct ev_win32_fs *ctx, ev_stat *w)
 {
-  struct ev_win32_watch *watch = *link;
-  *link = watch->next;
+  if (w->wd >= 0 && w->wd < ctx->watchcnt && ctx->watches[w->wd]->watcher == w)
+    return ctx->watches[w->wd];
+  return 0;
+}
+
+static void
+win32_watch_free (struct ev_win32_fs *ctx, struct ev_win32_watch *watch)
+{
   if (watch->dirty)
     {
       struct ev_win32_watch **dirty;
@@ -514,7 +520,7 @@ static void
 win32_fs_add_locked (EV_P_ ev_stat *w, int polling)
 {
   struct ev_win32_fs *ctx;
-  struct ev_win32_watch **link, *watch;
+  struct ev_win32_watch *old, *watch;
   struct ev_win32_dir *dir;
   wchar_t *parent, *children, *path;
   if (!win32_fs_init (EV_A))
@@ -525,51 +531,59 @@ win32_fs_add_locked (EV_P_ ev_stat *w, int polling)
     ? win32_fs_path (w->path, 0) : 0;
   if (!parent)
     { free (children); return; }
-  for (link = &ctx->watches; *link; link = &(*link)->next)
-    if ((*link)->watcher == w)
-      {
-        struct ev_win32_watch *old = *link;
-        int same_parent;
-        int same_children = !children && !old->children.dir;
-        /* Timer callbacks in one loop turn share the same timestamp. Validate
-         * shared handles once per turn; new registrations still check afresh. */
-        if (polling)
-          {
-            struct ev_win32_dir *dirs[2];
-            int i;
-            dirs[0] = old->parent.dir;
-            dirs[1] = old->children.dir;
-            for (i = 0; i < 2; ++i)
-              if (dirs[i] && !dirs[i]->failed && dirs[i]->checked_at != ev_rt_now)
-                {
-                  dirs[i]->checked_at = ev_rt_now;
-                  if (!win32_dir_matches (dirs[i], dirs[i]->path))
-                    dirs[i]->failed = 1;
-                }
-          }
-        same_parent = !old->parent.dir->failed
-          && (polling ? !_wcsicmp (old->parent.dir->path, parent)
-                      : win32_dir_matches (old->parent.dir, parent));
-        if (children && old->children.dir)
-          same_children = !old->children.dir->failed
-            && (polling ? !_wcsicmp (old->children.dir->path, children)
-                        : win32_dir_matches (old->children.dir, children));
-        if (same_parent && same_children)
-          {
-            /* Appends leave aliases unchanged. Retry failures during polling,
-             * and refresh after name events or an explicit re-registration. */
-            if (!polling || old->names_dirty || old->names_failed)
-              win32_watch_names (old);
-            free (parent);
-            free (children);
-            return;
-          }
-        if (!same_parent && !_wcsicmp (old->parent.dir->path, parent))
-          old->parent.dir->failed = 1;
-        if (!same_children && children && old->children.dir)
-          old->children.dir->failed = 1;
-        break;
-      }
+  old = win32_fs_watch (ctx, w);
+  if (old)
+    {
+      int same_parent;
+      int same_children = !children && !old->children.dir;
+      /* Timer callbacks in one loop turn share the same timestamp. Validate
+       * shared handles once per turn; new registrations still check afresh. */
+      if (polling)
+        {
+          struct ev_win32_dir *dirs[2];
+          int i;
+          dirs[0] = old->parent.dir;
+          dirs[1] = old->children.dir;
+          for (i = 0; i < 2; ++i)
+            if (dirs[i] && !dirs[i]->failed && dirs[i]->checked_at != ev_rt_now)
+              {
+                dirs[i]->checked_at = ev_rt_now;
+                if (!win32_dir_matches (dirs[i], dirs[i]->path))
+                  dirs[i]->failed = 1;
+              }
+        }
+      same_parent = !old->parent.dir->failed
+        && (polling ? !_wcsicmp (old->parent.dir->path, parent)
+                    : win32_dir_matches (old->parent.dir, parent));
+      if (children && old->children.dir)
+        same_children = !old->children.dir->failed
+          && (polling ? !_wcsicmp (old->children.dir->path, children)
+                      : win32_dir_matches (old->children.dir, children));
+      if (same_parent && same_children)
+        {
+          /* Appends leave aliases unchanged. Retry failures during polling,
+           * and refresh after name events or an explicit re-registration. */
+          if (!polling || old->names_dirty || old->names_failed)
+            win32_watch_names (old);
+          free (parent);
+          free (children);
+          return;
+        }
+      if (!same_parent && !_wcsicmp (old->parent.dir->path, parent))
+        old->parent.dir->failed = 1;
+      if (!same_children && children && old->children.dir)
+        old->children.dir->failed = 1;
+    }
+  else if (ctx->watchcnt == ctx->watchmax)
+    {
+      int max = ctx->watchmax ? ctx->watchmax * 2 : 16;
+      struct ev_win32_watch **watches
+        = (struct ev_win32_watch **)realloc (ctx->watches, max * sizeof (*watches));
+      if (!watches)
+        { free (parent); free (children); return; }
+      ctx->watches = watches;
+      ctx->watchmax = max;
+    }
 
   path = win32_fs_path (w->path, 0);
   watch = path ? (struct ev_win32_watch *)calloc (1, sizeof (*watch)) : 0;
@@ -583,12 +597,18 @@ win32_fs_add_locked (EV_P_ ev_stat *w, int polling)
   win32_watch_names (watch);
   win32_subscription_add (&watch->parent, watch, dir);
   win32_subscription_add (&watch->children, watch, win32_dir_acquire (ctx, children));
-  /* Acquire the replacement first, retaining unchanged shared directory reads. */
-  if (*link)
-    win32_fs_remove (ctx, link);
   watch->watcher = w;
-  watch->next = ctx->watches;
-  ctx->watches = watch;
+  /* Acquire the replacement first, retaining unchanged shared directory reads. */
+  if (old)
+    {
+      ctx->watches[w->wd] = watch;
+      win32_watch_free (ctx, old);
+    }
+  else
+    {
+      w->wd = ctx->watchcnt;
+      ctx->watches[ctx->watchcnt++] = watch;
+    }
 }
 
 static void
@@ -607,13 +627,19 @@ static void
 win32_fs_del (EV_P_ ev_stat *w)
 {
   struct ev_win32_fs *ctx = win32_fs;
-  struct ev_win32_watch **link;
+  struct ev_win32_watch *watch;
   if (!ctx)
     return;
   EnterCriticalSection (&ctx->lock);
-  for (link = &ctx->watches; *link; link = &(*link)->next)
-    if ((*link)->watcher == w)
-      { win32_fs_remove (ctx, link); break; }
+  watch = win32_fs_watch (ctx, w);
+  if (watch)
+    {
+      struct ev_win32_watch *last = ctx->watches[--ctx->watchcnt];
+      ctx->watches[w->wd] = last;
+      last->watcher->wd = w->wd;
+      w->wd = -1;
+      win32_watch_free (ctx, watch);
+    }
   LeaveCriticalSection (&ctx->lock);
 }
 
@@ -626,8 +652,10 @@ win32_fs_destroy (EV_P)
     return;
   EnterCriticalSection (&ctx->lock);
   ctx->stopping = 1;
-  while (ctx->watches)
-    win32_fs_remove (ctx, &ctx->watches);
+  while (ctx->watchcnt)
+    win32_watch_free (ctx, ctx->watches[--ctx->watchcnt]);
+  free (ctx->watches);
+  ctx->watches = 0;
   for (dir = ctx->dirs; dir; dir = next)
     {
       next = dir->next;
