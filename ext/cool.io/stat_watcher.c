@@ -258,20 +258,20 @@ static VALUE Coolio_StatInfo_build(ev_statdata *statdata_struct)
   VALUE blksize   = Qnil;
   VALUE blocks    = Qnil;
 
-  mtime   = rb_funcall(cTime, at_method, 1, INT2NUM(statdata_struct->st_mtime));
-  ctime   = rb_funcall(cTime, at_method, 1, INT2NUM(statdata_struct->st_ctime));
-  atime   = rb_funcall(cTime, at_method, 1, INT2NUM(statdata_struct->st_atime));
-  dev     = INT2NUM(statdata_struct->st_dev);
-  ino     = INT2NUM(statdata_struct->st_ino);
-  mode    = INT2NUM(statdata_struct->st_mode);
-  nlink   = INT2NUM(statdata_struct->st_nlink);
-  uid     = INT2NUM(statdata_struct->st_uid);
-  gid     = INT2NUM(statdata_struct->st_gid);
-  rdev    = INT2NUM(statdata_struct->st_rdev);
-  size    = INT2NUM(statdata_struct->st_size);
+  mtime   = rb_funcall(cTime, at_method, 1, LL2NUM((long long)statdata_struct->st_mtime));
+  ctime   = rb_funcall(cTime, at_method, 1, LL2NUM((long long)statdata_struct->st_ctime));
+  atime   = rb_funcall(cTime, at_method, 1, LL2NUM((long long)statdata_struct->st_atime));
+  dev     = LL2NUM((long long)statdata_struct->st_dev);
+  ino     = ULL2NUM((unsigned long long)statdata_struct->st_ino);
+  mode    = LL2NUM((long long)statdata_struct->st_mode);
+  nlink   = LL2NUM((long long)statdata_struct->st_nlink);
+  uid     = LL2NUM((long long)statdata_struct->st_uid);
+  gid     = LL2NUM((long long)statdata_struct->st_gid);
+  rdev    = LL2NUM((long long)statdata_struct->st_rdev);
+  size    = LL2NUM((long long)statdata_struct->st_size);
 #ifdef HAVE_ST_BLKSIZE
-  blksize = INT2NUM(statdata_struct->st_blksize);
-  blocks  = INT2NUM(statdata_struct->st_blocks);
+  blksize = LL2NUM((long long)statdata_struct->st_blksize);
+  blocks  = LL2NUM((long long)statdata_struct->st_blocks);
 #endif
 
   return rb_struct_new(cCoolio_StatInfo,
