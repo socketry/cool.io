@@ -47,7 +47,7 @@ module Coolio
       options.each do |option, value|
         case option
         when :skip_environment
-          flags |= EVFLAG_NOEV if value
+          flags |= EVFLAG_NOENV if value
         when :fork_check
           flags |= EVFLAG_FORKCHECK if value
         when :backend
