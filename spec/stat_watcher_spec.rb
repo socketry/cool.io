@@ -1,4 +1,5 @@
 require File.expand_path('../spec_helper', __FILE__)
+require 'tmpdir'
 
 TEMP_FILE_PATH = "./test.txt"
 
@@ -93,6 +94,32 @@ describe Cool.io::StatWatcher do
 
     watcher = run_with_file_change(TEMP_FILE_PATH, compact: true)
     expect(watcher.accessed).to eq(true)
+  end
+
+  it "reports sizes and timestamps beyond the 32-bit range" do
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "large")
+      File.write(path, "a")
+      size = 2**32 + 1
+      time = Time.utc(2040, 1, 1)
+      current = nil
+      reactor = Cool.io::Loop.new
+      watcher = Cool.io::StatWatcher.new(path, INTERVAL)
+      watcher.define_singleton_method(:on_change) { |_, cur| current = cur }
+      watcher.attach(reactor)
+
+      File.truncate(path, size)
+      File.utime(time, time, path)
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 5
+      until (current && current.size == size && current.mtime == time) ||
+            Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+        reactor.run_once(0.1)
+      end
+      watcher.detach
+
+      expect(current.size).to eq(size)
+      expect(current.mtime).to eq(time)
+    end
   end
 
   it "raises ArgumentError when the path contains a null byte" do
