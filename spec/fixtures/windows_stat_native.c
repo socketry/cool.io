@@ -212,6 +212,34 @@ cleanup:
   return Qtrue;
 }
 
+static VALUE
+notification_enabled (VALUE self, VALUE path, VALUE flags)
+{
+  struct ev_loop *loop;
+  ev_stat watcher;
+  WSADATA data;
+  FILE *file;
+  int enabled;
+  const char *filename = StringValueCStr (path);
+  if (WSAStartup (MAKEWORD (2, 2), &data))
+    rb_raise (rb_eRuntimeError, "WSAStartup failed");
+  file = fopen (filename, "w");
+  if (!file)
+    { WSACleanup (); rb_sys_fail (filename); }
+  fputs ("a", file);
+  fclose (file);
+  loop = ev_loop_new (NUM2UINT (flags) | EVBACKEND_SELECT);
+  if (!loop)
+    { WSACleanup (); rb_raise (rb_eRuntimeError, "ev_loop_new failed"); }
+  ev_stat_init (&watcher, changed_cb, filename, 60);
+  ev_stat_start (loop, &watcher);
+  enabled = loop->win32_fs != 0;
+  ev_stat_stop (loop, &watcher);
+  ev_loop_destroy (loop);
+  WSACleanup ();
+  return enabled ? Qtrue : Qfalse;
+}
+
 RUBY_FUNC_EXPORTED void
 Init_coolio_stat_native (void)
 {
@@ -219,4 +247,5 @@ Init_coolio_stat_native (void)
   rb_define_singleton_method (module, "path", stat_path, 2);
   rb_define_singleton_method (module, "check_pipe", check_pipe, 1);
   rb_define_singleton_method (module, "check_shutdown", check_shutdown, 1);
+  rb_define_singleton_method (module, "notification_enabled", notification_enabled, 2);
 }

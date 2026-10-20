@@ -282,7 +282,7 @@ win32_fs_init (EV_P)
   struct ev_win32_fs *ctx;
   if (win32_fs)
     return 1;
-  if (origflags & EVFLAG_NOINOTIFY)
+  if (win32_fs_disabled)
     return 0;
 
   ctx = (struct ev_win32_fs *)calloc (1, sizeof (*ctx));

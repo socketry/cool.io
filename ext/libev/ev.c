@@ -2935,6 +2935,7 @@ loop_init (EV_P_ unsigned int flags) EV_THROW
       evpipe [1]         = -1;
 #if defined(_WIN32) && EV_STAT_ENABLE && EV_ASYNC_ENABLE
       win32_fs          = 0;
+      win32_fs_disabled = (flags & EVFLAG_NOINOTIFY) != 0;
 #endif
 #if EV_USE_INOTIFY
       fs_fd              = flags & EVFLAG_NOINOTIFY ? -1 : -2;

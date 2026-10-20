@@ -92,4 +92,18 @@ describe 'Windows stat notification internals', :if => RUBY_PLATFORM =~ /mingw|m
     result = native_result('$stdout.write(Marshal.dump(CoolioStatNativeSpec.check_shutdown(ARGV[0])))', path)
     expect(result).to eq(true)
   end
+
+  it 'uses effective notification flags and respects EVFLAG_NOENV' do
+    path = File.join(@build, 'flags.txt')
+    # EVFLAG_NOINOTIFY = 0x00100000; EVFLAG_NOENV = 0x01000000.
+    [[0, 1048576, false], [16777216, 1048576, true],
+     [1048576, 0, true], [17825792, 0, false]].each do |flags, environment, expected|
+      result = native_result(<<~'RUBY', path, flags.to_s, environment.to_s)
+        ENV['LIBEV_FLAGS'] = ARGV[2]
+        enabled = CoolioStatNativeSpec.notification_enabled(ARGV[0], ARGV[1].to_i)
+        $stdout.write(Marshal.dump(enabled))
+      RUBY
+      expect(result).to eq(expected), "flags=#{flags}, LIBEV_FLAGS=#{environment}"
+    end
+  end
 end

@@ -183,6 +183,7 @@ VAR (fs_hash, ANFS fs_hash [EV_INOTIFY_HASHSIZE])
 VARx(EV_ATOMIC_T, sig_pending)
 #if defined(_WIN32) && EV_STAT_ENABLE && EV_ASYNC_ENABLE
 VARx(struct ev_win32_fs *, win32_fs)
+VARx(int, win32_fs_disabled)
 #endif
 #if EV_USE_SIGNALFD || EV_GENWRAP
 VARx(int, sigfd)
