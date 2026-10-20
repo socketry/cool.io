@@ -21,4 +21,11 @@ describe Cool.io::Loop do
     expect(status.success?).to eq(true), error
     expect(output).to eq("true")
   end
+
+  it "raises an error when no requested backend is usable" do
+    backend = RUBY_PLATFORM.include?("solaris") ? :kqueue : :port
+    expect {
+      Cool.io::Loop.new(skip_environment: true, backend: backend)
+    }.to raise_error(RuntimeError, /no usable backend/)
+  end
 end
