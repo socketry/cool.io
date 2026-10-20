@@ -169,6 +169,31 @@ describe Cool.io::Buffer do
       expect(buffer.size).to eq 0
       expect(buffer.empty?).to eq true
     end
+
+    it "reuses pooled nodes instead of leaking them" do
+      skip "GC.stat(:malloc_increase_bytes) is not available" unless GC.stat.key?(:malloc_increase_bytes)
+      node_size = Cool.io::Buffer.default_node_size
+      data = "a" * (node_size * 2 + 1)
+      cycle = proc do
+        buffer << data
+        buffer.clear
+        buffer << "x"
+        buffer.clear
+      end
+
+      # Marking a Buffer frees its pool, so keep GC off from the warm-up on.
+      GC.start
+      gc_was_disabled = GC.disable
+      begin
+        3.times { cycle.call }
+        before = GC.stat(:malloc_increase_bytes)
+        200.times { cycle.call }
+        grown = GC.stat(:malloc_increase_bytes) - before
+      ensure
+        GC.enable unless gc_was_disabled
+      end
+      expect(grown).to be < node_size * 4
+    end
   end
   
   context "#read_frame" do

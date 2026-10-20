@@ -484,10 +484,13 @@ static void
 buffer_clear(struct buffer * buf)
 {
     /* Move everything into the buffer pool */
-    if (!buf->pool_tail) {
-        buf->pool_head = buf->pool_tail = buf->head;
-    } else {
-        buf->pool_tail->next = buf->head;
+    if (buf->head) {
+        if (!buf->pool_tail) {
+            buf->pool_head = buf->head;
+        } else {
+            buf->pool_tail->next = buf->head;
+        }
+        buf->pool_tail = buf->tail;
     }
 
     buf->head = buf->tail = 0;
