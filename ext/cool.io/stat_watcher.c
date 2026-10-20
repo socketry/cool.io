@@ -94,14 +94,13 @@ static VALUE Coolio_StatWatcher_initialize(int argc, VALUE *argv, VALUE self)
     interval = rb_convert_type(interval, T_FLOAT, "Float", "to_f");
 
   path = rb_String(path);
-  path_str = StringValueCStr(path);
   rb_iv_set(self, "@path", path);
 
 #ifdef _WIN32
   /* libev's wide Windows APIs and stat wrapper use UTF-8 paths. */
   path = rb_str_export_to_enc(path, rb_utf8_encoding());
-  path_str = StringValueCStr(path);
 #endif
+  path_str = StringValueCStr(path);
 
   watcher_data = Coolio_Watcher_ptr(self);
 
