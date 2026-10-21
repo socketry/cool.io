@@ -143,6 +143,23 @@ describe 'Windows stat notification internals', :if => RUBY_PLATFORM =~ /mingw|m
     end
   end
 
+  def replaced_dir(mode)
+    script = '$stdout.write(Marshal.dump(CoolioStatNativeSpec.replaced_dir(ARGV[0], ARGV[1].to_i)))'
+    native_result(script, @build, mode.to_s)
+  end
+
+  it 'moves directory and file watchers to a directory recreated under the same name' do
+    expect(replaced_dir(0)).to eq(directory: true, file: true)
+  end
+
+  it 'moves the watchers when a rename record arrives before the creation record' do
+    expect(replaced_dir(1)).to eq(directory: true, file: true)
+  end
+
+  it 'registers the contents of a directory that was missing while the watcher registered again' do
+    expect(replaced_dir(2)).to eq(directory: true, file: nil)
+  end
+
   it 'refreshes aliases after replacement records and retries failed lookups' do
     path = File.join(@build, 'aliases.txt')
     result = native_result('$stdout.write(Marshal.dump(CoolioStatNativeSpec.alias_recovery(ARGV[0])))', path)

@@ -506,8 +506,8 @@ clear_dirty (struct ev_win32_fs *ctx)
 }
 
 static void
-notify_names (struct ev_win32_fs *ctx, struct ev_win32_dir *dir,
-              const wchar_t *const *names, int count)
+notify_records (struct ev_win32_fs *ctx, struct ev_win32_dir *dir,
+                const wchar_t *const *names, int count, DWORD action)
 {
   struct ev_win32_dir event_dir;
   char *record = (char *)event_dir.buffer;
@@ -519,13 +519,20 @@ notify_names (struct ev_win32_fs *ctx, struct ev_win32_dir *dir,
       FILE_NOTIFY_INFORMATION *event = (FILE_NOTIFY_INFORMATION *)record;
       DWORD length = (DWORD)(wcslen (names[i]) * sizeof (wchar_t));
       DWORD size = (DWORD)((offsetof (FILE_NOTIFY_INFORMATION, FileName) + length + 3) & ~3u);
-      event->Action = FILE_ACTION_MODIFIED;
+      event->Action = action;
       event->FileNameLength = length;
       memcpy (event->FileName, names[i], length);
       event->NextEntryOffset = i + 1 < count ? size : 0;
       record += size;
     }
   win32_dir_notify (ctx, &event_dir, (DWORD)(record - (char *)event_dir.buffer));
+}
+
+static void
+notify_names (struct ev_win32_fs *ctx, struct ev_win32_dir *dir,
+              const wchar_t *const *names, int count)
+{
+  notify_records (ctx, dir, names, count, FILE_ACTION_MODIFIED);
 }
 
 static VALUE
@@ -959,6 +966,118 @@ children_cwd (VALUE self, VALUE first, VALUE second, VALUE polling)
   return result;
 }
 
+static int
+follows (struct ev_win32_fs *ctx, struct ev_win32_dir *dir, const wchar_t *path)
+{
+  int same;
+  EnterCriticalSection (&ctx->lock);
+  same = dir && win32_dir_matches (dir, path);
+  LeaveCriticalSection (&ctx->lock);
+  return same;
+}
+
+static VALUE
+replaced_dir (VALUE self, VALUE directory, VALUE mode)
+{
+  static const wchar_t *const watched_name[] = { L"P" };
+  struct ev_loop *loop;
+  struct ev_win32_fs *ctx;
+  struct ev_win32_watch *watch;
+  ev_stat dir_watcher, file_watcher;
+  WSADATA data;
+  int kind = NUM2INT (mode);
+  int with_file = kind != 2;
+  const char *parent = StringValueCStr (directory);
+  VALUE root = rb_sprintf ("replaced-%d", kind);
+  VALUE watched_rel = rb_sprintf ("replaced-%d/P", kind);
+  VALUE file_rel = rb_sprintf ("replaced-%d/P/f.txt", kind);
+  VALUE watched = rb_sprintf ("%s/%s", parent, StringValueCStr (watched_rel));
+  VALUE moved = rb_sprintf ("%s/replaced-%d/P.old", parent, kind);
+  VALUE file = rb_sprintf ("%s/%s", parent, StringValueCStr (file_rel));
+  VALUE result;
+  wchar_t *watched_dir = absolute_path (StringValueCStr (watched));
+  wchar_t *moved_dir = absolute_path (StringValueCStr (moved));
+  int replaced, directory_followed, file_followed = 0;
+  if (WSAStartup (MAKEWORD (2, 2), &data))
+    {
+      free (watched_dir);
+      free (moved_dir);
+      rb_raise (rb_eRuntimeError, "WSAStartup failed");
+    }
+  make_dir (parent, StringValueCStr (root));
+  make_dir (parent, StringValueCStr (watched_rel));
+  make_file (parent, StringValueCStr (file_rel));
+  loop = ev_loop_new (EVFLAG_NOENV | EVBACKEND_SELECT);
+  if (!loop)
+    {
+      free (watched_dir);
+      free (moved_dir);
+      WSACleanup ();
+      rb_raise (rb_eRuntimeError, "ev_loop_new failed");
+    }
+  ev_stat_init (&dir_watcher, changed_cb, StringValueCStr (watched), 60);
+  ev_stat_start (loop, &dir_watcher);
+  ev_stat_init (&file_watcher, changed_cb, StringValueCStr (file), 60);
+  if (with_file)
+    {
+      ev_stat_start (loop, &file_watcher);
+    }
+  ctx = loop->win32_fs;
+  if (!ctx || !win32_fs_watch (ctx, &dir_watcher) || !win32_fs_watch (ctx, &dir_watcher)->children.dir
+      || (with_file && !win32_fs_watch (ctx, &file_watcher)))
+    {
+      ev_stat_stop (loop, &dir_watcher);
+      ev_stat_stop (loop, &file_watcher);
+      ev_loop_destroy (loop);
+      free (watched_dir);
+      free (moved_dir);
+      WSACleanup ();
+      rb_raise (rb_eRuntimeError, "the watchers were not registered");
+    }
+  replaced = MoveFileW (watched_dir, moved_dir);
+  if (replaced && kind == 2)
+    {
+      win32_fs_add (loop, &dir_watcher, 0);
+    }
+  replaced = replaced && CreateDirectoryW (watched_dir, 0);
+  EnterCriticalSection (&ctx->lock);
+  clear_dirty (ctx);
+  watch = win32_fs_watch (ctx, &dir_watcher);
+  if (kind == 1)
+    {
+      notify_records (ctx, watch->parent.dir, watched_name, 1, FILE_ACTION_RENAMED_OLD_NAME);
+    }
+  notify_records (ctx, watch->parent.dir, watched_name, 1, FILE_ACTION_ADDED);
+  LeaveCriticalSection (&ctx->lock);
+  win32_fs_cb (loop, &ctx->async, EV_ASYNC);
+  directory_followed = follows (ctx, win32_fs_watch (ctx, &dir_watcher)->children.dir, watched_dir);
+  if (with_file)
+    {
+      file_followed = follows (ctx, win32_fs_watch (ctx, &file_watcher)->parent.dir, watched_dir);
+    }
+  ev_stat_stop (loop, &dir_watcher);
+  ev_stat_stop (loop, &file_watcher);
+  ev_loop_destroy (loop);
+  free (watched_dir);
+  free (moved_dir);
+  WSACleanup ();
+  RB_GC_GUARD (root);
+  RB_GC_GUARD (watched_rel);
+  RB_GC_GUARD (file_rel);
+  RB_GC_GUARD (watched);
+  RB_GC_GUARD (moved);
+  RB_GC_GUARD (file);
+  if (!replaced)
+    {
+      rb_raise (rb_eRuntimeError, "could not replace the watched directory");
+    }
+  result = rb_hash_new ();
+  rb_hash_aset (result, ID2SYM (rb_intern ("directory")), directory_followed ? Qtrue : Qfalse);
+  rb_hash_aset (result, ID2SYM (rb_intern ("file")),
+    with_file ? (file_followed ? Qtrue : Qfalse) : Qnil);
+  return result;
+}
+
 static VALUE
 alias_recovery (VALUE self, VALUE path)
 {
@@ -1036,5 +1155,6 @@ Init_coolio_stat_native (void)
   rb_define_singleton_method (module, "alias_index", alias_index, 1);
   rb_define_singleton_method (module, "index_growth", index_growth, 1);
   rb_define_singleton_method (module, "children_cwd", children_cwd, 3);
+  rb_define_singleton_method (module, "replaced_dir", replaced_dir, 2);
   rb_define_singleton_method (module, "alias_recovery", alias_recovery, 1);
 }
