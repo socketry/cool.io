@@ -9,7 +9,7 @@
 static int fail_socket, socket_calls, syserr_calls, changed, timed_out;
 static HANDLE completion_entered, completion_release;
 static volatile LONG delay_completion;
-static int directory_opens, identity_calls, short_calls, long_calls, fail_alias;
+static int directory_opens, identity_calls, name_calls, fail_alias;
 
 static HANDLE WINAPI
 test_create_file (LPCWSTR path, DWORD access, DWORD share, LPSECURITY_ATTRIBUTES security,
@@ -26,40 +26,36 @@ test_file_information (HANDLE handle, LPBY_HANDLE_FILE_INFORMATION information)
   return GetFileInformationByHandle (handle, information);
 }
 
-static DWORD WINAPI
-test_short_path (LPCWSTR path, LPWSTR buffer, DWORD size)
-{
-  ++short_calls;
-  if (fail_alias)
-    { SetLastError (ERROR_ACCESS_DENIED); return 0; }
-  return GetShortPathNameW (path, buffer, size);
-}
-
 static const wchar_t *long_prefix;
 
-static DWORD WINAPI
-test_long_path (LPCWSTR path, LPWSTR buffer, DWORD size)
+static HANDLE WINAPI
+test_find_file (LPCWSTR path, FINDEX_INFO_LEVELS level, LPVOID data, FINDEX_SEARCH_OPS search,
+                LPVOID filter, DWORD flags)
 {
-  DWORD extra, room, length;
+  HANDLE handle;
   wchar_t *name;
-  ++long_calls;
+  size_t extra;
+  ++name_calls;
   if (fail_alias)
-    { SetLastError (ERROR_ACCESS_DENIED); return 0; }
-  if (!long_prefix)
     {
-      return GetLongPathNameW (path, buffer, size);
+      SetLastError (ERROR_ACCESS_DENIED);
+      return INVALID_HANDLE_VALUE;
     }
-  extra = (DWORD)wcslen (long_prefix);
-  room = size > extra ? size - extra : 0;
-  length = GetLongPathNameW (path, room ? buffer : 0, room);
-  if (!length || length >= room)
+  handle = FindFirstFileExW (path, level, data, search, filter, flags);
+  if (handle != INVALID_HANDLE_VALUE && long_prefix)
     {
-      return length ? length + extra : 0;
+      name = ((WIN32_FIND_DATAW *)data)->cFileName;
+      extra = wcslen (long_prefix);
+      if (wcslen (name) + extra >= MAX_PATH)
+        {
+          FindClose (handle);
+          SetLastError (ERROR_INSUFFICIENT_BUFFER);
+          return INVALID_HANDLE_VALUE;
+        }
+      memmove (name + extra, name, (wcslen (name) + 1) * sizeof (wchar_t));
+      memcpy (name, long_prefix, extra * sizeof (wchar_t));
     }
-  name = wcsrchr (buffer, L'\\') + 1;
-  memmove (name + extra, name, (wcslen (name) + 1) * sizeof (wchar_t));
-  memcpy (name, long_prefix, extra * sizeof (wchar_t));
-  return length + extra;
+  return handle;
 }
 
 static BOOL WINAPI
@@ -94,8 +90,7 @@ test_socket (int af, int type, int protocol)
 #define GetQueuedCompletionStatus test_completion
 #define CreateFileW test_create_file
 #define GetFileInformationByHandle test_file_information
-#define GetShortPathNameW test_short_path
-#define GetLongPathNameW test_long_path
+#define FindFirstFileExW test_find_file
 #define EV_STANDALONE 1
 #define EV_USE_REALTIME 0
 #define EV_USE_MONOTONIC 0
@@ -105,8 +100,7 @@ test_socket (int af, int type, int protocol)
 #undef GetQueuedCompletionStatus
 #undef CreateFileW
 #undef GetFileInformationByHandle
-#undef GetShortPathNameW
-#undef GetLongPathNameW
+#undef FindFirstFileExW
 
 static void
 recover_socket (const char *message)
@@ -368,7 +362,7 @@ path_work (VALUE self, VALUE directory, VALUE mode)
       ctx->dirs->dirty = 1;
       LeaveCriticalSection (&ctx->lock);
     }
-  directory_opens = identity_calls = short_calls = long_calls = 0;
+  directory_opens = identity_calls = name_calls = 0;
   if (notification)
     win32_fs_cb (loop, &ctx->async, EV_ASYNC);
   else
@@ -376,8 +370,8 @@ path_work (VALUE self, VALUE directory, VALUE mode)
       stat_timer_cb (loop, &watchers[i].timer, EV_TIMER);
   for (i = 0; i < count; ++i)
     valid = valid && watchers[i].attr.st_size == 2;
-  result = rb_ary_new_from_args (5, INT2NUM (directory_opens), INT2NUM (identity_calls),
-    INT2NUM (short_calls), INT2NUM (long_calls), valid ? Qtrue : Qfalse);
+  result = rb_ary_new_from_args (4, INT2NUM (directory_opens), INT2NUM (identity_calls),
+    INT2NUM (name_calls), valid ? Qtrue : Qfalse);
   for (i = 0; i < count; ++i)
     ev_stat_stop (loop, &watchers[i]);
   ev_loop_destroy (loop);
@@ -469,10 +463,10 @@ watch_index (VALUE self, VALUE directory)
       rb_raise (rb_eRuntimeError, "notification worker did not start");
     }
   ev_stat_stop (loop, &watchers[1]);
-  directory_opens = identity_calls = short_calls = long_calls = 0;
+  directory_opens = identity_calls = name_calls = 0;
   poll_active (loop, watchers, count);
-  result = rb_ary_new_from_args (4, INT2NUM (directory_opens), INT2NUM (identity_calls),
-    INT2NUM (short_calls), INT2NUM (long_calls));
+  result = rb_ary_new_from_args (3, INT2NUM (directory_opens), INT2NUM (identity_calls),
+    INT2NUM (name_calls));
   stopped = watch_index_consistent (ctx, watchers, count);
   ev_stat_stop (loop, ctx->watches[ctx->watchcnt - 1]->watcher);
   ev_stat_start (loop, &watchers[1]);
@@ -865,6 +859,52 @@ absolute_path (const char *path)
   return absolute;
 }
 
+static int
+lookup_skipped (wchar_t *path)
+{
+  struct ev_win32_watch watch;
+  int skipped, i;
+  memset (&watch, 0, sizeof (watch));
+  watch.path = path;
+  watch.name = wcsrchr (path, L'\\') + 1;
+  name_calls = 0;
+  win32_watch_names (&watch);
+  skipped = !name_calls && !watch.keys[1].key && !watch.keys[2].key;
+  for (i = 1; i < 3; ++i)
+    {
+      free (watch.keys[i].key);
+    }
+  return skipped;
+}
+
+static VALUE
+name_guards (VALUE self, VALUE directory)
+{
+  static const wchar_t *const roots[] = {
+    L"C:\\", L"\\\\?\\C:", L"\\\\localhost\\share", L"\\\\localhost\\share\\",
+    L"\\\\?\\UNC\\localhost\\share"
+  };
+  wchar_t root[64], *path;
+  char pattern[1024];
+  VALUE result = rb_hash_new ();
+  int i, skipped = 1;
+  const char *parent = StringValueCStr (directory);
+  for (i = 0; i < (int)(sizeof (roots) / sizeof (*roots)); ++i)
+    {
+      wcscpy (root, roots[i]);
+      skipped = skipped && lookup_skipped (root);
+    }
+  rb_hash_aset (result, ID2SYM (rb_intern ("root")), skipped ? Qtrue : Qfalse);
+  make_dir (parent, "wild");
+  make_file (parent, "wild/x0.txt");
+  snprintf (pattern, sizeof (pattern), "%s/wild/x*.txt", parent);
+  path = absolute_path (pattern);
+  skipped = lookup_skipped (path);
+  free (path);
+  rb_hash_aset (result, ID2SYM (rb_intern ("wildcard")), skipped ? Qtrue : Qfalse);
+  return result;
+}
+
 static VALUE
 children_cwd (VALUE self, VALUE first, VALUE second, VALUE polling)
 {
@@ -1109,10 +1149,10 @@ alias_recovery (VALUE self, VALUE path)
   if (!ctx)
     rb_raise (rb_eRuntimeError, "notification worker did not start");
   watch = ctx->watches[0];
-  initial = !watch->shortname && !watch->longname;
+  initial = watch->names_failed;
   fail_alias = 0;
   stat_timer_cb (loop, &watcher.timer, EV_TIMER);
-  initial = initial && watch->shortname && watch->longname;
+  initial = initial && !watch->names_failed;
 
   /* A replacement name record must refresh aliases even with equal stat data.
    * Use a separate buffer: the real directory buffer belongs to pending I/O. */
@@ -1127,13 +1167,13 @@ alias_recovery (VALUE self, VALUE path)
   LeaveCriticalSection (&ctx->lock);
   fail_alias = 1;
   win32_fs_cb (loop, &ctx->async, EV_ASYNC);
-  invalidated = !watch->shortname && !watch->longname;
+  invalidated = watch->names_failed;
   fail_alias = 0;
   stat_timer_cb (loop, &watcher.timer, EV_TIMER);
-  retried = watch->shortname && watch->longname;
-  short_calls = long_calls = 0;
+  retried = !watch->names_failed;
+  name_calls = 0;
   stat_timer_cb (loop, &watcher.timer, EV_TIMER);
-  cached = !short_calls && !long_calls;
+  cached = !name_calls;
   ev_stat_stop (loop, &watcher);
   ev_loop_destroy (loop);
   WSACleanup ();
@@ -1153,6 +1193,7 @@ Init_coolio_stat_native (void)
   rb_define_singleton_method (module, "watch_index", watch_index, 1);
   rb_define_singleton_method (module, "name_index", name_index, 1);
   rb_define_singleton_method (module, "alias_index", alias_index, 1);
+  rb_define_singleton_method (module, "name_guards", name_guards, 1);
   rb_define_singleton_method (module, "index_growth", index_growth, 1);
   rb_define_singleton_method (module, "children_cwd", children_cwd, 3);
   rb_define_singleton_method (module, "replaced_dir", replaced_dir, 2);
