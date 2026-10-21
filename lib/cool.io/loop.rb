@@ -38,6 +38,10 @@ module Coolio
     #     :kqueue (BSD/Mac OS X)
     #     :port   (Solaris 10)
     #
+    # Raises RuntimeError if none of the selected backends is usable.
+    # Unless :skip_environment is true, $LIBEV_FLAGS can override the
+    # backend selection and cause the same error.
+    #
     def initialize(options = {})
       @watchers = {}
       @active_watchers = 0
