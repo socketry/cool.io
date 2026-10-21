@@ -237,7 +237,11 @@ win32_dir_notify (struct ev_win32_fs *ctx, struct ev_win32_dir *dir, DWORD bytes
               {
                 /* Replacement can change aliases even with equal stat data. */
                 if (event->Action != FILE_ACTION_MODIFIED)
-                  node->watch->names_dirty = 1;
+                  {
+                    node->watch->names_dirty = 1;
+                    if (node->watch->children.dir)
+                      node->watch->children.dir->dirty = 1;
+                  }
                 win32_watch_dirty (ctx, node->watch);
               }
         }
@@ -251,6 +255,8 @@ win32_dir_notify (struct ev_win32_fs *ctx, struct ev_win32_dir *dir, DWORD bytes
   for (sub = dir->files; sub; sub = sub->next)
     {
       sub->watch->names_dirty = 1; /* Overflow may have hidden a replacement. */
+      if (sub->watch->children.dir)
+        sub->watch->children.dir->dirty = 1;
       win32_watch_dirty (ctx, sub->watch);
     }
   for (sub = dir->children; sub; sub = sub->next)
@@ -361,6 +367,7 @@ win32_fs_cb (EV_P_ ev_async *async, int revents)
       int refresh;
     } *batch;
   size_t count = 0, i = 0;
+  int refresh;
 
   EnterCriticalSection (&ctx->lock);
   /* Check identity once per directory per batch, rather than once for every
@@ -385,11 +392,14 @@ win32_fs_cb (EV_P_ ev_async *async, int revents)
         if (ctx->dirty)
           ctx->dirty->dirty_prev = &ctx->dirty;
         watch->dirty = 0;
-        if (watch->names_dirty)
+        refresh = watch->parent.dir->failed
+          || (watch->children.dir && watch->children.dir->failed)
+          || (watch->names_dirty && !watch->children.dir && watch->watcher->attr.st_nlink
+              && (watch->watcher->attr.st_mode & S_IFMT) == S_IFDIR);
+        if (watch->names_dirty && !refresh)
           win32_watch_names (watch);
         batch[i].watcher = watch->watcher;
-        batch[i++].refresh = watch->parent.dir->failed
-          || (watch->children.dir && watch->children.dir->failed);
+        batch[i++].refresh = refresh;
       }
   LeaveCriticalSection (&ctx->lock);
 
