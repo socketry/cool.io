@@ -177,6 +177,25 @@ describe 'Windows stat notification internals', :if => RUBY_PLATFORM =~ /mingw|m
     expect(result).to eq([true, true, true, true])
   end
 
+  it 'closes the notification pipe of a destroyed loop so that imported sockets can listen' do
+    lib = File.expand_path('../lib', __dir__)
+    result = native_result(<<~'RUBY', lib, @build)
+      $LOAD_PATH.unshift(ARGV[0])
+      require 'cool.io'
+      path = File.join(ARGV[1], 'evpipe.txt')
+      File.write(path, 'a')
+      20.times do
+        reactor = Coolio::Loop.new
+        watcher = Coolio::StatWatcher.new(path, 60)
+        watcher.attach(reactor)
+        watcher.detach
+      end
+      3.times { GC.start }
+      $stdout.write(Marshal.dump(CoolioStatNativeSpec.imported_listen_failures(30)))
+    RUBY
+    expect(result).to eq(0)
+  end
+
   it 'uses effective notification flags and respects EVFLAG_NOENV' do
     path = File.join(@build, 'flags.txt')
     # EVFLAG_NOINOTIFY = 0x00100000; EVFLAG_NOENV = 0x01000000.
