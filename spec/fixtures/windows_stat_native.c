@@ -847,6 +847,118 @@ index_growth (VALUE self, VALUE directory)
     queued ? Qtrue : Qfalse, routed ? Qtrue : Qfalse);
 }
 
+static wchar_t *
+absolute_path (const char *path)
+{
+  wchar_t *absolute = win32_fs_path (path, 0);
+  if (!absolute)
+    {
+      rb_raise (rb_eRuntimeError, "win32_fs_path failed: %s", path);
+    }
+  return absolute;
+}
+
+static VALUE
+children_cwd (VALUE self, VALUE first, VALUE second, VALUE polling)
+{
+  struct ev_loop *loop;
+  struct ev_win32_fs *ctx;
+  struct ev_win32_dir *shared_dir, *children_dir;
+  ev_stat dir_watcher, file_watcher;
+  WSADATA data;
+  wchar_t original[MAX_PATH], *first_dir, *second_dir, *second_rel;
+  VALUE file = rb_sprintf ("%s/rel/f.txt", StringValueCStr (first));
+  VALUE moved_rel = rb_sprintf ("%s/rel", StringValueCStr (second));
+  VALUE result;
+  DWORD length;
+  int shared, failed, moved, followed, cwd_changed;
+  length = GetCurrentDirectoryW (MAX_PATH, original);
+  if (!length || length >= MAX_PATH)
+    {
+      rb_raise (rb_eRuntimeError, "GetCurrentDirectoryW failed");
+    }
+  first_dir = absolute_path (StringValueCStr (first));
+  second_dir = absolute_path (StringValueCStr (second));
+  second_rel = absolute_path (StringValueCStr (moved_rel));
+  if (!SetCurrentDirectoryW (first_dir) || WSAStartup (MAKEWORD (2, 2), &data))
+    {
+      SetCurrentDirectoryW (original);
+      free (first_dir);
+      free (second_dir);
+      free (second_rel);
+      rb_raise (rb_eRuntimeError, "could not prepare the current directory and Winsock");
+    }
+  loop = ev_loop_new (EVFLAG_NOENV | EVBACKEND_SELECT);
+  if (!loop)
+    {
+      SetCurrentDirectoryW (original);
+      WSACleanup ();
+      free (first_dir);
+      free (second_dir);
+      free (second_rel);
+      rb_raise (rb_eRuntimeError, "ev_loop_new failed");
+    }
+  ev_stat_init (&dir_watcher, changed_cb, "rel", 60);
+  ev_stat_start (loop, &dir_watcher);
+  ev_stat_init (&file_watcher, changed_cb, StringValueCStr (file), 60);
+  ev_stat_start (loop, &file_watcher);
+  ctx = loop->win32_fs;
+  if (!ctx || !win32_fs_watch (ctx, &dir_watcher) || !win32_fs_watch (ctx, &file_watcher))
+    {
+      ev_stat_stop (loop, &dir_watcher);
+      ev_stat_stop (loop, &file_watcher);
+      ev_loop_destroy (loop);
+      SetCurrentDirectoryW (original);
+      WSACleanup ();
+      free (first_dir);
+      free (second_dir);
+      free (second_rel);
+      rb_raise (rb_eRuntimeError, "the watchers were not registered");
+    }
+  EnterCriticalSection (&ctx->lock);
+  shared_dir = win32_fs_watch (ctx, &file_watcher)->parent.dir;
+  shared = win32_fs_watch (ctx, &dir_watcher)->children.dir == shared_dir;
+  LeaveCriticalSection (&ctx->lock);
+  cwd_changed = SetCurrentDirectoryW (second_dir);
+  if (NUM2INT (polling))
+    {
+      stat_timer_cb (loop, &dir_watcher.timer, EV_TIMER);
+    }
+  else
+    {
+      win32_fs_add (loop, &dir_watcher, 0);
+    }
+  EnterCriticalSection (&ctx->lock);
+  failed = shared_dir->failed;
+  children_dir = win32_fs_watch (ctx, &dir_watcher)->children.dir;
+  followed = children_dir && !_wcsicmp (children_dir->path, second_rel);
+  LeaveCriticalSection (&ctx->lock);
+  stat_timer_cb (loop, &file_watcher.timer, EV_TIMER);
+  EnterCriticalSection (&ctx->lock);
+  moved = win32_fs_watch (ctx, &file_watcher)->parent.dir != shared_dir;
+  LeaveCriticalSection (&ctx->lock);
+  SetCurrentDirectoryW (original);
+  ev_stat_stop (loop, &dir_watcher);
+  ev_stat_stop (loop, &file_watcher);
+  ev_loop_destroy (loop);
+  WSACleanup ();
+  free (first_dir);
+  free (second_dir);
+  free (second_rel);
+  RB_GC_GUARD (file);
+  RB_GC_GUARD (moved_rel);
+  if (!cwd_changed)
+    {
+      rb_raise (rb_eRuntimeError, "could not change the current directory");
+    }
+  result = rb_hash_new ();
+  rb_hash_aset (result, ID2SYM (rb_intern ("shared")), shared ? Qtrue : Qfalse);
+  rb_hash_aset (result, ID2SYM (rb_intern ("failed")), failed ? Qtrue : Qfalse);
+  rb_hash_aset (result, ID2SYM (rb_intern ("moved")), moved ? Qtrue : Qfalse);
+  rb_hash_aset (result, ID2SYM (rb_intern ("followed")), followed ? Qtrue : Qfalse);
+  return result;
+}
+
 static VALUE
 alias_recovery (VALUE self, VALUE path)
 {
@@ -923,5 +1035,6 @@ Init_coolio_stat_native (void)
   rb_define_singleton_method (module, "name_index", name_index, 1);
   rb_define_singleton_method (module, "alias_index", alias_index, 1);
   rb_define_singleton_method (module, "index_growth", index_growth, 1);
+  rb_define_singleton_method (module, "children_cwd", children_cwd, 3);
   rb_define_singleton_method (module, "alias_recovery", alias_recovery, 1);
 }

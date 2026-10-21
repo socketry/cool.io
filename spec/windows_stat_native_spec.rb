@@ -131,6 +131,18 @@ describe 'Windows stat notification internals', :if => RUBY_PLATFORM =~ /mingw|m
     expect(result).to eq([true, true, true, true])
   end
 
+  [[1, 'polling'], [0, 'an explicit registration']].each do |polling, description|
+    it "keeps a shared child directory when a relative directory moves with the current directory during #{description}" do
+      first, second = %w[cwd1 cwd2].map { |name| File.join(@build, "#{name}-#{polling}") }
+      FileUtils.mkdir_p(File.join(first, 'rel'))
+      File.write(File.join(first, 'rel', 'f.txt'), 'a')
+      FileUtils.mkdir_p(File.join(second, 'rel'))
+      script = '$stdout.write(Marshal.dump(CoolioStatNativeSpec.children_cwd(ARGV[0], ARGV[1], ARGV[2].to_i)))'
+      result = native_result(script, first, second, polling.to_s)
+      expect(result).to eq(shared: true, failed: false, moved: false, followed: true)
+    end
+  end
+
   it 'refreshes aliases after replacement records and retries failed lookups' do
     path = File.join(@build, 'aliases.txt')
     result = native_result('$stdout.write(Marshal.dump(CoolioStatNativeSpec.alias_recovery(ARGV[0])))', path)

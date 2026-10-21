@@ -746,7 +746,8 @@ win32_fs_add_locked (EV_P_ ev_stat *w, int polling)
         }
       if (!same_parent && !_wcsicmp (old->parent.dir->path, parent))
         old->parent.dir->failed = 1;
-      if (!same_children && children && old->children.dir)
+      if (!same_children && children && old->children.dir
+          && !_wcsicmp (old->children.dir->path, children))
         old->children.dir->failed = 1;
     }
   else if (ctx->watchcnt == ctx->watchmax)
