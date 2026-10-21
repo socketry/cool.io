@@ -1284,6 +1284,76 @@ alias_recovery (VALUE self, VALUE path)
     retried ? Qtrue : Qfalse, cached ? Qtrue : Qfalse);
 }
 
+static VALUE
+imported_listen_failures (VALUE self, VALUE tries)
+{
+  enum { limit = 64 };
+  WSADATA data;
+  WSAPROTOCOL_INFOW info;
+  struct sockaddr_in addr;
+  SOCKET sockets[limit * 2], base, imported;
+  const char *failure = 0;
+  int i, error = 0, opened = 0, failures = 0, count = NUM2INT (tries);
+  if (count < 0 || count > limit)
+    {
+      rb_raise (rb_eArgError, "tries must be between 0 and %d", limit);
+    }
+  if (WSAStartup (MAKEWORD (2, 2), &data))
+    {
+      rb_raise (rb_eRuntimeError, "WSAStartup failed");
+    }
+  memset (&addr, 0, sizeof (addr));
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
+  for (i = 0; i < count; ++i)
+    {
+      base = WSASocketW (AF_INET, SOCK_STREAM, IPPROTO_TCP, 0, 0, WSA_FLAG_OVERLAPPED);
+      if (base == INVALID_SOCKET)
+        {
+          failure = "WSASocketW failed";
+          error = WSAGetLastError ();
+          break;
+        }
+      sockets[opened++] = base;
+      if (bind (base, (struct sockaddr *)&addr, sizeof (addr))
+          || WSADuplicateSocketW (base, GetCurrentProcessId (), &info))
+        {
+          failure = "could not prepare a socket to import";
+          error = WSAGetLastError ();
+          break;
+        }
+      imported = WSASocketW (FROM_PROTOCOL_INFO, FROM_PROTOCOL_INFO, FROM_PROTOCOL_INFO,
+                             &info, 0, WSA_FLAG_OVERLAPPED);
+      if (imported == INVALID_SOCKET)
+        {
+          failure = "WSASocketW could not import the socket";
+          error = WSAGetLastError ();
+          break;
+        }
+      sockets[opened++] = imported;
+      if (listen (imported, 1) == SOCKET_ERROR)
+        {
+          error = WSAGetLastError ();
+          if (error != WSAEISCONN)
+            {
+              failure = "listen failed";
+              break;
+            }
+          ++failures;
+        }
+    }
+  while (opened)
+    {
+      closesocket (sockets[--opened]);
+    }
+  WSACleanup ();
+  if (failure)
+    {
+      rb_raise (rb_eRuntimeError, "%s: %d", failure, error);
+    }
+  return INT2NUM (failures);
+}
+
 RUBY_FUNC_EXPORTED void
 Init_coolio_stat_native (void)
 {
@@ -1302,4 +1372,5 @@ Init_coolio_stat_native (void)
   rb_define_singleton_method (module, "children_cwd", children_cwd, 3);
   rb_define_singleton_method (module, "replaced_dir", replaced_dir, 2);
   rb_define_singleton_method (module, "alias_recovery", alias_recovery, 1);
+  rb_define_singleton_method (module, "imported_listen_failures", imported_listen_failures, 1);
 }
