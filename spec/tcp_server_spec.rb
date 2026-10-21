@@ -175,9 +175,9 @@ describe Coolio::TCPServer do
       it "connected socket called on_connect" do
         begin
           connected = false
-          server = Cool.io::TCPServer.new("localhost", port, ServerOnConnect, proc { connected = true })
+          server = Cool.io::TCPServer.new(HOST, port, ServerOnConnect, proc { connected = true })
           loop.attach server
-          s = TCPSocket.open("localhost", port)
+          s = TCPSocket.open(HOST, port)
           loop.run_once
           s.close
           expect(connected).to eq true
@@ -201,9 +201,9 @@ describe Coolio::TCPServer do
       it "closed socket called on_close" do
         begin
           closed = false
-          server = Cool.io::TCPServer.new("localhost", port, ServerOnConnect, proc { closed = true })
+          server = Cool.io::TCPServer.new(HOST, port, ServerOnConnect, proc { closed = true })
           loop.attach server
-          s = TCPSocket.open("localhost", port)
+          s = TCPSocket.open(HOST, port)
           loop.run_once
           s.close
           loop.run_once
@@ -229,10 +229,10 @@ describe Coolio::TCPServer do
       it "server socket received data" do
         begin
           data = "aaa"
-          server = Cool.io::TCPServer.new("localhost", port, Echo, proc { |d| data = d })
+          server = Cool.io::TCPServer.new(HOST, port, Echo, proc { |d| data = d })
           loop.attach server
           thread = Thread.new { loop.run }
-          s = TCPSocket.open("localhost", port)
+          s = TCPSocket.open(HOST, port)
           s.write "zzz"
           sleep 0.1
           expect(data).to eq "zzz"
