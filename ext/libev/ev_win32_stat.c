@@ -41,8 +41,8 @@ struct ev_win32_watch
   struct ev_win32_watch *dirty_next, **dirty_prev;
   struct ev_win32_subscription parent, children;
   struct ev_win32_name keys[3];
-  wchar_t *path, *shortpath, *longpath;
-  const wchar_t *name, *shortname, *longname;
+  wchar_t *path;
+  const wchar_t *name;
   ev_stat *watcher;
   int dirty, names_dirty, names_failed;
 };
@@ -65,6 +65,7 @@ struct ev_win32_fs
 
 static void win32_fs_add_locked (EV_P_ ev_stat *w, int polling);
 static int win32_dir_matches (struct ev_win32_dir *dir, const wchar_t *parent);
+static size_t win32_fs_root (const wchar_t *path);
 
 static unsigned int
 win32_hash (const wchar_t *key, size_t length)
@@ -146,8 +147,9 @@ static void
 win32_watch_names (struct ev_win32_watch *watch)
 {
   struct ev_win32_dir *dir = watch->parent.dir;
-  DWORD length;
-  int i, keyed;
+  WIN32_FIND_DATAW data;
+  HANDLE handle;
+  int i, keyed = 1;
   for (i = 1; i < 3; ++i)
     if (watch->keys[i].key)
       {
@@ -156,36 +158,24 @@ win32_watch_names (struct ev_win32_watch *watch)
         free (watch->keys[i].key);
         watch->keys[i].key = 0;
       }
-  length = GetShortPathNameW (watch->path, 0, 0);
   watch->names_dirty = 0;
-  free (watch->shortpath);
-  watch->shortname = 0;
-  watch->shortpath = length ? (wchar_t *)malloc (length * sizeof (wchar_t)) : 0;
-  if (watch->shortpath)
+  if (win32_fs_root (watch->path) < wcslen (watch->path) && !wcspbrk (watch->name, L"*?<>\""))
     {
-      DWORD written = GetShortPathNameW (watch->path, watch->shortpath, length);
-      wchar_t *slash = written && written < length ? wcsrchr (watch->shortpath, L'\\') : 0;
-      if (slash)
-        watch->shortname = slash + 1;
+      handle = FindFirstFileExW (watch->path, FindExInfoStandard, &data, FindExSearchNameMatch, 0, 0);
+      if (handle == INVALID_HANDLE_VALUE)
+        keyed = 0;
+      else
+        {
+          FindClose (handle);
+          keyed = win32_name_key (watch, 1, *data.cAlternateFileName ? data.cAlternateFileName : 0);
+          keyed &= win32_name_key (watch, 2, data.cFileName);
+        }
     }
-  length = GetLongPathNameW (watch->path, 0, 0);
-  free (watch->longpath);
-  watch->longname = 0;
-  watch->longpath = length ? (wchar_t *)malloc (length * sizeof (wchar_t)) : 0;
-  if (watch->longpath)
-    {
-      DWORD written = GetLongPathNameW (watch->path, watch->longpath, length);
-      wchar_t *slash = written && written < length ? wcsrchr (watch->longpath, L'\\') : 0;
-      if (slash)
-        watch->longname = slash + 1;
-    }
-  keyed = win32_name_key (watch, 1, watch->shortname);
-  keyed &= win32_name_key (watch, 2, watch->longname);
   if (dir)
     for (i = 1; i < 3; ++i)
       if (watch->keys[i].key)
         win32_name_link (dir, &watch->keys[i]);
-  watch->names_failed = !watch->shortname || !watch->longname || !keyed;
+  watch->names_failed = !keyed;
 }
 
 /* Called with ctx->lock held. Queue each watcher at most once per batch. */
@@ -587,8 +577,6 @@ win32_watch_free (struct ev_win32_fs *ctx, struct ev_win32_watch *watch)
   for (i = 0; i < 3; ++i)
     free (watch->keys[i].key);
   free (watch->path);
-  free (watch->shortpath);
-  free (watch->longpath);
   free (watch);
 }
 

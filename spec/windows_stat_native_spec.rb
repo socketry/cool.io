@@ -100,13 +100,13 @@ describe 'Windows stat notification internals', :if => RUBY_PLATFORM =~ /mingw|m
         $stdout.write(Marshal.dump(result))
       RUBY
       # One open and two identity queries for 32 changed files; no alias work.
-      expect(result).to eq([1, 2, 0, 0, true])
+      expect(result).to eq([1, 2, 0, true])
     end
   end
 
   it 'keeps finding each watch as watchers stop, restart and re-register' do
     result = native_result('$stdout.write(Marshal.dump(CoolioStatNativeSpec.watch_index(ARGV[0])))', @build)
-    expect(result).to eq([1, 2, 0, 0, true, true])
+    expect(result).to eq([1, 2, 0, true, true])
   end
 
   it 'shares directories and routes name records through the directory index' do
@@ -124,6 +124,17 @@ describe 'Windows stat notification internals', :if => RUBY_PLATFORM =~ /mingw|m
   it 'relinks changed alias names and unlinks them when the watcher stops' do
     result = native_result('$stdout.write(Marshal.dump(CoolioStatNativeSpec.alias_index(ARGV[0])))', @build)
     expect(result).to eq([true, false, true, true, true])
+  end
+
+  it 'skips name lookups for roots and wildcard names' do
+    result = native_result('$stdout.write(Marshal.dump(CoolioStatNativeSpec.name_guards(ARGV[0])))', @build)
+    expect(result).to eq(root: true, wildcard: true)
+  end
+
+  it 'routes records for the short and the long name of a watched file' do
+    result = native_result('$stdout.write(Marshal.dump(CoolioStatNativeSpec.short_alias(ARGV[0])))', @build)
+    skip 'the volume does not create 8.3 names' if result.nil?
+    expect(result).to eq(short: true, long: true)
   end
 
   it 'keeps sharing directories, queues and routing names after the tables grow' do
