@@ -905,6 +905,98 @@ name_guards (VALUE self, VALUE directory)
   return result;
 }
 
+static int
+routed_to (struct ev_win32_fs *ctx, ev_stat *watcher, const wchar_t *name)
+{
+  struct ev_win32_watch *watch = win32_fs_watch (ctx, watcher);
+  int dirty;
+  EnterCriticalSection (&ctx->lock);
+  clear_dirty (ctx);
+  notify_names (ctx, watch->parent.dir, &name, 1);
+  dirty = watch->dirty;
+  clear_dirty (ctx);
+  LeaveCriticalSection (&ctx->lock);
+  return dirty;
+}
+
+static VALUE
+short_alias (VALUE self, VALUE directory)
+{
+  struct ev_loop *loop;
+  struct ev_win32_fs *ctx;
+  ev_stat long_watcher, short_watcher;
+  char long_path[1024], short_path[1024];
+  wchar_t *path, *buffer, *short_name;
+  WSADATA data;
+  DWORD length, written;
+  VALUE result;
+  int prefix;
+  const char *parent = StringValueCStr (directory);
+  if (WSAStartup (MAKEWORD (2, 2), &data))
+    {
+      rb_raise (rb_eRuntimeError, "WSAStartup failed");
+    }
+  make_dir (parent, "short");
+  make_file (parent, "short/long-file-name.txt");
+  snprintf (long_path, sizeof (long_path), "%s/short/long-file-name.txt", parent);
+  path = absolute_path (long_path);
+  length = GetShortPathNameW (path, 0, 0);
+  buffer = length ? (wchar_t *)malloc (length * sizeof (wchar_t)) : 0;
+  written = buffer ? GetShortPathNameW (path, buffer, length) : 0;
+  free (path);
+  if (!written || written >= length)
+    {
+      free (buffer);
+      WSACleanup ();
+      rb_raise (rb_eRuntimeError, "GetShortPathNameW failed");
+    }
+  short_name = wcsrchr (buffer, L'\\') + 1;
+  if (!_wcsicmp (short_name, L"long-file-name.txt"))
+    {
+      free (buffer);
+      WSACleanup ();
+      return Qnil;
+    }
+  prefix = snprintf (short_path, sizeof (short_path), "%s/short/", parent);
+  if (!WideCharToMultiByte (CP_UTF8, 0, short_name, -1, short_path + prefix,
+                            (int)sizeof (short_path) - prefix, 0, 0))
+    {
+      free (buffer);
+      WSACleanup ();
+      rb_raise (rb_eRuntimeError, "WideCharToMultiByte failed");
+    }
+  loop = ev_loop_new (EVFLAG_NOENV | EVBACKEND_SELECT);
+  if (!loop)
+    {
+      free (buffer);
+      WSACleanup ();
+      rb_raise (rb_eRuntimeError, "ev_loop_new failed");
+    }
+  ev_stat_init (&long_watcher, changed_cb, long_path, 60);
+  ev_stat_start (loop, &long_watcher);
+  ev_stat_init (&short_watcher, changed_cb, short_path, 60);
+  ev_stat_start (loop, &short_watcher);
+  ctx = loop->win32_fs;
+  if (!ctx)
+    {
+      free (buffer);
+      ev_loop_destroy (loop);
+      WSACleanup ();
+      rb_raise (rb_eRuntimeError, "notification worker did not start");
+    }
+  result = rb_hash_new ();
+  rb_hash_aset (result, ID2SYM (rb_intern ("short")),
+    routed_to (ctx, &long_watcher, short_name) ? Qtrue : Qfalse);
+  rb_hash_aset (result, ID2SYM (rb_intern ("long")),
+    routed_to (ctx, &short_watcher, L"long-file-name.txt") ? Qtrue : Qfalse);
+  ev_stat_stop (loop, &long_watcher);
+  ev_stat_stop (loop, &short_watcher);
+  ev_loop_destroy (loop);
+  free (buffer);
+  WSACleanup ();
+  return result;
+}
+
 static VALUE
 children_cwd (VALUE self, VALUE first, VALUE second, VALUE polling)
 {
@@ -1194,6 +1286,7 @@ Init_coolio_stat_native (void)
   rb_define_singleton_method (module, "name_index", name_index, 1);
   rb_define_singleton_method (module, "alias_index", alias_index, 1);
   rb_define_singleton_method (module, "name_guards", name_guards, 1);
+  rb_define_singleton_method (module, "short_alias", short_alias, 1);
   rb_define_singleton_method (module, "index_growth", index_growth, 1);
   rb_define_singleton_method (module, "children_cwd", children_cwd, 3);
   rb_define_singleton_method (module, "replaced_dir", replaced_dir, 2);

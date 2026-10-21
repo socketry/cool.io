@@ -131,6 +131,12 @@ describe 'Windows stat notification internals', :if => RUBY_PLATFORM =~ /mingw|m
     expect(result).to eq(root: true, wildcard: true)
   end
 
+  it 'routes records for the short and the long name of a watched file' do
+    result = native_result('$stdout.write(Marshal.dump(CoolioStatNativeSpec.short_alias(ARGV[0])))', @build)
+    skip 'the volume does not create 8.3 names' if result.nil?
+    expect(result).to eq(short: true, long: true)
+  end
+
   it 'keeps sharing directories, queues and routing names after the tables grow' do
     result = native_result('$stdout.write(Marshal.dump(CoolioStatNativeSpec.index_growth(ARGV[0])))', @build)
     expect(result).to eq([true, true, true, true])
