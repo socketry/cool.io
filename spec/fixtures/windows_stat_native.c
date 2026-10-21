@@ -145,6 +145,7 @@ check_pipe (VALUE self, VALUE path)
   ev_stat watcher;
   ev_timer timeout;
   ev_async async;
+  ev_tstamp deadline;
   WSADATA data;
   FILE *file;
   const char *error = 0;
@@ -183,10 +184,20 @@ check_pipe (VALUE self, VALUE path)
 
   fail_socket = 0;
   socket_calls = 0;
-  ev_run (loop, EVRUN_ONCE); /* The next polling tick retries notification setup. */
+  deadline = ev_time () + 5;
+  while (!loop->win32_fs && ev_time () < deadline)
+    {
+      ev_run (loop, EVRUN_ONCE); /* The next polling tick retries notification setup. */
+    }
   /* One listener plus one client socket; ev_async_start must reuse this pair. */
-  if (!loop->win32_fs || !ev_is_active (&loop->pipe_w) || socket_calls != 2)
-    error = "notification recovery did not reuse the prepared pipe";
+  if (!loop->win32_fs)
+    {
+      error = "polling did not retry notification setup";
+    }
+  else if (!ev_is_active (&loop->pipe_w) || socket_calls != 2)
+    {
+      error = "notification recovery did not reuse the prepared pipe";
+    }
 cleanup:
   ev_stat_stop (loop, &watcher);
   ev_loop_destroy (loop);
