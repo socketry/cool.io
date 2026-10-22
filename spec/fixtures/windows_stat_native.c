@@ -91,11 +91,7 @@ test_socket (int af, int type, int protocol)
 #define CreateFileW test_create_file
 #define GetFileInformationByHandle test_file_information
 #define FindFirstFileExW test_find_file
-#define EV_STANDALONE 1
-#define EV_USE_REALTIME 0
-#define EV_USE_MONOTONIC 0
-#define EV_WIN32_STAT_CODEPAGE CP_UTF8
-#include "ev.c"
+#include "libev.c"
 #undef socket
 #undef GetQueuedCompletionStatus
 #undef CreateFileW

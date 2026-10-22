@@ -7,7 +7,7 @@ describe 'Windows stat notification internals', :if => RUBY_PLATFORM =~ /mingw|m
   before(:context) do
     @build = Dir.mktmpdir('coolio-stat-native-')
     source = File.expand_path('fixtures/windows_stat_native.c', __dir__)
-    libev = File.expand_path('../ext/libev', __dir__)
+    coolio = File.expand_path('../ext/cool.io', __dir__)
     FileUtils.cp(source, @build)
     File.write(File.join(@build, 'extconf.rb'), <<~RUBY)
       begin
@@ -16,7 +16,7 @@ describe 'Windows stat notification internals', :if => RUBY_PLATFORM =~ /mingw|m
         # Other Windows toolchains can provide the compiler through PATH.
       end
       require 'mkmf'
-      $INCFLAGS << ' -I"#{libev}"'
+      $INCFLAGS << ' -I"#{coolio}"'
       abort 'ws2_32 is required' unless have_library('ws2_32')
       create_makefile('coolio_stat_native')
     RUBY
