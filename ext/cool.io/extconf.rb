@@ -1,28 +1,6 @@
 require 'mkmf'
 
-libs = []
-
-$defs << "-DRUBY_VERSION_CODE=#{RUBY_VERSION.gsub(/\D/, '')}"
-
-have_func('rb_io_descriptor')
-have_func('rb_thread_blocking_region')
-have_func('rb_thread_call_without_gvl')
-have_func('rb_thread_alone')
-have_func('rb_str_set_len')
 have_library('rt', 'clock_gettime')
-
-have_library("c", "main")
-if have_macro("HAVE_RB_IO_T", "ruby/io.h")
-  have_struct_member("rb_io_t", "fd", "ruby/io.h")
-end
-
-if have_header('ruby/io.h')
-  $defs << '-DHAVE_RUBY_IO_H'
-end
-
-if have_header('ruby/thread.h')
-  $defs << '-DHAVE_RUBY_THREAD_H'
-end
 
 if have_header('sys/select.h')
   $defs << '-DEV_USE_SELECT'
@@ -60,8 +38,6 @@ if RUBY_PLATFORM =~ /solaris/
   # libev/ev.c requires NSIG which is undefined if _XOPEN_SOURCE is defined
   $defs << '-D__EXTENSIONS__'
 end
-
-$LIBS << ' ' << libs.join(' ')
 
 dir_config('cool.io_ext')
 create_makefile('cool.io_ext')

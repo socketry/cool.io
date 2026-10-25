@@ -39,9 +39,7 @@
 
 /* ########## COOLIO PATCHERY HO! ########## */
 #include "ruby.h"
-#if defined(HAVE_RUBY_THREAD_H)
 #include "ruby/thread.h"
-#endif
 /* ######################################## */
 
 /* this big block deduces configuration from config.h */
@@ -3602,7 +3600,6 @@ time_update (EV_P_ ev_tstamp max_block)
 }
 
 /* ########## COOLIO PATCHERY HO! ########## */
-#if defined(HAVE_RB_THREAD_BLOCKING_REGION) || defined(HAVE_RB_THREAD_CALL_WITHOUT_GVL)
 struct ev_poll_args {
   struct ev_loop *loop;
   ev_tstamp waittime;
@@ -3616,16 +3613,13 @@ VALUE ev_backend_poll(void *ptr)
   backend_poll (EV_A_ args->waittime);
   return Qnil;
 }
-#endif
 /* ######################################## */
 
 int
 ev_run (EV_P_ int flags)
 {
 /* ########## COOLIO PATCHERY HO! ########## */
-#if defined(HAVE_RB_THREAD_BLOCKING_REGION) || defined(HAVE_RB_THREAD_CALL_WITHOUT_GVL)
     struct ev_poll_args poll_args;
-#endif
 /* ######################################## */
 
 #if EV_FEATURE_API
@@ -3786,25 +3780,9 @@ rb_thread_unsafe_dangerous_crazy_blocking_region_end(...);
 #######################################################################
 */
 
-/*
-  simulate to rb_thread_call_without_gvl using rb_theread_blocking_region.
-  https://github.com/brianmario/mysql2/blob/master/ext/mysql2/client.h#L8
-*/
-
-#ifndef HAVE_RB_THREAD_CALL_WITHOUT_GVL
-#ifdef HAVE_RB_THREAD_BLOCKING_REGION
-#define rb_thread_call_without_gvl(func, data1, ubf, data2) \
-  rb_thread_blocking_region((rb_blocking_function_t *)func, data1, ubf, data2)
-#endif
-#endif
-
-#if defined(HAVE_RB_THREAD_BLOCKING_REGION) || defined(HAVE_RB_THREAD_CALL_WITHOUT_GVL)
         poll_args.loop = loop;
         poll_args.waittime = waittime;
         rb_thread_call_without_gvl((void *)ev_backend_poll, (void *)&poll_args, RUBY_UBF_IO, 0);
-#else
-         backend_poll (EV_A_ waittime);
-#endif
 /*
 ############################# END PATCHERY ############################
 */
