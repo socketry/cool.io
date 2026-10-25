@@ -50,6 +50,8 @@
 #define kqueue_eventmax ((loop)->kqueue_eventmax)
 #define kqueue_events ((loop)->kqueue_events)
 #define kqueue_fd_pid ((loop)->kqueue_fd_pid)
+#define kq_stat ((loop)->kq_stat)
+#define kq_stat_disabled ((loop)->kq_stat_disabled)
 #define loop_count ((loop)->loop_count)
 #define loop_depth ((loop)->loop_depth)
 #define loop_done ((loop)->loop_done)
@@ -151,6 +153,8 @@
 #undef kqueue_eventmax
 #undef kqueue_events
 #undef kqueue_fd_pid
+#undef kq_stat
+#undef kq_stat_disabled
 #undef loop_count
 #undef loop_depth
 #undef loop_done

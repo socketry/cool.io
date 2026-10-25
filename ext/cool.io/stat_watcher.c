@@ -33,9 +33,8 @@ static void Coolio_StatWatcher_libev_callback(struct ev_loop *ev_loop, struct ev
 static void Coolio_StatWatcher_dispatch_callback(VALUE self, int revents);
 
 /*
- * Coolio::StatWatcher lets you create either one-shot or periodic stats which
- * run within Coolio's event loop.  It's useful for creating timeouts or
- * events which fire periodically.
+ * Coolio::StatWatcher monitors a path and calls on_change when its stat
+ * attributes change.
  **/
 void Init_coolio_stat_watcher()
 {
@@ -77,10 +76,14 @@ void Init_coolio_stat_watcher()
  * specified how often in seconds the path should be polled for changes.
  * Setting interval to zero uses an "automatic" value (typically around 5
  * seconds) which optimizes performance.  Otherwise, values less than
- * 0.1 are not particularly meaningful.  Where available (on Linux and Windows),
- * high performance file monitoring interfaces are used.  On Windows, polling
- * remains necessary because notification timing is not guaranteed.  An attached
- * Windows watcher may also prevent renaming an ancestor directory until detached.
+ * 0.1 are not particularly meaningful.  Where available (on Linux, macOS and
+ * Windows), high performance file monitoring interfaces are used.  On macOS
+ * and Windows, polling remains enabled for changes native notifications may
+ * miss.  An attached Windows watcher may also prevent renaming an ancestor
+ * directory until detached.
+ *
+ * On macOS, construct the loop with :fork_check => true when continuing to
+ * use attached watchers in a forked child.
  */
 static VALUE Coolio_StatWatcher_initialize(int argc, VALUE *argv, VALUE self)
 {
