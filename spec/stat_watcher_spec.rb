@@ -19,10 +19,10 @@ class MyStatWatcher < Cool.io::StatWatcher
   end
 end
 
-def run_with_file_change(path, compact: false)
+def run_with_file_change(path, watcher_class: MyStatWatcher, compact: false)
   reactor = Cool.io::Loop.new
 
-  sw = MyStatWatcher.new(path)
+  sw = watcher_class.new(path)
   sw.attach(reactor)
 
   # libev retains the path pointer passed to ev_stat_init() for the lifetime of
@@ -155,12 +155,11 @@ describe Cool.io::StatWatcher do
   end
 
   it "should raise when the handler does not take 2 parameters" do
-    class MyStatWatcher < Cool.io::StatWatcher
-      remove_method :on_change
+    watcher_class = Class.new(MyStatWatcher) do
       def on_change
       end
     end
-    expect { watcher.accessed }.to raise_error(ArgumentError)
+    expect { run_with_file_change(TEMP_FILE_PATH, watcher_class: watcher_class) }.to raise_error(ArgumentError)
   end
 
 end
