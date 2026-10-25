@@ -53,7 +53,16 @@ describe Cool.io::TimerWatcher do
     expect(nr).to eq(:foo)
   end
 
+  it "reports whether it is attached" do
+    @watcher = Cool.io::TimerWatcher.new(interval, true)
+    expect(@watcher.attached?).to eq(false)
+    @watcher.attach(loop)
+    expect(@watcher.attached?).to eq(true)
+    @watcher.detach
+    expect(@watcher.attached?).to eq(false)
+  end
+
   after :each do
-    @watcher.detach if defined?(@watcher)
+    @watcher.detach if defined?(@watcher) && @watcher.attached?
   end
 end
