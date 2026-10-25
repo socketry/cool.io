@@ -1,3 +1,75 @@
+1.10.1
+------
+
+* Fix listen failing with EISCONN on Windows after a Loop with a StatWatcher is freed (#128)
+
+1.10.0
+------
+
+* Use ReadDirectoryChangesW notifications for StatWatcher on Windows, so that changes are reported promptly while polling remains as a backstop (#109, #113)
+* Fix quadratic polling, stop, notification and registration costs with many StatWatchers on Windows (#120, #121)
+* Fix needless re-registration of Windows StatWatchers after the current directory changes (#122)
+* Fix Windows StatWatcher missing changes in a directory recreated under the same name (#123)
+* Speed up Windows StatWatcher name lookups (#124)
+* Fix heap overflow in Buffer#read and Buffer#to_str on 64-bit Windows (#111)
+* Fix memory leak when Buffer#clear is called repeatedly (#117)
+* Fix DNS resolver accepting an A record shorter than its RDLENGTH (#107)
+* Fix StatInfo fields truncated to 32 bits (#114)
+* Fix StatInfo#blksize and StatInfo#blocks always being nil (#115)
+* Fix IO and timer watcher reattachment (#112)
+* Fix NameError when creating a Loop with skip_environment (#118)
+* Fix SEGV when a Loop is created with no usable backend. It raises RuntimeError instead (#119)
+* Fix Buffer#read documentation to match its argument handling (#116)
+* Document that Loop.new raises RuntimeError when no backend is usable (#125)
+
+1.9.5
+-----
+
+* Fix 32-bit byte accounting in Buffer (#105)
+* Fix FD_SETSIZE mismatch silently dropping watchers on Windows (#103)
+* Fix dangling path pointer in StatWatcher under GC compaction (#98)
+* Validate Buffer#read_frame argument to prevent SEGV (#97)
+* Ignore IPv6 nameservers to prevent Socket::ResolutionError (#94)
+* Fix Buffer.default_node_size documentation to match DEFAULT_NODE_SIZE (#99)
+
+1.9.4
+-----
+
+* Fix memory leak when detaching watchers (#91)
+
+1.9.3
+-----
+
+* Fix freeing of Buffer memory allocated with xmalloc (#84)
+
+1.9.2
+-----
+
+* Fix TypeError when processing a detached watcher (#88)
+
+1.9.1
+-----
+
+* Use typed data APIs for the extension objects (#85)
+* Fix DNSResolver mutating the nameservers array given by the caller (commit 489ec55)
+
+1.9.0
+-----
+
+* Rename IO::Buffer to Coolio::Buffer and build it into the cool.io extension, since Ruby 3.1 added its own IO::Buffer (#82)
+
+1.8.1
+-----
+
+* Fix build error on Windows caused by incompatible pointer types (#81)
+
+1.8.0
+-----
+
+* Support Ruby 3.3 (#79)
+* Fix build failure with compilers that reject incompatible function pointer types (#78)
+* Fix fallback to the local loopback address when the hosts file has no localhost entry (#73)
+
 1.7.1
 -----
 
