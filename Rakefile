@@ -7,11 +7,10 @@ RSpec::Core::RakeTask.new
 task :default => %w(compile spec)
 
 require 'rdoc/task'
+require_relative 'lib/cool.io/version'
 Rake::RDocTask.new do |rdoc|
-  version = File.exist?('VERSION') ? File.read('VERSION') : ""
-
   rdoc.rdoc_dir = 'rdoc'
-  rdoc.title = "cool.io #{version}"
+  rdoc.title = "cool.io #{Coolio::VERSION}"
   rdoc.rdoc_files.include('README*')
   rdoc.rdoc_files.include('lib/**/*.rb')
 end
