@@ -271,7 +271,7 @@ static VALUE Coolio_Watcher_evloop(VALUE self)
  */
 static VALUE Coolio_Watcher_attached(VALUE self)
 {
-  return Coolio_Watcher_evloop(self) != Qnil;
+  return Coolio_Watcher_evloop(self) != Qnil ? Qtrue : Qfalse;
 }
 
 /**
