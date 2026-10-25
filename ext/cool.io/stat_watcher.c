@@ -135,7 +135,6 @@ static VALUE Coolio_StatWatcher_initialize(int argc, VALUE *argv, VALUE self)
  */
 static VALUE Coolio_StatWatcher_attach(VALUE self, VALUE loop)
 {
-  ev_tstamp interval, timeout;
   struct Coolio_Loop *loop_data;
   struct Coolio_Watcher *watcher_data;
 
