@@ -17,16 +17,16 @@ class ClientConnection < Cool.io::TCPSocket
   end
 
   def on_read(data)
-    print "got #{data}"
+    puts "got #{data}"
     close
   end
 
   def on_resolve_failed
-    print "DNS resolve failed"
+    puts "DNS resolve failed"
   end
 
   def on_connect_failed
-    print "connect failed, meaning our connection to their port was rejected"
+    puts "connect failed, meaning our connection to their port was rejected"
   end
 
 end
