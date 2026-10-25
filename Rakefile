@@ -24,16 +24,8 @@ require 'rake/extensiontask'
 
 spec = Gem::Specification.load("cool.io.gemspec")
 
-def configure_cross_compilation(ext)
-  unless RUBY_PLATFORM =~ /mswin|mingw/
-    ext.cross_compile = true
-    ext.cross_platform = ['x86-mingw32', 'x64-mingw32']
-  end
-end
-
 Rake::ExtensionTask.new('cool.io_ext', spec) do |ext|
   ext.ext_dir = 'ext/cool.io'
-  configure_cross_compilation(ext)
 end
 
 if RUBY_PLATFORM.include?('linux')
