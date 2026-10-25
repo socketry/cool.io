@@ -128,6 +128,47 @@ describe 'kqueue notification-backed StatWatcher', :if => RUBY_PLATFORM =~ /darw
     expect(current.size).to eq(6)
   end
 
+  it 'notifies for atomic replacement and subsequent changes' do
+    path = File.join(@directory, 'file')
+    replacement = File.join(@directory, 'replacement')
+    File.write(path, 'a')
+    File.write(replacement, 'longer')
+    watcher = watch(path)
+    await_change(watcher, size: 6) { File.rename(replacement, path) }
+    await_change(watcher, size: 7) { File.write(path, 'changed') }
+  end
+
+  it 'uses parent hints when a symlink is replaced' do
+    path = File.join(@directory, 'link')
+    File.symlink('missing', path)
+    watcher = watch(path)
+    _, current = await_change(watcher, size: 22, exists: true) do
+      File.unlink(path)
+      File.symlink('another-missing-target', path)
+    end
+    expect(current.mode & 0o170000).to eq(0o120000)
+    expect(current.size).to eq('another-missing-target'.bytesize)
+  end
+
+  it 'attaches without blocking for a FIFO or a path below it' do
+    in_child do
+      path = File.join(@directory, 'fifo')
+      File.mkfifo(path)
+      fifo = watch(path, 0.1)
+      watch(File.join(path, 'missing'), 0.1)
+      await_change(fifo, exists: false) { File.unlink(path) }
+    end
+  end
+
+  it 'continues polling in a child without fork checking' do
+    path = File.join(@directory, 'file')
+    File.write(path, 'a')
+    watcher = watch(path, 0.1)
+    in_child do
+      await_change(watcher, size: 6) { File.write(path, 'longer') }
+    end
+  end
+
   it 'notifies when a child is added to a watched directory' do
     directory = File.join(@directory, 'sub')
     Dir.mkdir(directory)

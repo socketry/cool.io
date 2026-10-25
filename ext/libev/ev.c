@@ -4673,12 +4673,12 @@ stat_timer_cb (EV_P_ ev_timer *w_, int revents)
     win32_fs_add (EV_A_ w, 1); /* retry missing parents or failed directory handles */
 #endif
 
-  ev_statdata prev = w->attr;
-  ev_stat_stat (EV_A_ w);
-
 #if EV_USE_KQUEUE_STAT
   kq_stat_poll (EV_A_ w, revents);
 #endif
+
+  ev_statdata prev = w->attr;
+  ev_stat_stat (EV_A_ w);
 
   /* memcmp doesn't work on netbsd, they.... do stuff to their struct stat */
   if (

@@ -12,6 +12,36 @@
 
 static int fail_kqueue, kqueue_calls, fail_calloc, changed, timed_out;
 static int invalid_closes;
+static int event_reads, flood_events;
+static void *flood_watcher;
+static const char *registration_change;
+
+static int
+test_kevent (int fd, const struct kevent *changes, int count,
+             struct kevent *events, int size, const struct timespec *timeout)
+{
+  int result;
+  if (!count && size)
+    {
+      ++event_reads;
+      if (flood_events && event_reads <= 2)
+        {
+          int i;
+          for (i = 0; i < size; ++i)
+            EV_SET (&events [i], 0, EVFILT_VNODE, 0, NOTE_WRITE, 0, flood_watcher);
+          return size;
+        }
+    }
+  result = kevent (fd, changes, count, events, size, timeout);
+  if (count && result == 0 && registration_change)
+    {
+      FILE *file = fopen (registration_change, "w");
+      if (file)
+        { fputs ("registration race", file); fclose (file); }
+      registration_change = 0;
+    }
+  return result;
+}
 
 static int
 test_close (int fd)
@@ -45,10 +75,14 @@ test_calloc (size_t count, size_t size)
   return calloc (count, size);
 }
 
+/* sys/event.h uses EV_ERROR for a different flag than libev. */
+#undef EV_ERROR
+#define kevent(...) test_kevent (__VA_ARGS__)
 #define kqueue test_kqueue
 #define calloc test_calloc
 #define close test_close
 #include "libev.c"
+#undef kevent
 #undef kqueue
 #undef calloc
 #undef close
@@ -135,6 +169,8 @@ check (VALUE self, VALUE mode, VALUE path)
   int slot_failure = !strcmp (scenario, "slot_failure");
 
   fail_kqueue = kqueue_calls = fail_calloc = invalid_closes = 0;
+  event_reads = flood_events = 0;
+  registration_change = 0;
   if (!write_file (filename, "a"))
     rb_sys_fail (filename);
   /* A poll backend isolates the stat kqueue from the loop's I/O backend. */
@@ -155,6 +191,41 @@ check (VALUE self, VALUE mode, VALUE path)
   ev_stat_start (loop, &watcher);
 
 #if EV_USE_KQUEUE_STAT
+  if (!strcmp (scenario, "bounded_batch"))
+    {
+      flood_watcher = &watcher;
+      flood_events = 1;
+      kq_stat_cb (loop, &loop->kq_stat->io, EV_READ);
+      flood_events = 0;
+      if (event_reads != 1)
+        error = "notification callback drained more than one batch";
+      goto stop;
+    }
+  if (!strcmp (scenario, "io_error") || !strcmp (scenario, "io_error_valid_fd"))
+    {
+      int refs = loop->activecnt;
+      int fd = loop->kq_stat->fd;
+      fd_reify (loop);
+      if (!strcmp (scenario, "io_error"))
+        close (fd);
+      fd_kill (loop, fd);
+      ev_invoke_pending (loop);
+      if (fcntl (fd, F_GETFD) != -1 || errno != EBADF
+          || loop->activecnt != refs || loop->kq_stat->fd != -1
+          || ev_is_active (&loop->kq_stat->io) || loop->kq_stat->slots [watcher.wd]->fd != -1)
+        { error = "I/O failure did not restore polling references"; goto stop; }
+    }
+  if (!strcmp (scenario, "registration_race"))
+    {
+      kq_stat_close_slot (loop->kq_stat, loop->kq_stat->slots [watcher.wd]);
+      registration_change = filename;
+      changed = 0;
+      stat_timer_cb (loop, &watcher.timer, EV_TIMER);
+      ev_invoke_pending (loop);
+      if (!changed || registration_change)
+        error = "retry missed a change during registration";
+      goto stop;
+    }
   if (!strcmp (scenario, "gc_cleanup"))
     {
       size_t size = (size_t)getpagesize ();

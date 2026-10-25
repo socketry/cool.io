@@ -50,6 +50,22 @@ describe 'kqueue stat notification internals', :if => RUBY_PLATFORM =~ /darwin/ 
       end
 
       if configuration == 'enabled'
+        it 'returns after one notification batch under sustained load' do
+          check_native('bounded_batch')
+        end
+
+        it 'balances loop references after the internal I/O watcher fails' do
+          check_native('io_error')
+        end
+
+        it 'closes a valid kqueue descriptor when its I/O watcher fails' do
+          check_native('io_error_valid_fd')
+        end
+
+        it 'takes the stat snapshot after retrying registration' do
+          check_native('registration_race')
+        end
+
         it 'keeps polling through EMFILE and retries native initialization' do
           check_native('init_failure')
         end

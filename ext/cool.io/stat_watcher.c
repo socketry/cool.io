@@ -82,6 +82,10 @@ void Init_coolio_stat_watcher()
  * miss.  An attached Windows watcher may also prevent renaming an ancestor
  * directory until detached.
  *
+ * On macOS, each registered watcher uses one file descriptor for the path or
+ * an ancestor directory, plus one shared kqueue descriptor per loop. If the
+ * descriptor limit is reached, watchers fall back to polling.
+ *
  * On macOS, construct the loop with :fork_check => true when continuing to
  * use attached watchers in a forked child.
  */

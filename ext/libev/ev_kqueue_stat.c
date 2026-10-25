@@ -26,7 +26,7 @@ struct ev_kq_stat
   int slotcnt, slotmax;
 };
 
-/* Drain notifications in fixed-size batches to bound stack usage. */
+/* Process one bounded batch per callback so other watchers can run. */
 #define EV_KQ_EVENT_BUFSIZE 32
 
 static void kq_stat_add (EV_P_ ev_stat *w);
@@ -126,9 +126,15 @@ kq_stat_add (EV_P_ ev_stat *w)
   if (!slot)
     return;
 
-  fd = open (w->path, O_RDONLY | O_EVTONLY | O_NOFOLLOW | O_CLOEXEC);
+  fd = open (w->path, O_RDONLY | O_EVTONLY | O_NONBLOCK | O_NOFOLLOW | O_CLOEXEC);
   if (fd >= 0)
-    flags = kq_stat_file_flags ();
+    {
+      struct stat st;
+      if (fstat (fd, &st) == 0 && (S_ISREG (st.st_mode) || S_ISDIR (st.st_mode)))
+        flags = kq_stat_file_flags ();
+      else
+        close (fd), fd = -1;
+    }
   else if ((errno == ENOENT || errno == ENOTDIR || errno == ELOOP || errno == EACCES)
            && strlen (w->path) < 4096)
     {
@@ -142,9 +148,9 @@ kq_stat_add (EV_P_ ev_stat *w)
           if (!pend || pend == path)
             break;
           *pend = 0;
-          fd = open (path, O_RDONLY | O_EVTONLY | O_CLOEXEC);
+          fd = open (path, O_RDONLY | O_EVTONLY | O_NONBLOCK | O_CLOEXEC);
         }
-      while (fd < 0 && (errno == ENOENT || errno == ENOTDIR || errno == ELOOP));
+      while (fd < 0 && (errno == ENOENT || errno == ENOTDIR || errno == ELOOP || errno == EACCES));
 
       if (fd >= 0)
         {
@@ -183,42 +189,43 @@ static void
 kq_stat_cb (EV_P_ ev_io *w_, int revents)
 {
   struct ev_kq_stat *ctx = kq_stat;
+  struct kevent evs [EV_KQ_EVENT_BUFSIZE];
+  struct timespec ts;
+  int n, i;
 
   (void)w_;
-  (void)revents;
-
-  for (;;)
+  if (revents & EV_ERROR)
     {
-      struct kevent evs [EV_KQ_EVENT_BUFSIZE];
-      struct timespec ts;
-      int n, i;
+      /* fd_kill stops the unreferenced I/O watcher before feeding EV_ERROR. */
+      ev_ref (EV_A);
+      ev_io_stop (EV_A_ &ctx->io);
+      if (ctx->fd >= 0 && ctx->owner_pid == getpid () && fd_valid (ctx->fd))
+        close (ctx->fd);
+      ctx->fd = -1;
+      for (i = 0; i < ctx->slotcnt; ++i)
+        kq_stat_close_slot (ctx, ctx->slots [i]);
+      return;
+    }
 
-      ts.tv_sec = 0;
-      ts.tv_nsec = 0;
-      n = kevent (ctx->fd, 0, 0, evs, EV_KQ_EVENT_BUFSIZE, &ts);
-      if (n <= 0)
-        return;
+  ts.tv_sec = 0;
+  ts.tv_nsec = 0;
+  n = kevent (ctx->fd, 0, 0, evs, EV_KQ_EVENT_BUFSIZE, &ts);
+  for (i = 0; i < n; ++i)
+    {
+      ev_stat *w = (ev_stat *)evs [i].udata;
+      struct ev_kq_stat_slot *slot = kq_stat_slot_valid (ctx, w);
 
-      for (i = 0; i < n; ++i)
-        {
-          ev_stat *w = (ev_stat *)evs [i].udata;
-          struct ev_kq_stat_slot *slot = kq_stat_slot_valid (ctx, w);
+      if (!slot)
+        continue;
 
-          if (!slot)
-            continue;
+      /* Follow the path when the monitored vnode is removed or renamed. */
+      if (evs [i].fflags & (NOTE_DELETE | NOTE_RENAME))
+        kq_stat_add (EV_A_ w);
+      /* A parent hint may mean that a deeper path component now exists. */
+      else if (slot->is_dir)
+        kq_stat_add (EV_A_ w);
 
-          /* Follow the path when the monitored vnode is removed or renamed. */
-          if (evs [i].fflags & (NOTE_DELETE | NOTE_RENAME))
-            kq_stat_add (EV_A_ w);
-          /* A parent hint may mean that a deeper path component now exists. */
-          else if (slot->is_dir)
-            kq_stat_add (EV_A_ w);
-
-          stat_timer_cb (EV_A_ &w->timer, 0);
-        }
-
-      if (n < EV_KQ_EVENT_BUFSIZE)
-        return;
+      stat_timer_cb (EV_A_ &w->timer, 0);
     }
 }
 
