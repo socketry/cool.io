@@ -19,9 +19,6 @@ rdoc
 pkg
 tmp
 
-## RUBINIUS
-*.rbc
-
 ## PROJECT::SPECIFIC
 conftest.dSYM
 

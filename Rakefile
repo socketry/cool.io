@@ -33,5 +33,5 @@ if RUBY_PLATFORM.include?('linux')
   end
 end
 
-CLEAN.include "**/*.rbc", "**/*.o", "**/*.so", "**/*.bundle"
-CLEAN.exclude "vendor/**/*.rbc", "vendor/**/*.o", "vendor/**/*.so", "vendor/**/*.bundle"
+CLEAN.include "**/*.o", "**/*.so", "**/*.bundle"
+CLEAN.exclude "vendor/**/*.o", "vendor/**/*.so", "vendor/**/*.bundle"
