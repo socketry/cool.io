@@ -6,6 +6,12 @@ Gem::Specification.new do |s|
   s.authors     = ["Tony Arcieri", "Masahiro Nakagawa"]
   s.email       = ["tony.arcieri@gmail.com", "repeatedly@gmail.com"]
   s.homepage    = "https://github.com/socketry/cool.io"
+  s.metadata    = {
+    "bug_tracker_uri" => "https://github.com/socketry/cool.io/issues",
+    "changelog_uri" => "https://github.com/socketry/cool.io/blob/main/CHANGES.md",
+    "source_code_uri" => "https://github.com/socketry/cool.io.git",
+    "rubygems_mfa_required" => "true",
+  }
   s.summary     = "A cool framework for doing high performance I/O in Ruby"
   s.description = "Cool.io provides a high performance event framework for Ruby which uses the libev C library"
   s.extensions = ["ext/cool.io/extconf.rb"]
