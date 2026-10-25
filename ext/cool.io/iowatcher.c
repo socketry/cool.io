@@ -5,11 +5,7 @@
  */
 
 #include "ruby.h"
-#if defined(HAVE_RUBY_IO_H)
 #include "ruby/io.h"
-#else
-#include "rubyio.h"
-#endif
 
 #include "ev_wrap.h"
 
@@ -86,17 +82,7 @@ static VALUE Coolio_IOWatcher_initialize(int argc, VALUE *argv, VALUE self)
   io = rb_convert_type(io, T_FILE, "IO", "to_io");
 
   watcher_data->dispatch_callback = Coolio_IOWatcher_dispatch_callback;
-#ifdef HAVE_RB_IO_DESCRIPTOR
   ev_io_init(&watcher_data->event_types.ev_io, Coolio_IOWatcher_libev_callback, rb_io_descriptor(io), events);
-#else
-#if defined(HAVE_RB_IO_T)
-  rb_io_t *fptr;
-#else
-  OpenFile *fptr;
-#endif
-  GetOpenFile(io, fptr);
-  ev_io_init(&watcher_data->event_types.ev_io, Coolio_IOWatcher_libev_callback, FPTR_TO_FD(fptr), events);
-#endif
   watcher_data->event_types.ev_io.data = (void *)self;
 
   return Qnil;

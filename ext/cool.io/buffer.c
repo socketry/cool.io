@@ -20,13 +20,6 @@
 /* 1 GiB maximum buffer size */
 #define MAX_BUFFER_SIZE 0x40000000
 
-/* Macro for retrieving the file descriptor from an FPTR */
-#if !HAVE_RB_IO_T_FD
-#define FPTR_TO_FD(fptr) fileno(fptr->f)
-#else
-#define FPTR_TO_FD(fptr) fptr->fd
-#endif
-
 /* Default number of bytes in each node's buffer.  Should be >= MTU */
 #define DEFAULT_NODE_SIZE 16384
 static size_t default_node_size = DEFAULT_NODE_SIZE;
@@ -414,22 +407,14 @@ Coolio_Buffer_read_from(VALUE self, VALUE io)
 {
     struct buffer  *buf;
     ssize_t         ret;
-#if defined(HAVE_RB_IO_T) || defined(HAVE_RB_IO_DESCRIPTOR)
     rb_io_t        *fptr;
-#else
-    OpenFile       *fptr;
-#endif
 
     TypedData_Get_Struct(self, struct buffer, &Coolio_Buffer_type, buf);
     io = rb_convert_type(io, T_FILE, "IO", "to_io");
     GetOpenFile(io, fptr);
     rb_io_set_nonblock(fptr);
 
-#ifdef HAVE_RB_IO_DESCRIPTOR
     ret = buffer_read_from(buf, rb_io_descriptor(io));
-#else
-    ret = buffer_read_from(buf, FPTR_TO_FD(fptr));
-#endif
     return ret == -1 ? Qnil : SSIZET2NUM(ret);
 }
 
@@ -445,22 +430,14 @@ static VALUE
 Coolio_Buffer_write_to(VALUE self, VALUE io)
 {
     struct buffer  *buf;
-#if defined(HAVE_RB_IO_T) || defined(HAVE_RB_IO_DESCRIPTOR)
     rb_io_t        *fptr;
-#else
-    OpenFile       *fptr;
-#endif
 
     TypedData_Get_Struct(self, struct buffer, &Coolio_Buffer_type, buf);
     io = rb_convert_type(io, T_FILE, "IO", "to_io");
     GetOpenFile(io, fptr);
     rb_io_set_nonblock(fptr);
 
-#ifdef HAVE_RB_IO_DESCRIPTOR
     return SSIZET2NUM(buffer_write_to(buf, rb_io_descriptor(io)));
-#else
-    return SSIZET2NUM(buffer_write_to(buf, FPTR_TO_FD(fptr)));
-#endif
 }
 
 /*
