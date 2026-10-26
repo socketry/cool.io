@@ -160,6 +160,37 @@ describe 'kqueue notification-backed StatWatcher', :if => RUBY_PLATFORM =~ /darw
     end
   end
 
+  it 'does not wake a FIFO writer when attaching or retrying registration' do
+    in_child do
+      path = File.join(@directory, 'fifo')
+      File.mkfifo(path)
+      reader, ready = IO.pipe
+      writer = fork do
+        reader.close
+        ready.write('ready')
+        File.open(path, File::WRONLY) { ready.write('opened') }
+        exit! 0
+      end
+      ready.close
+      begin
+        expect(reader.read(5)).to eq('ready')
+        expect(IO.select([reader], nil, nil, 0.1)).to be_nil
+        watch(path, 0.1)
+        watch(File.join(path, 'missing'), 0.1)
+        deadline = Coolio::TimerWatcher.new(0.35, false)
+        deadline.on_timer { @loop.stop }
+        deadline.attach(@loop)
+        @loop.run
+        expect(IO.select([reader], nil, nil, 0)).to be_nil
+      ensure
+        deadline.detach if deadline && deadline.attached?
+        Process.kill('KILL', writer)
+        Process.wait(writer)
+        reader.close
+      end
+    end
+  end
+
   it 'continues polling in a child without fork checking' do
     path = File.join(@directory, 'file')
     File.write(path, 'a')

@@ -121,12 +121,26 @@ kq_stat_add (EV_P_ ev_stat *w)
   struct ev_kq_stat_slot *slot;
   int fd = -1, is_dir = 0;
   unsigned int flags = 0;
+  struct stat st;
 
   slot = kq_stat_slot_get (EV_A_ w);
   if (!slot)
     return;
 
-  fd = open (w->path, O_RDONLY | O_EVTONLY | O_NONBLOCK | O_NOFOLLOW | O_CLOEXEC);
+  /* Even a nonblocking FIFO open can wake a waiting writer. Keep known
+   * special files on polling; retain the checks below for replacement races. */
+  if (lstat (w->path, &st) == 0)
+    {
+      if (S_ISREG (st.st_mode) || S_ISDIR (st.st_mode))
+        fd = open (w->path, O_RDONLY | O_EVTONLY | O_NONBLOCK | O_NOFOLLOW | O_CLOEXEC);
+      else if (S_ISLNK (st.st_mode))
+        errno = ELOOP;
+      else
+        {
+          kq_stat_close_slot (ctx, slot);
+          return;
+        }
+    }
   if (fd >= 0)
     {
       struct stat st;
@@ -148,7 +162,13 @@ kq_stat_add (EV_P_ ev_stat *w)
           if (!pend || pend == path)
             break;
           *pend = 0;
-          fd = open (path, O_RDONLY | O_EVTONLY | O_NONBLOCK | O_CLOEXEC);
+          if (stat (path, &st) == 0)
+            {
+              if (S_ISDIR (st.st_mode))
+                fd = open (path, O_RDONLY | O_EVTONLY | O_NONBLOCK | O_CLOEXEC);
+              else
+                errno = ENOTDIR;
+            }
         }
       while (fd < 0 && (errno == ENOENT || errno == ENOTDIR || errno == ELOOP || errno == EACCES));
 
