@@ -185,6 +185,10 @@ VARx(EV_ATOMIC_T, sig_pending)
 VARx(struct ev_win32_fs *, win32_fs)
 VARx(int, win32_fs_disabled)
 #endif
+#if EV_USE_KQUEUE_STAT || EV_GENWRAP
+VARx(struct ev_kq_stat *, kq_stat)
+VARx(int, kq_stat_disabled)
+#endif
 #if EV_USE_SIGNALFD || EV_GENWRAP
 VARx(int, sigfd)
 VARx(ev_io, sigfd_w)

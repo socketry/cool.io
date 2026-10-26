@@ -340,6 +340,14 @@
 # endif
 #endif
 
+#ifndef EV_USE_KQUEUE_STAT
+# if EV_USE_KQUEUE && EV_STAT_ENABLE && defined __APPLE__ && defined __MACH__
+#  define EV_USE_KQUEUE_STAT 1
+# else
+#  define EV_USE_KQUEUE_STAT 0
+# endif
+#endif
+
 #ifndef EV_PID_HASHSIZE
 # define EV_PID_HASHSIZE EV_FEATURE_DATA ? 16 : 1
 #endif
@@ -1861,6 +1869,10 @@ typedef struct
 #if defined(_WIN32) && EV_STAT_ENABLE && EV_ASYNC_ENABLE
 static void win32_fs_destroy (EV_P);
 #endif
+#if EV_USE_KQUEUE_STAT
+static void kq_stat_fork (EV_P);
+static void kq_stat_destroy (EV_P);
+#endif
 
 #if EV_FEATURE_API
 # define EV_RELEASE_CB if (expect_false (release_cb)) release_cb (EV_A)
@@ -2935,6 +2947,10 @@ loop_init (EV_P_ unsigned int flags) EV_THROW
       win32_fs          = 0;
       win32_fs_disabled = (flags & EVFLAG_NOINOTIFY) != 0;
 #endif
+#if EV_USE_KQUEUE_STAT
+      kq_stat          = 0;
+      kq_stat_disabled = (flags & EVFLAG_NOINOTIFY) != 0;
+#endif
 #if EV_USE_INOTIFY
       fs_fd              = flags & EVFLAG_NOINOTIFY ? -1 : -2;
 #endif
@@ -3005,6 +3021,9 @@ ev_loop_destroy (EV_P)
 
 #if defined(_WIN32) && EV_STAT_ENABLE && EV_ASYNC_ENABLE
   win32_fs_destroy (EV_A);
+#endif
+#if EV_USE_KQUEUE_STAT
+  kq_stat_destroy (EV_A);
 #endif
 
   if (ev_is_active (&pipe_w))
@@ -3107,6 +3126,9 @@ loop_fork (EV_P)
 #endif
 #if EV_USE_INOTIFY
   infy_fork (EV_A);
+#endif
+#if EV_USE_KQUEUE_STAT
+  kq_stat_fork (EV_A);
 #endif
 
 #if EV_SIGNAL_ENABLE || EV_ASYNC_ENABLE
@@ -4344,6 +4366,9 @@ noinline static void stat_timer_cb (EV_P_ ev_timer *w_, int revents);
 #if defined(_WIN32) && EV_ASYNC_ENABLE
 # include "ev_win32_stat.c"
 #endif
+#if EV_USE_KQUEUE_STAT
+# include "ev_kqueue_stat.c"
+#endif
 
 #if EV_USE_INOTIFY
 
@@ -4626,6 +4651,10 @@ stat_timer_cb (EV_P_ ev_timer *w_, int revents)
     win32_fs_add (EV_A_ w, 1); /* retry missing parents or failed directory handles */
 #endif
 
+#if EV_USE_KQUEUE_STAT
+  kq_stat_poll (EV_A_ w, revents);
+#endif
+
   ev_statdata prev = w->attr;
   ev_stat_stat (EV_A_ w);
 
@@ -4663,6 +4692,10 @@ stat_timer_cb (EV_P_ ev_timer *w_, int revents)
           }
       #endif
 
+#if EV_USE_KQUEUE_STAT
+      kq_stat_refresh (EV_A_ w);
+#endif
+
       ev_feed_event (EV_A_ w, EV_STAT);
     }
 }
@@ -4699,6 +4732,9 @@ ev_stat_start (EV_P_ ev_stat *w) EV_THROW
   win32_fs_add (EV_A_ w, 0);
   stat_timer_cb (EV_A_ &w->timer, 0); /* close the stat/registration race */
 #endif
+#if EV_USE_KQUEUE_STAT
+  kq_stat_start (EV_A_ w);
+#endif
 
   EV_FREQUENT_CHECK;
 }
@@ -4714,6 +4750,9 @@ ev_stat_stop (EV_P_ ev_stat *w) EV_THROW
 
 #if defined(_WIN32) && EV_ASYNC_ENABLE
   win32_fs_del (EV_A_ w);
+#endif
+#if EV_USE_KQUEUE_STAT
+  kq_stat_del (EV_A_ w);
 #endif
 
 #if EV_USE_INOTIFY
