@@ -143,7 +143,6 @@ kq_stat_add (EV_P_ ev_stat *w)
     }
   if (fd >= 0)
     {
-      struct stat st;
       if (fstat (fd, &st) == 0 && (S_ISREG (st.st_mode) || S_ISDIR (st.st_mode)))
         flags = kq_stat_file_flags ();
       else
@@ -174,7 +173,6 @@ kq_stat_add (EV_P_ ev_stat *w)
 
       if (fd >= 0)
         {
-          struct stat st;
           if (fstat (fd, &st) == 0 && S_ISDIR (st.st_mode))
             is_dir = 1, flags = kq_stat_dir_flags ();
           else
