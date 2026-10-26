@@ -1,3 +1,12 @@
+1.11.0
+------
+
+* Use kqueue notifications for StatWatcher on macOS, so that changes are reported promptly while polling remains as a backstop (#130)
+* Fix Watcher#attached? returning 0 instead of true (#132)
+* Fix the DSL examples and remove the HttpClient example (#133)
+* Add bug tracker, changelog and source code links to the gem metadata and require MFA for gem owners (#138)
+* Require Ruby 3.2 or later (#139, #140)
+
 1.10.1
 ------
 
